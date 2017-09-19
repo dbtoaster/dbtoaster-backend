@@ -51,12 +51,6 @@ trait IScalaGen extends CodeGen {
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, tup, fresh, freshClear, stringIf } // common functions
 
-  def mapRef(n: String, tp: Type, keys: List[(String, Type)]) = { 
-    val m = M3.MapRef(n, tp, keys)
-    m.isTemp = true
-    m 
-  }
-
   def addToTempMap(m: String, ks: List[String], vs: String) = 
     extractBooleanExp(vs) match {
       case Some((c, t)) =>
@@ -268,7 +262,7 @@ trait IScalaGen extends CodeGen {
     //     v * ex
     //   }
     // }
-    case m @ MapRef(n, tp, ks) =>
+    case MapRef(n, tp, ks, isTemp) =>
       val (ko, ki) = ks.zipWithIndex.partition { case ((n, t), i) => ctx.contains(n) }
       if (ks.size == 0) { // variable
         if (ctx contains n) co(rn(n)) else co(n)
@@ -380,7 +374,7 @@ trait IScalaGen extends CodeGen {
           ctx.load(cur)
           val s2 = cpsExpr(er, (v: String) => addToTempMap(acc, ks, v), tmp)
           ctx.load(cur)
-          genVar(acc, ex.tp, agg.map(_._2)) + s1 + s2 + cpsExpr(mapRef(acc, ex.tp, agg), co)
+          genVar(acc, ex.tp, agg.map(_._2)) + s1 + s2 + cpsExpr(MapRef(acc, ex.tp, agg, true), co)
       }
     case a @ AggSum(ks, e) =>
       // aggregation keys as (name,type)
@@ -409,7 +403,7 @@ trait IScalaGen extends CodeGen {
             ", " + e.tp.toScala + "]()\n" +
             cpsExpr(e, (v: String) => addToTempMap(a0, aks.map(_._1),v), tmp)
           ctx.load(cur)
-          s1 + cpsExpr(mapRef(a0, e.tp, aks), co)
+          s1 + cpsExpr(MapRef(a0, e.tp, aks, true), co)
       }
     case Repartition(ks, e) => cpsExpr(e, co)
     case Gather(e) => cpsExpr(e, co)
@@ -651,7 +645,7 @@ trait IScalaGen extends CodeGen {
 
   def genQueries(queries: List[Query]) = {
     queries.map { query => { query.map match {
-      case MapRef(n,_,_) if (n == query.name) => ""
+      case MapRef(n,_,_,_) if (n == query.name) => ""
       case _ =>
         ctx = Ctx[(Type, String)]()
         "def " + query.name + "() = {\n" +

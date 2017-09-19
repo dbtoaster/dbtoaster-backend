@@ -84,7 +84,7 @@ if(Optimizer.initialStoreSize) {
 
 
   def containsForeachOrSliceOrLift(ex: Expr): Boolean = ex match {
-    case MapRef(_, _, ks) => {
+    case MapRef(_, _, ks, _) => {
       ks.size > 0 && {
         val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
         ki.size > 0
@@ -196,7 +196,7 @@ if(Optimizer.initialStoreSize) {
           foreach(acc, agg, a.tp, co)
       }
 
-    case m@MapRef(n, tp, ks) =>
+    case m@MapRef(n, tp, ks, isTemp) =>
       val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
       val proxy = mapProxy(cx(n))
       val proxy2 = mapProxy2(cx(n))

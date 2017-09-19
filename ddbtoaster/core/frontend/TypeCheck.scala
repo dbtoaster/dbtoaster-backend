@@ -52,7 +52,7 @@ object TypeCheck extends (M3.System => M3.System) {
     def rs(s: Schema) = Schema(s.name, s.fields.map { case (n, t) => (r(n), t) })
     def re(e: Expr, t: Trigger): Expr = e.replace {
       case Ref(n) => Ref(r(n))
-      case MapRef(n, tp, ks) => 
+      case MapRef(n, tp, ks, tmp) =>
         MapRef(localMaps.get(n).getOrElse(n), tp, ks.map { case (n, t) => (r(n), t) })
       case d @ DeltaMapRefConst(_, ks) => 
         MapRef(d.deltaName, TypeLong, ks.map { case (n, t) => (r(n), t) })
@@ -220,7 +220,7 @@ object TypeCheck extends (M3.System => M3.System) {
           as.map(ie(_, c, t))         
           a.tp = Library.typeCheck(n, as.map(_.tp))
         case r @ Ref(n) => r.tp = c(n)
-        case m @ MapRef(n, tp, ks) =>
+        case m @ MapRef(n, tp, ks, tmp) =>
           s0.mapType.get(n) match {
             case Some(mtp) =>
               cr = c ++ ((ks.map(_._1)) zip mtp._1).toMap

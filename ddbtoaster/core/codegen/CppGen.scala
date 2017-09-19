@@ -171,7 +171,7 @@ trait ICppGen extends IScalaGen {
 
     case Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
 
-    case m @ MapRef(mapName,tp,ks) =>
+    case MapRef(mapName,tp,ks,isTemp) =>
       val (ko, ki) = ks.zipWithIndex.partition { case((n,t),i) => ctx.contains(n) }
       val mapType = mapName + "_map"
       val mapEntry = mapName + "_entry"
@@ -196,7 +196,7 @@ trait ICppGen extends IScalaGen {
 
         ctx.add(ks.filter(x => !ctx.contains(x._1)).map(x => (x._1, (x._2, x._1))).toMap)
 
-        if (!m.isTemp) { // slice or foreach
+        if (!isTemp) { // slice or foreach
           val mapDef = mapDefs(mapName)
           val n0 = fresh("n")
           val idx0= fresh("i")
@@ -220,7 +220,7 @@ trait ICppGen extends IScalaGen {
 
             val idxIndex = slice(mapName, is) + 1 //+1 because the index 0 is the unique index
             val sampleEnt = fresh("se")
-            sampleEntDef += stringIf(m.keys.size > 0, s"  ${mapEntry} ${sampleEnt};\n");
+            sampleEntDef += s"  ${mapEntry} ${sampleEnt};\n"
 
             val h0= fresh("h")
             if (EXPERIMENTAL_HASHMAP) {
@@ -281,7 +281,7 @@ trait ICppGen extends IScalaGen {
                 |""".stripMargin
 
           s"""|{ //temp foreach
-              |  ${tupType(ks.map(_._2), m.tp)}* ${e0} = ${mapName}.head;
+              |  ${tupType(ks.map(_._2), tp)}* ${e0} = ${mapName}.head;
               |  while(${e0}) {
               |${body}  
               |  }
@@ -386,7 +386,7 @@ trait ICppGen extends IScalaGen {
             ( genVar(acc, a.tp, agg.map(_._2)) +
               s1 +
               s2 +
-              cpsExpr(mapRef(acc, a.tp, agg), co) )
+              cpsExpr(MapRef(acc, a.tp, agg, true), co) )
         }
       s
 
@@ -417,7 +417,7 @@ trait ICppGen extends IScalaGen {
           val s1 = genVar(a0, e.tp, aks.map(_._2)) + "\n" +
             cpsExpr(e, (v: String) => ADD_TO_TEMP_MAP_FUNC(aks.map(_._2), e.tp, a0, aks.map(_._1), v), tmp)
           ctx.load(cur)
-          s1 + cpsExpr(mapRef(a0, e.tp, aks), co)
+          s1 + cpsExpr(MapRef(a0, e.tp, aks, true), co)
       }
 
     case Repartition(ks, e) => cpsExpr(e, (v: String) => co(v))
@@ -585,7 +585,7 @@ trait ICppGen extends IScalaGen {
     */
   def isExpressiveTLQSEnabled(queries:List[Query]) =
     queries.exists { query => query.map match {
-        case MapRef(n,_,_) => (n != query.name)
+        case MapRef(n,_,_,_) => (n != query.name)
         case _ => true
       }
     }
@@ -1077,7 +1077,7 @@ trait ICppGen extends IScalaGen {
     def compile_tlqs = s0.queries.map{ query =>
       "const " + query.toCppRefType + " get_" + query.name + "() const {\n"+
       (query.map match {
-        case MapRef(n,_,_) if (n == query.name) => "  return " + query.name + ";"
+        case MapRef(n,_,_,_) if (n == query.name) => "  return " + query.name + ";"
         case _ => 
           ctx = Ctx[(Type,String)]()
           ind(

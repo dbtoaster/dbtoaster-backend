@@ -139,9 +139,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       val rhsStoreType = LogStore
       val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
       mapInfo += ((lhsInfo.name, lhsInfo))
-      val lhsRef = MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      val lhsRef = MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys, true)
       lhsRef.locality = Some(lhsInfo.locality)
-      lhsRef.isTemp = true
       Statement(lhsRef, LogStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
     }
 
@@ -151,9 +150,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       val rhsStoreType = PartitionStore(pkeys.map(k => rhsMap.keys.indexOf(k)))
       val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
       mapInfo += ((lhsInfo.name, lhsInfo))
-      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys, true)
       lhsRef.locality = Some(lhsInfo.locality)
-      lhsRef.isTemp = true
       Statement(lhsRef, PartitionStoreTransformer(rhsMap, pkeys), None, OpSet, execMode(lhsInfo.locality))
     }
 
@@ -163,9 +161,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       val rhsStoreType = IndexedStore
       val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
       mapInfo += ((lhsInfo.name, lhsInfo))
-      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys, true)
       lhsRef.locality = Some(lhsInfo.locality)
-      lhsRef.isTemp = true
       Statement(lhsRef, IndexStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
     }
 
@@ -190,9 +187,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           }
           val localInfo = MapInfo(localName, expr.tp, ov, expr, localLocality, IndexedStore)
           mapInfo += ((localInfo.name, localInfo))
-          val localRef = new MapRef(localInfo.name, localInfo.tp, localInfo.keys)
+          val localRef = new MapRef(localInfo.name, localInfo.tp, localInfo.keys, true)
           localRef.locality = Some(localInfo.locality)
-          localRef.isTemp = true
           val localStmt = Statement(localRef, DefaultTransformer(expr), None, OpSet, LocalMode)
           (localRef, List(localStmt))
       }
@@ -201,9 +197,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         val distName = fresh("scatter")
         val distInfo = MapInfo(distName, expr.tp, ov, expr, DistByKeyExp(pkeys), LogStore, true)
         mapInfo += ((distInfo.name, distInfo))
-        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys, true)
         distRef.locality = Some(distInfo.locality)
-        distRef.isTemp = true
         Statement(distRef, ScatterTransformer(toPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
       val toStoreStmt = Statement.transformToIndex("scatter", scatterStmt.lhsMap)
@@ -233,9 +228,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           }
           val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
           mapInfo += ((distInfo.name, distInfo))
-          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)    
+          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys, true)
           distRef.locality = Some(distInfo.locality)
-          distRef.isTemp = true    
           val distStmt = Statement(distRef, DefaultTransformer(expr), None, OpSet, DistributedMode)
           (distRef, List(distStmt))
       }
@@ -245,9 +239,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         val distStoreType = PartitionStore(pkeys.map(k => ov.indexOf(k)))
         val distInfo = MapInfo(distName, expr.tp, ov, expr, DistByKeyExp(pkeys), distStoreType, true)
         mapInfo += ((distInfo.name, distInfo))
-        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys, true)
         distRef.locality = Some(distInfo.locality)
-        distRef.isTemp = true
         Statement(distRef, RepartitionTransformer(srcToPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
       val dstToIndexStmt = Statement.transformToIndex("repartition", repartitionStmt.lhsMap)
@@ -277,9 +270,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           }
           val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
           mapInfo += ((distInfo.name, distInfo))
-          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys, true)
           distRef.locality = Some(distInfo.locality)
-          distRef.isTemp = true
           val distStmt = Statement(distRef, DefaultTransformer(expr), None, OpSet, DistributedMode)
           (distRef, List(distStmt))
         }
@@ -288,9 +280,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           val partName = fresh("gather")
           val partInfo = MapInfo(partName, expr.tp, ov, expr, LocalExp, PartitionStore(Nil), true)
           mapInfo += ((partInfo.name, partInfo))
-          val partRef = new MapRef(partInfo.name, partInfo.tp, partInfo.keys)
+          val partRef = new MapRef(partInfo.name, partInfo.tp, partInfo.keys, true)
           partRef.locality = Some(partInfo.locality)
-          partRef.isTemp = true
           Statement(partRef, GatherTransformer(toLogStmt.lhsMap), None, OpSet, LocalMode)
         }
         val toIndexStmt = Statement.transformToIndex("gather", gatherStmt.lhsMap)
@@ -392,7 +383,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       def dropIndexTransformers(block: StatementBlock, valid: MapRef => Boolean) = {
         def drop(stmts: List[Statement]): List[Statement] = stmts match {
           case Nil => Nil
-          case Statement(lhsMap, IndexStoreTransformer(MapRef(rhsMapName,_,_)), None, OpSet, _) :: tail
+          case Statement(lhsMap, IndexStoreTransformer(MapRef(rhsMapName,_,_,_)), None, OpSet, _) :: tail
             if valid(lhsMap) && tail.forall(t => mapRequiresNoIndex(lhsMap, t)) =>
             {
               // java.lang.System.err.println("REMOVE " + lhsMap.name +  " AND REPLACE BY " + rhsMapName)
@@ -608,7 +599,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
   def prepareExpression(expr: Expr): (List[Statement], Expr) = expr match {
     case Const(tp, v) => (Nil, expr)
     case Ref(name) => (Nil, expr)
-    case m @ MapRef(name, tp, keys) => 
+    case m @ MapRef(name, tp, keys, isTemp) =>
       val map = mapInfo(name)
       m.locality  = map.locality match {
         case LocalExp => Some(LocalExp)

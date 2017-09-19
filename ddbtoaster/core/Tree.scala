@@ -338,9 +338,8 @@ object M3 {
         val newEx = Ref(r(n))
         newEx.tp = tp
         newEx
-      case m @ MapRef(n, tp, ks) => 
-        val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)))
-        newEx.isTemp = m.isTemp
+      case m @ MapRef(n, tp, ks, isTemp) =>
+        val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp)
         newEx.locality = m.locality match { 
           case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
           case Some(DistRandomExp) => Some(DistRandomExp)
@@ -377,7 +376,7 @@ object M3 {
       this match {
         case Const(tp, v) => (List(), List())
         case Ref(n) => (List((n, this.tp)), List())
-        case MapRef(n, tp, ks) => (List(), ks)
+        case MapRef(n, tp, ks, tmp) => (List(), ks)
         case MapRefConst(n, ks) => (List(), ks)
         case DeltaMapRefConst(n, ks) => (List(), ks)        
         case Cmp(l, r, op) => (union(l.schema._1, r.schema._1), List())
@@ -432,16 +431,16 @@ object M3 {
           if (fn1 != fn2 || as1.length != as2.length) None 
           else as1.zip(as2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, a.cmp(b)) }
-        case (MapRef(n1, tp1, ks1), MapRef(n2, tp2, ks2)) =>
+        case (MapRef(n1, tp1, ks1, tmp1), MapRef(n2, tp2, ks2, tmp2)) =>
+          if (n1 != n2 || ks1.length != ks2.length || tmp1 != tmp2) None
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
+        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) =>
           if (n1 != n2 || ks1.length != ks2.length) None
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
-        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) => 
-          if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (empty) {
-            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
-        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>          
-          if (n1 != n2 || ks1.length != ks2.length) None 
+        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>
+          if (n1 != n2 || ks1.length != ks2.length) None
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
@@ -486,8 +485,7 @@ object M3 {
   }
 
   // Map reference
-  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)]) extends Expr {
-    var isTemp:  Boolean = false
+  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], val isTemp: Boolean = false) extends Expr {
     var locality: Option[LocalityType] = Some(LocalExp)
     
     override def toString = 

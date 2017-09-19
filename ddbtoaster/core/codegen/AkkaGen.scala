@@ -141,7 +141,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
   def fmap(e:Expr,c2:Set[String]=Set()):MapRef = e match {
-    case m@MapRef(n,tp,ks) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
+    case m@MapRef(n,tp,ks,_) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => List(n) }) else lm
@@ -178,7 +178,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
                       else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
+    case m@MapRef(n,tp,ks,_) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
       if (part.local(m) || !ref.contains(n)) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) { inuse.add(ks.map(_._1).toSet); co(n+(if (ks.size>0) ".get("+tup(ks map { case (n, _) => rn(n) })+")" else "")) } // all keys are bound
@@ -217,7 +217,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       } else {
         val a0=fresh("agg"); val l0=lacc; lacc=(a0,e.tp,aks); val r =remote_agg(a0,m,aks,e); lacc=l0
-        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(mapRef(a0,e.tp,aks),co) })
+        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(MapRef(a0,e.tp,aks,true),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
       val agg = a.schema._2.filter { case(n,t)=> !ctx.contains(n) }
@@ -229,14 +229,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
             val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,agg); val r=remote_agg(a0,m,agg,e,true); lacc=l0; r }
                     else cpsExpr(e,(v:String)=>a0+".add("+tup(agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,agg),co) }
+          "val "+a0+" = M3Map.temp["+tup(agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(MapRef(a0,ex.tp,agg,true),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }
 
   override def genStmt(s:Stmt) = s match {
     case StmtMap(m,e,op,oi) => val r=ref(m.name);
-      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks)=>List(ref(n)) }).map(x=>","+x).mkString
+      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks,_)=>List(ref(n)) }).map(x=>","+x).mkString
       def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
                                 ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
       def mo(o:OpMap,v:String) = (if (o==OpSet) "set" else "add")+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map (x => rn(x._1))))+","+v+");\n"
