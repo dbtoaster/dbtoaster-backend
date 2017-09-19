@@ -77,7 +77,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
 
   def apply(s0:System):(Partitioning,String) = {
     sys0=s0; parts=Nil
-    tableNames = s0.sources.filter(!_.stream).map(_.schema.name).toSet
+    tableNames = s0.sources.filter(!_.isStream).map(_.schema.name).toSet
     deltaNames = s0.triggers.flatMap(_.event match {
       case EventBatchUpdate(s) => List(s.deltaName) case _ => Nil
     }).toSet
@@ -134,7 +134,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     }
     val r1 = parts.map(_.freq).sum // selected constraints (approximation)
     // partitioning
-    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
+    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.isStream).map(s=>s.schema.name).toSet);
     // hashing function
     val its = s0.maps.zipWithIndex.map { 
         case (m, i) => (m.name, (i,m.keys.map(_._2))) 

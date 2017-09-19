@@ -34,7 +34,7 @@ object TypeCheck extends (M3.System => M3.System) {
     val triggers = s0.triggers.map { t => Trigger(t.event, t.stmts map rst) }
     val queries = s0.queries.map { q => Query(q.name, re(q.map)) }
     val tabMaps = s0.sources.filter { s => 
-        !s.stream && used.contains(s.schema.name) 
+        !s.isStream && used.contains(s.schema.name) 
       }.map { so =>
         val s = so.schema
         MapDef(s.name, TypeLong, s.fields, Const(TypeLong, "0L"), LocalExp) 
@@ -113,7 +113,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case StmtMap(m, _, _, _) => (m.name, m.tp)
         case MapDef(n, tp, ks, e, l) => (n, tp)
       }).toMap ++
-      s0.sources.filter(!_.stream).map { s => 
+      s0.sources.filter(!_.isStream).map { s => 
         (s.schema.name, TypeLong)
       }.toMap // constant table are not written
     val maps = s0.maps.map { m => 

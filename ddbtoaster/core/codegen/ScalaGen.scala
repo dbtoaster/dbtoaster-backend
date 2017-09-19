@@ -593,7 +593,7 @@ trait IScalaGen extends CodeGen {
          |""".stripMargin
       .format(step, step, nextSkip, ind(sBatchEvents, 2))
     }
-    val tableInitialization = s0.sources.filter { s => !s.stream }.map {
+    val tableInitialization = s0.sources.filter { !_.isStream }.map {
       s => {
         val (in, ad, sp) = genStream(s)
         val (i, o, _, pl) = ev(s.schema)
@@ -794,7 +794,7 @@ trait IScalaGen extends CodeGen {
       } ::: xs
     }
     val ss = 
-      fixOrderbook(sources).filter { _.stream }.map { s => 
+      fixOrderbook(sources).filter { _.isStream }.map { s => 
         val (in, ad, sp) = genStream(s)
         "(" + in + "," + ad + "," + sp + ")" 
       }.mkString(",\n")

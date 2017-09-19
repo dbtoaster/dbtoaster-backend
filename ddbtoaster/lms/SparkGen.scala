@@ -1100,7 +1100,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
   }
 
   protected def emitLoadTablesBody(sources: List[Source]): String = 
-    sources.filterNot { _.stream }.map { table => {
+    sources.filterNot { _.isStream }.map { table => {
       val keys = table.schema.fields.zipWithIndex.map { case ((_, t), i) => ("v" + i, t) }
       val tuple = genTuple(keys.map { case (v, t) => (t, v) })
       val (_, adaptor, split) = genStream(table)

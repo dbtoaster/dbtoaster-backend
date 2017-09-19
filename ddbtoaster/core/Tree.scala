@@ -123,16 +123,16 @@ case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
 }
 
 // ---------- Source definitions, see ddbt.frontend.ExtParser
-case class Source(stream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
+case class Source(isStream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
   override def toString = 
-    "CREATE " + (if (stream) "STREAM" else "TABLE") + " " + schema + 
+    "CREATE " + (if (isStream) "STREAM" else "TABLE") + " " + schema + 
     "\n  FROM " + in + " " + split + " " + adaptor + 
-    (locality match { 
-      case LocalExp => "" 
+    (locality match {
+      case LocalExp => ""
       case DistRandomExp => "\n  PARTITIONED RANDOMLY"
-      case DistByKeyExp(pk) => 
+      case DistByKeyExp(pk) =>
         "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
-    }) + ";" 
+    }) + ";"
 }
 
 case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
@@ -220,13 +220,13 @@ object M3 {
   // ---------- Map definition statement
   case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends Stmt {    
     override def toString = 
-      "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
-      keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" + 
-      ind(expr.toString) + 
-      (locality match { 
-        case LocalExp => "" 
+      "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" +
+      keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" +
+      ind(expr.toString) +
+      (locality match {
+        case LocalExp => ""
         case DistRandomExp => "\n  PARTITIONED RANDOMLY"
-        case DistByKeyExp(pk) => 
+        case DistByKeyExp(pk) =>
           "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
       }) + ";"
 
@@ -252,7 +252,6 @@ object M3 {
     override def toString = "ON " + event + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
 
-  // -------- Trigger definition
   sealed abstract class EventTrigger extends M3 { 
     def name: String
     def schema: Schema 

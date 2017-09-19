@@ -621,10 +621,10 @@ trait ICppGen extends IScalaGen {
       }.mkString
 
     def register_relations = s0.sources.map { s => 
-        "pb.add_relation(\"" + s.schema.name + "\"" + (if (s.stream) "" else ", true") + ");\n"
+        "pb.add_relation(\"" + s.schema.name + "\"" + (if (s.isStream) "" else ", true") + ");\n"
       }.mkString
 
-    def register_table_triggers = s0.sources.filter(!_.stream).map { s => 
+    def register_table_triggers = s0.sources.filter(!_.isStream).map { s => 
         stringIf(
           s0.triggers.exists { _.event match {
               case EventBatchUpdate(_) => true
@@ -649,7 +649,7 @@ trait ICppGen extends IScalaGen {
 
     def genTableTriggers = 
       if (EXPERIMENTAL_RUNTIME_LIBRARY) {
-        s0.sources.filter(!_.stream).map { s =>
+        s0.sources.filter(!_.isStream).map { s =>
           val name = s.schema.name
           val fields = s.schema.fields
           val params = s.schema.fields.map { case (fld,tp) => "const " + tp.toCpp + " " + fld  }.mkString(", ")
@@ -669,7 +669,7 @@ trait ICppGen extends IScalaGen {
       }
       else {
         val entryParam = if(usingPardis && pardisExtendEntryParam) "false_type(), " else ""
-        s0.sources.filter(!_.stream).map { s =>
+        s0.sources.filter(!_.isStream).map { s =>
             val name = s.schema.name
             val fields = s.schema.fields
             
@@ -871,7 +871,7 @@ trait ICppGen extends IScalaGen {
 
     usedRelationDirectives = 
       s0.sources.map { s => 
-        if (s.stream) s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
+        if (s.isStream) s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
         else s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
       }.mkString("\n")
 
@@ -1010,7 +1010,7 @@ trait ICppGen extends IScalaGen {
         var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
         code = code + "  size_t sz = eaList.size();\n"
 
-        for (sources <- s0.sources.filter(_.stream)) {
+        for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
           val deltaRel = schema.deltaName
           code = code + "    "+deltaRel+".clear();\n"
@@ -1020,7 +1020,7 @@ trait ICppGen extends IScalaGen {
         code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
         code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
         
-        for (sources <- s0.sources.filter(_.stream)) {
+        for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
           val deltaRel = schema.deltaName
           val entryClass = deltaRel + "_entry"  
@@ -1032,7 +1032,7 @@ trait ICppGen extends IScalaGen {
           code = code + "      }\n"
         }
         code = code +   "    }\n"
-        for (sources <- s0.sources.filter(_.stream)) {
+        for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
           val deltaRel = schema.deltaName
           code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
@@ -1234,7 +1234,7 @@ trait ICppGen extends IScalaGen {
     }
 
     adaptor+split+in+
-    "add_source("+sourceFileVar+(if(s.stream) "" else ", true")+");\n"
+    "add_source("+sourceFileVar+(if(s.isStream) "" else ", true")+");\n"
   }
 
   override def streams(sources:List[Source]) = {
@@ -1248,7 +1248,7 @@ trait ICppGen extends IScalaGen {
       scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts,loc)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts),loc) } ::: xs
     }
     val src = fixOrderbook(sources)
-    val ss="\n/* Specifying data sources */\n\n"+src.filter{!_.stream}.map(genStreams).mkString("\n")+"\n"+src.filter{_.stream}.map(genStreams).mkString("\n")
+    val ss="\n/* Specifying data sources */\n\n"+src.filter{!_.isStream}.map(genStreams).mkString("\n")+"\n"+src.filter{_.isStream}.map(genStreams).mkString("\n")
     ss
   }
 
