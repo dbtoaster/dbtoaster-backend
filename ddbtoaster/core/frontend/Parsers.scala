@@ -2,18 +2,16 @@ package ddbt.frontend
 
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.combinator.lexical.StdLexical
-import scala.util.parsing.combinator.token.StdTokens
 import ddbt.ast._
 
 /**
-  * These classes define the parsers for SQL and M3 languages 
-  * into corresponding AST.
+  * Define parsers for SQL and M3 languages 
   *
   * @author TCK
   */
 
 class ExtParser extends StandardTokenParsers {
-  
+
   class CaseInsensitiveLexical extends StdLexical {
 
     override protected def processIdent(name: String) = {
@@ -281,12 +279,14 @@ object M3Parser extends ExtParser with (String => M3.System) {
   }
 }
 
+
 // -----------------------------------------------------------------------------
 // SQL parser
 
 object SQLParser extends ExtParser with (String => SQL.System) {
 
-  import ddbt.ast.SQL._
+  import SQL._
+
   lexical.reserved ++= 
     List("SELECT", "FROM", "WHERE", "GROUP", "LEFT", "RIGHT", 
          "JOIN", "NATURAL", "ON") // reduce this list by conditional accepts
@@ -296,7 +296,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   lazy val field = 
     opt(ident <~ ".") ~ (ident | "*") ^^ { 
-      case t ~ n => Field(n, t.getOrElse(null)) 
+      case t ~ n => Field(n, t)
     } // if '*' compute the expansion
 
   // ------------ Expressions
@@ -367,9 +367,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
     | field
     | "(" ~> expr <~ ")"
     | "(" ~> query <~ ")" ^^ Nested
-    // | floatLit ^^ { Const(_, TypeFloat) }
     | doubleLit ^^ { Const(_, TypeDouble) }
-    // | intLit ^^ { Const(_, TypeInt) }
     | longLit ^^ { Const(_, TypeLong) }
     | stringLit ^^ { Const(_, TypeString) }
     | failure("SQL expression")
@@ -442,18 +440,18 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val join: Parser[Table] = 
     tab ~ 
     rep( // joins should be left-associative
-      ("NATURAL" ~ "JOIN") ~> tab ^^ { (_, JoinInner, null) }
+      ("NATURAL" ~ "JOIN") ~> tab ^^ { (_, JoinInner, None) }
     | ( opt(
         "LEFT" ^^^ JoinLeft
       | "RIGHT" ^^^ JoinRight
       | "FULL" ^^^ JoinFull
       ) <~ 
       opt("OUTER") <~ "JOIN") ~ tab ~ ("ON" ~> cond) ^^ { 
-        case j ~ t ~ c => (t, j.getOrElse(JoinInner), c) 
+        case j ~ t ~ c => (t, j.getOrElse(JoinInner), Some(c))
       }
     ) ^^ { 
       case t ~ js => (t /: js) { 
-        case (t1, (t2, j, c)) => TableJoin(t1,t2,j,c) 
+        case (t1, (t2, j, c)) => TableJoin(t1, t2, j, c)
       }
     }
 
@@ -467,7 +465,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   lazy val groupBy = 
     "GROUP" ~> "BY" ~> rep1sep(field, ",") ~ opt("HAVING" ~> disj) ^^ { 
-      case fs ~ ho => GroupBy(fs, ho.getOrElse(null)) 
+      case fs ~ ho => GroupBy(fs, ho) 
     }
 
   lazy val orderBy = 
@@ -490,14 +488,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
     opt(groupBy) ~ 
     opt(orderBy) ^^ {
       case d ~ cs ~ ts ~ wh ~ gb ~ ob => 
-        Select(
-          d.isDefined, 
-          cs, 
-          ts.getOrElse(Nil), 
-          wh.getOrElse(null),
-          gb.getOrElse(null),
-          ob.getOrElse(null)
-        ) 
+        Select(d.isDefined, cs, ts.getOrElse(Nil), wh, gb, ob)
     }
 
   // ------------ System definition

@@ -624,7 +624,7 @@ object M3 {
 // -----------------------------------------------------------------------------
 // SQL (http://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt)
 
-sealed abstract class SQL // see ddbt.frontend.SQLParser
+sealed abstract class SQL // see ddbt.frontend.Parsers
 
 object SQL {
 
@@ -667,19 +667,19 @@ object SQL {
   }
 
   case class Select(distinct: Boolean, cs: List[Expr], ts: List[Table], 
-                    wh: Cond = null, gb: GroupBy = null, ob: OrderBy = null)  extends Query {
+                    wh: Option[Cond], gb: Option[GroupBy], ob: Option[OrderBy])  extends Query {
     override def toString = 
       "SELECT " + (if (distinct) "DISTINCT " else "") + cs.mkString(", ") + 
-      "\nFROM " + ts.mkString(", ")+
-      (if (wh != null) "\nWHERE " + wh else "") + 
-      (if (gb != null) "\n" + gb else "") + 
-      (if (ob != null) "\n" + ob else "")
+      "\nFROM " + ts.mkString(", ") +
+      wh.map("\nWHERE " + _).getOrElse("") +
+      gb.map("\n" + _).getOrElse("") + 
+      ob.map("\n" + _).getOrElse("")
   }
 
-  case class GroupBy(fs: List[Field], cond: Cond = null) extends SQL { 
+  case class GroupBy(fs: List[Field], cond: Option[Cond]) extends SQL { 
     override def toString = 
       "GROUP BY " + fs.mkString(", ") +
-      (if (cond != null) " HAVING " + cond else "") 
+      cond.map(" HAVING " + _).getOrElse("")
   }
   
   case class OrderBy(cs: List[(Field, Boolean)]) extends SQL { 
@@ -704,14 +704,14 @@ object SQL {
     override def toString = t + " " + n 
   }
 
-  case class TableJoin(t1: Table, t2: Table, j: Join, c: Cond) extends Table {
+  case class TableJoin(t1: Table, t2: Table, j: Join, c: Option[Cond]) extends Table {
     // empty condition = natural join
     override def toString = t1 + "\n  " + (j match {
-      case JoinInner => (if (c == null) "NATURAL " else "") + "JOIN"
-      case JoinLeft  => "LEFT JOIN"
-      case JoinRight => "RIGHT JOIN"
-      case JoinFull  => "FULL JOIN"
-    }) + " " + t2 + (if (c != null) " ON " + c else "")
+        case JoinInner => if (c == None) "NATURAL JOIN" else "JOIN"
+        case JoinLeft  => "LEFT JOIN"
+        case JoinRight => "RIGHT JOIN"
+        case JoinFull  => "FULL JOIN"
+      }) + " " + t2 + c.map(" ON " + _).getOrElse("")
   }
 
   // ---------- Expressions
@@ -721,8 +721,8 @@ object SQL {
     override def toString = e + " AS " + n 
   }
 
-  case class Field(n: String, t: String) extends Expr { 
-    override def toString = if (t == null) n else t + "." + n 
+  case class Field(n: String, t: Option[String]) extends Expr { 
+    override def toString = t.map(_ + "." + n).getOrElse(n)
   }
 
   case class Const(v: String, tp: Type) extends Expr { 
@@ -741,7 +741,8 @@ object SQL {
     override def toString = 
       "CASE" + ind(
         ce.map { case (c, t) => "\nWHEN " + c + " THEN " + t }.mkString + 
-        "\nELSE " + d) + "\nEND"
+        "\nELSE " + d) + 
+      "\nEND"
   }
 
   // ---------- Arithmetic
@@ -768,9 +769,9 @@ object SQL {
   // ---------- Aggregation
   case class Agg(e: Expr, op: OpAgg) extends Expr { 
     override def toString = (op match { 
-      case OpCountDistinct => "COUNT(DISTINCT " 
-      case _ => op.toString.substring(2).toUpperCase + "(" 
-    }) + e + ")" 
+        case OpCountDistinct => "COUNT(DISTINCT " 
+        case _ => op.toString.substring(2).toUpperCase + "(" 
+      }) + e + ")" 
   }
 
   case class All(q: Query) extends Expr { 
@@ -809,6 +810,6 @@ object SQL {
   }
 
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Cond { 
-    override def toString = l + " " + op.toSQL + " " + r 
+    override def toString = l + " " + op + " " + r 
   }
 }
