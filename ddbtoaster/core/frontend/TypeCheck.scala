@@ -215,7 +215,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case a @ AggSum(ks, e) =>
           val in = ie(e, c, t)
           cr = c ++ ks.map { case (n, t) => (n, in(n)) }
-          a.ks = ks.map { case (n, _) => (n, cr(n)) }   // resolved types
+          a.keys = ks.map { case (n, _) => (n, cr(n)) }   // resolved types
         case a @ Apply(n, ss, as) => 
           as.map(ie(_, c, t))         
           a.tp = Library.typeCheck(n, as.map(_.tp))

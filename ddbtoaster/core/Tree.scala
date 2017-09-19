@@ -284,23 +284,10 @@ object M3 {
     override def toString = "ON " + evt + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
 
-  object FMap {
-    val empty: Option[Map[(String, Type), (String, Type)]] = Some(Map())
-    def create(a: (String, Type), b: (String, Type)): Option[Map[(String, Type), (String, Type)]] = Some(Map(a -> b))
-    def create(m: Map[(String, Type), (String, Type)]) = Some(m)
-    def merge(a: Option[Map[(String, Type), (String, Type)]], 
-              b: => Option[Map[(String, Type), (String, Type)]]) = 
-      if (a == None) None else (a, b) match {
-        case (Some(a), Some(b)) =>
-          val common = a.keySet.intersect(b.keySet)
-          if (common.exists(k => a(k) != b(k))) None else Some(a ++ b)
-        case _ => None
-      }
-  }
-
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
     def tp: Type                          // expression type
+
     def locality: Option[LocalityType]    // expression locality type
    
     def collect[T](f: PartialFunction[Expr, List[T]]): List[T] = 
@@ -386,6 +373,7 @@ object M3 {
       def union(l1: List[(String, Type)],l2: List[(String, Type)])  = (l1 ++ l2).distinct
       def diff(l1: List[(String, Type)], l2: List[(String, Type)])  = l1.filterNot(l2.contains)
       def inter(l1: List[(String, Type)], l2: List[(String, Type)]) = l1.filter(l2.contains)
+
       this match {
         case Const(tp, v) => (List(), List())
         case Ref(n) => (List((n, this.tp)), List())
@@ -419,43 +407,58 @@ object M3 {
       }
     }
 
-    def cmp(that: Expr): Option[Map[(String, Type), (String, Type)]] = 
+    def ivars: List[(String, Type)] = schema._1
+
+    def ovars: List[(String, Type)] = schema._2
+
+    def cmp(that: Expr): Option[Map[(String, Type), (String, Type)]] = {
+      val empty: Option[Map[(String, Type), (String, Type)]] = Some(Map())
+      def merge(a: Option[Map[(String, Type), (String, Type)]],
+                b: => Option[Map[(String, Type), (String, Type)]]) =
+        if (a == None) None
+        else (a, b) match {
+          case (Some(a), Some(b)) =>
+            if (a.keySet.intersect(b.keySet).exists(k => a(k) != b(k))) None
+            else Some(a ++ b)
+          case _ => None
+        }
+
       if (this.tp != that.tp) None else (this, that) match {
         case (Const(_, v1), Const(_, v2)) => 
-          if (v1 == v2) FMap.empty else None        
+          if (v1 == v2) empty else None
         case (a @ Ref(n1), b @ Ref(n2)) => 
-          FMap.create((n1, a.tp), (n2, b.tp))        
+          Some(Map((n1, a.tp) -> (n2, b.tp)))
         case (Apply(fn1, tp1, as1), Apply(fn2, tp2, as2)) =>
           if (fn1 != fn2 || as1.length != as2.length) None 
-          else as1.zip(as2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, a.cmp(b)) }
-        case (MapRef(n1, tp1, ks1), MapRef(n2, tp2, ks2)) => 
-          if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+          else as1.zip(as2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, a.cmp(b)) }
+        case (MapRef(n1, tp1, ks1), MapRef(n2, tp2, ks2)) =>
+          if (n1 != n2 || ks1.length != ks2.length) None
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) => 
           if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>          
           if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
-          if (op1 != op2) None else FMap.merge(l1.cmp(l2), r1.cmp(r2))
-        case (Mul(l1, r1), Mul(l2, r2)) => 
-          FMap.merge(l1.cmp(l2), r1.cmp(r2))
-        case (Add(l1, r1), Add(l2, r2)) => 
-          FMap.merge(l1.cmp(l2), r1.cmp(r2))          
+          if (op1 != op2) None else merge(l1.cmp(l2), r1.cmp(r2))
+        case (Mul(l1, r1), Mul(l2, r2)) =>
+          merge(l1.cmp(l2), r1.cmp(r2))
+        case (Add(l1, r1), Add(l2, r2)) =>
+          merge(l1.cmp(l2), r1.cmp(r2))
         case (Lift(v1, e1), Lift(v2, e2)) =>
-          FMap.merge(e1.cmp(e2), FMap.create((v1, e1.tp), (v2, e2.tp)))
+          merge(e1.cmp(e2), Some(Map((v1, e1.tp) -> (v2, e2.tp))))
         case (Exists(e1), Exists(e2)) => e1.cmp(e2)
         case (AggSum(ks1, e1), AggSum(ks2, e2)) =>
           if (ks1.length != ks2.length) None else e1.cmp(e2) match {
             case Some(mapping) if ks1.map(mapping.apply).toSet == ks2.toSet =>
               val rvars = (e1.schema._1 ++ ks1).toSet
               val rmapping = rvars.map(v => (v, mapping.apply(v))).toMap
-              FMap.create(rmapping)              
+              Some(rmapping)
             case _ => None
           }
         case (Repartition(ks1, e1), Repartition(ks2, e2)) =>
@@ -466,6 +469,7 @@ object M3 {
         case (Gather(e1), Gather(e2)) => e1.cmp(e2)
         case _ => None
       }
+    }
   }
 
   // Constants
@@ -481,7 +485,8 @@ object M3 {
     override def toString = name
   }
 
-  case class MapRef(name: String, var tp: Type /*M3 bug*/, var keys: List[(String, Type)]) extends Expr { 
+  // Map reference
+  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)]) extends Expr {
     var isTemp:  Boolean = false
     var locality: Option[LocalityType] = Some(LocalExp)
     
@@ -494,18 +499,21 @@ object M3 {
     def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
+  // Lifting operator ('Let name=e in ...' semantics)
   case class Lift(name: String, e: Expr) extends Expr { 
     val tp = TypeLong
     def locality = e.locality
     override def toString = "(" + name + " ^= " + e + ")"
-  } // 'Let name=e in ...' semantics (combined with Mul)
+  }
 
+  // Map reference of a table
   case class MapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
     val tp = TypeLong 
     var locality: Option[LocalityType] = None
     override def toString = name + "(" + keys.map(_._1).mkString(", ") + ")"
-  } // appear in Map definition and constant table lookups
+  }
 
+  // Map reference of a delta update
   case class DeltaMapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
     val tp = TypeLong
     var locality: Option[LocalityType] = None
@@ -513,19 +521,20 @@ object M3 {
     def deltaName = Schema(name, null).deltaName 
   } //used for delta relations used while batching is used
   
-  // Operations
-  case class AggSum(var ks: List[(String, Type)], e: Expr) extends Expr { 
+  // Sum aggregate
+  case class AggSum(var keys: List[(String, Type)], e: Expr) extends Expr {
     def tp = e.tp
     def locality = e.locality match {
       case l @ Some(DistByKeyExp(pk)) =>
-        val expVars = (e.schema._1 ++ ks).toSet
+        val expVars = (e.schema._1 ++ keys).toSet
         if (pk.forall(expVars.contains)) l else Some(DistRandomExp)
       case l => l
     }
     override def toString =
-      "AggSum([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
-  } // (grouping_keys)->sum relation
+      "AggSum([" + keys.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
+  }
 
+  // Multiplication operator
   case class Mul(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null 
     def locality = (l.locality, r.locality) match {
@@ -544,8 +553,9 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Mul: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " * " + r + ")"
-  } // cross-product semantics
+  }
 
+  // Union operator
   case class Add(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null
     def locality = (l.locality, r.locality) match {
@@ -559,30 +569,34 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Add: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " + " + r + ")"
-  } // set union semantics
+  }
 
+  // Exists operator - returns 0 or 1 (checks if there is at least one tuple)
   case class Exists(e: Expr) extends Expr { 
     val tp = TypeLong 
     def locality = e.locality
     override def toString = "EXISTS(" + e + ")"
-  } // returns 0 or 1 (check that there is at least one tuple)
+  }
 
-  case class Apply(fun: String, var tp: Type /*=>typeCheck*/, args: List[Expr]) extends Expr {
+  // Function application
+  case class Apply(fun: String, var tp: Type, args: List[Expr]) extends Expr {
     val locality: Option[LocalityType] = None
-    override def toString = "[" + fun + ": " + tp + "](" + args.mkString(", ") + ")" 
-  } // function application
+    override def toString = "[" + fun + ": " + tp + "](" + args.mkString(", ") + ")"
+  }
 
+  // Comparison, returns 0 or 1
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Expr { 
     val tp = TypeLong    
     val locality: Option[LocalityType] = None
-    override def toString = "{" + l + " " + op.toM3 + " " + r + "}"
-  } // comparison, returns 0 or 1
+    override def toString = "{" + l + " " + op + " " + r + "}"
+  }
 
+  // OR comparison with a given expr list, returns 0 or 1
   case class CmpOrList(l: Expr, r: List[Expr]) extends Expr {
     val tp = TypeLong
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " IN [" + r.mkString(", ") + "]}"
-  } // comparison, returns 0 or 1
+  }
 
   // Tupling
   case class Tuple(es: List[Expr]) extends Expr { 
@@ -591,13 +605,14 @@ object M3 {
     override def toString = "<" + es.mkString(", ") + ">"
   }
 
+  // Lifting operator with tuples
   case class TupleLift(ns: List[String], e: Expr) extends Expr { 
     val tp = TypeLong
     val locality: Option[LocalityType] = None
     override def toString = "(<" + ns.mkString(", ") + "> ^= " + e + ")"
   }
 
-  // Distributed operations
+  // Distributed operation - repartion by key
   case class Repartition(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp    
     def locality = Some(DistByKeyExp(ks))
@@ -605,6 +620,7 @@ object M3 {
       "Repartition([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"  
   } 
 
+  // Distributed operation - gather on master
   case class Gather(e: Expr) extends Expr { 
     def tp = e.tp    
     val locality = Some(LocalExp)    
