@@ -39,6 +39,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import IR._
+  import ddbt.lib.TypeHelper.Scala._
 
   val infoFile = new File(s"../runtime/stats/${if (Optimizer.infoFileName == "") "default" else Optimizer.infoFileName}.json")
   val infoFilePath = infoFile.getAbsolutePath
@@ -344,7 +345,7 @@ if(Optimizer.initialStoreSize) {
 
   def filterStatement(s: TriggerStmt) = !s.target.name.endsWith("_DELTA")
 
-  def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + tp.toScala + " = " + tp.zero
+  def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + typeToString(tp) + " = " + zeroOfType(tp)
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     if (Optimizer.analyzeEntry) {
@@ -364,7 +365,7 @@ if(Optimizer.initialStoreSize) {
     val res = nodeName + "_mres"
     def get(i: Int) = if (Optimizer.analyzeEntry) s"e._$i" else s"e.get($i)"
     if (q.expr.ovars.size > 0)
-      "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(_.toScala)) + "," + q.expr.tp.toScala + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
+      "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(typeToString)) + "," + typeToString(q.expr.tp) + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
     else {
       q.name
     }
@@ -447,23 +448,19 @@ if(Optimizer.initialStoreSize) {
   override def genPardis(s0: M3.System): (String, String, String) = {
     ExpressionSymbol.globalId = 0
     m3System = s0
-    val classLevelMaps = s0.triggers.filter(_.event match {
-      case EventBatchUpdate(s) => true
-      case _ => false
-    }).map(_.event match {
-      //delta relations
-      case EventBatchUpdate(sc) =>
-        val name = sc.name
-        val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-        val deltaRel = sc.deltaName
-        val tp = TypeLong
-        val keys = schema.fields
-        MapDef(deltaRel, tp, keys, null, LocalExp)
-      case _ => null
-    }) ++
+    val classLevelMaps = 
+    // s0.triggers.filter(_.event match {
+    //   case EventBatchUpdate(s) => true
+    //   case _ => false
+    // }).map(_.event match {
+    //   //delta relations
+    //   case EventBatchUpdate(schema) =>
+    //     MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp)
+    //   case _ => null
+    // }) ++
       mapDefs.map {
         case (_, m@MapDef(_, _, _, _, _)) => m
-      } // XXX missing indexes
+      }.toList // XXX missing indexes
     globalMembersBlock = IR.reifyBlock {
       ctx0 = classLevelMaps.map {
         case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
@@ -564,6 +561,7 @@ if(Optimizer.initialStoreSize) {
 class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) {
 
   import IR._
+  import ddbt.lib.TypeHelper.Scala._
 
   override val codeGen = new StoreScalaCodeGenerator(IR)
 

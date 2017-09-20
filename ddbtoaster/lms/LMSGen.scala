@@ -11,9 +11,10 @@ import ddbt.ast._
 abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, override val watch: Boolean = false) extends IScalaGen {
 
   import ddbt.ast.M3._
-  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear } // common functions
+  import ddbt.lib.Utils._
   import ddbt.lib.store.{ Store, Entry }
   import ddbt.lib.ManifestHelper.{man, zero, manEntry, manStore}
+  import ddbt.lib.TypeHelper.Scala._
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
   
@@ -318,10 +319,9 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
     val block = impl.reifyEffects {
       params = t.event match {
         case EventBatchUpdate(Schema(n, _)) =>
-          val rel = s0.sources.filter(_.schema.name == n)(0).schema
-          val name = rel.deltaName    
+          val name = delta(n)
           name + ": Store[" + impl.codegen.storeEntryType(ctx0(name)._1) + "]"
-        case _ => args.map(a => a._1 + ": " + a._2.toScala).mkString(", ")
+        case _ => args.map(a => a._1 + ": " + typeToString(a._2)).mkString(", ")
       }
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
@@ -403,7 +403,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       val res = nodeName + "_mres"
 
       "{ val " + res + " = new scala.collection.mutable.HashMap[" +
-      tup(mapKeys.map(_.toScala)) + ", " + q.expr.tp.toScala + "](); " +
+      tup(mapKeys.map(typeToString)) + ", " + typeToString(q.expr.tp) + "](); " +
       map + ".foreach { e => " + res+" += (" +
       tup(mapKeys.zipWithIndex.map { case (_, i) => "e._" + (i + 1) }) +
       " -> e._" + (mapKeys.size + 1) + ") }; " + res + ".toMap }"
@@ -423,7 +423,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
   def genAllMaps(maps: Seq[MapDef]) = maps.map(genMap).mkString("\n")
 
-  def createVarDefinition(name: String, tp: Type) = "var " + name + ": " + tp.toScala + " = " + tp.zero
+  def createVarDefinition(name: String, tp: Type) = "var " + name + ": " + typeToString(tp) + " = " + zeroOfType(tp)
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     val (a, keys, tp) = ctx0(map)
@@ -450,22 +450,23 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
-    val classLevelMaps = s0.triggers.filter(_.event match {
-      case EventBatchUpdate(s) => true
-      case _ => false
-    }).map(_.event match { //delta relations
-      case EventBatchUpdate(sc) =>
-        val name = sc.name
-        val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-        val deltaRel = sc.deltaName
-        val tp = TypeLong
-        val keys = schema.fields
-        MapDef(deltaRel, tp, keys, null, LocalExp)
-      case _ => null
-    }) ++
+    val classLevelMaps = 
+    // s0.triggers.filter(_.event match {
+    //   case EventBatchUpdate(s) => true
+    //   case _ => false
+    // }).map(_.event match { //delta relations
+    //   case EventBatchUpdate(sc) =>
+    //     val name = sc.name
+    //     val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
+    //     val deltaRel = sc.deltaName
+    //     val tp = TypeLong
+    //     val keys = schema.fields
+    //     MapDef(deltaRel, tp, keys, null, LocalExp)
+    //   case _ => null
+    // }) ++
     mapDefs.map {
       case (_, m: MapDef) => m
-    } // XXX missing indexes
+    }.toList // XXX missing indexes
 
     resultMapNames = s0.queries.map(q => q.name)
     ctx0 = classLevelMaps.map {
@@ -555,12 +556,13 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(cls, ScalaExpGen, watch) {
   import ddbt.ast.M3._
   import ddbt.lib.Utils.ind
+  import ddbt.lib.TypeHelper.Scala._
 
   override def createVarDefinition(name: String, tp: Type) = {
     if (watch && resultMapNames.contains(name)) // only use ValueWrapper if watch flag is enabled and the variable is the result
-      "var " + name + " = new ValueWrapper(" + tp.zero + ")"
+      "var " + name + " = new ValueWrapper(" + zeroOfType(tp) + ")"
     else
-      "var " + name + ": " + tp.toScala + " = " + tp.zero
+      "var " + name + ": " + typeToString(tp) + " = " + zeroOfType(tp)
   }
 
   override protected def emitGetSnapshotBody(queries: List[Query]): String = {

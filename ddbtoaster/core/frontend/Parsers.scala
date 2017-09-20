@@ -69,14 +69,9 @@ class ExtParser extends StandardTokenParsers {
   // ------------ Types
   lazy val tpe: Parser[Type] = (
     ("string" | ("char" | "varchar") ~> "(" ~> numericLit <~ ")") ^^^ TypeString
-    // | "char" ^^^ TypeChar 
-    // | "short" ^^^ TypeShort 
-    // | "int" ^^^ TypeInt 
     | ("char" | "short" | "int" | "long") ^^^ TypeLong
-    // | ("float" | "decimal") ^^^ TypeFloat
     | ("float" | "decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
-    | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
     | failure("Bad type")
   )
 

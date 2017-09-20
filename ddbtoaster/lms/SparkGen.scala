@@ -11,9 +11,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
   
   import ddbt.ast.M3._
   import ddbt.ast._
-  import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
-  import ddbt.lib.ManifestHelper.{ man, zero, manEntry, manStore }
+  import ddbt.lib.Utils._
+  import ddbt.lib.ManifestHelper.{ manEntry, manStore }
   import ddbt.lib.store._
+  import ddbt.lib.TypeHelper.Scala._
   import impl.Rep
 
   var deltaMapInfo = List[(String, MapInfo)]()  
@@ -42,7 +43,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         val source = s0.sources.filter(_.schema.name == name).head
         val keys = source.schema.fields
         val storeType = if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) ArrayStore else IndexedStore
-        List((s.deltaName, MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, storeType)))
+        List((delta(name), MapInfo(delta(name), TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, storeType)))
       case EventInsert(_) | EventDelete(_) => 
         sys.error("Distributed programs run only in batch mode.")
       case _ => Nil
@@ -993,7 +994,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     fields.zipWithIndex.map { case ((_, _), i) => "v" + i }.mkString(", ")
 
   def fieldsToParamList(fields: List[(String, Type)]): String = 
-    fields.zipWithIndex.map { case ((_, tp), i) => s"v$i: ${tp.toScala}" }.mkString(", ")
+    fields.zipWithIndex.map { case ((_, tp), i) => s"v$i: ${typeToString(tp)}" }.mkString(", ")
 
   protected def emitEventHandlers(s0: System, skipExec: Boolean): String = {
     val step = 128 // periodicity of timeout verification, must be a power of 2
@@ -1023,11 +1024,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
               |}
               |""".stripMargin      
         val sStreamCase = batchEvents.map {
-          case EventBatchUpdate(s) =>
-            val schema = s0.sources.filter(_.schema.name == s.name).head.schema
-            val deltaName = schema.deltaName
+          case EventBatchUpdate(schema) =>
             val params = fieldsToParamList(schema.fields)
-            val addBatchTuple = ind(genAddBatchTuple(deltaName, schema.fields, "vv"), 2)
+            val addBatchTuple = ind(genAddBatchTuple(delta(schema.name), schema.fields, "vv"), 2)
             s"""|case ("${schema.name}", dataList) => 
                 |  dataList.foreach { case List(${params}, vv: TupleOp) =>
                 |$addBatchTuple
@@ -1035,7 +1034,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
           case _ => ""
         }.mkString("\n")
         val deltaNames = batchEvents.flatMap {
-          case EventBatchUpdate(s) => List(s.deltaName)
+          case EventBatchUpdate(schema) => List(delta(schema.name))
           case _ => Nil
         } 
         val onBatchArgs = deltaNames.mkString(", ")
@@ -1147,14 +1146,14 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     }).mkString(",\n")
 
     val sEnqueueBatches = streams.zipWithIndex.map { case (s, ind) => {
-        val name = s.schema.deltaName
+        val name = delta(s.schema.name)
         val params = fieldsToParamList(s.schema.fields)
         val args = fieldsToArgList(s.schema.fields)
         s"""|ctx.rdd.zip(batchedStreams(${ind})).foreach {
             |  case ((id, localCtx), batches) =>
             |    for (batch <- batches)
             |    {
-            |      localCtx.${s.schema.deltaName}_QUEUE.enqueue(
+            |      localCtx.${delta(s.schema.name)}_QUEUE.enqueue(
             |        batch.map { case List(${params}) => 
             |          ${impl.codegen.storeEntryType(ctx0(name)._1)}(${args}, Messages.TupleInsert)
             |      })
@@ -1218,16 +1217,16 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     }).mkString(",\n")
 
     val sDistInputList = streams.map (s => {
-        val name = s.schema.deltaName
+        val name = delta(s.schema.name)
         s"val ${name}_BATCHES = new ArrayBuffer[${impl.codegen.storeEntryType(ctx0(name)._1)}](16)"
       }).mkString("\n")
 
     val sQueueList = streams.map (s => 
-        s"localCtx.${s.schema.deltaName}_QUEUE.enqueue(${s.schema.deltaName}_BATCHES)"
+        s"localCtx.${delta(s.schema.name)}_QUEUE.enqueue(${delta(s.schema.name)}_BATCHES)"
       ).mkString("\n")
 
     val sCaseList = streams.zipWithIndex.map { case (s, ind) => {
-        val name = s.schema.deltaName
+        val name = delta(s.schema.name)
         val params = fieldsToParamList(s.schema.fields)
         val args = fieldsToArgList(s.schema.fields)
         s"""|case (List(${params}, vv: TupleOp), (ind, $ind)) =>
@@ -1271,11 +1270,11 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   override def toMapFunction(q: Query) = {
     val mapName = q.name
-    val mapType = q.expr.tp.toScala
+    val mapType = typeToString(q.expr.tp)
     val mapDef = mapInfo(mapName)
     val mapKeyTypes = mapDef.keys.map(_._2)
     val args = tup(mapKeyTypes.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
-    val params = tup(mapKeyTypes.map(_.toScala))
+    val params = tup(mapKeyTypes.map(typeToString))
     val resultMapName = mapName + "Result"
     mapDef.locality match {
       case LocalExp => 
@@ -1441,7 +1440,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
                     |if (!localCtx.${name}_QUEUE.isEmpty) {
                     |  val ${name}_TMP = localCtx.${name}_QUEUE.dequeue
                     |  ${name}_TMP.foreach {
-                    |    case ${storeEntryType}(${params}, vv: ${tp.toScala}) =>
+                    |    case ${storeEntryType}(${params}, vv: ${typeToString(tp)}) =>
                     |${ind(addBatchTuple, 3)}
                     |  }
                     |}

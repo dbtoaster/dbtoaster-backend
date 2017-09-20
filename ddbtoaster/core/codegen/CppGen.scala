@@ -13,7 +13,8 @@ class CppGen(override val cls: String = "Query", override val isReleaseMode: Boo
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.lib.Utils.{ ind, fresh, freshClear, stringIf } // common functions
+  import ddbt.lib.Utils._
+  import ddbt.lib.TypeHelper.Cpp._
 
   def isReleaseMode: Boolean = false
 
@@ -33,6 +34,22 @@ trait ICppGen extends IScalaGen {
   var sampleEntDef = ""
 
   var unionDepth = 0
+
+  protected def mapTypeToString(m: MapDef) = 
+    if (m.keys.size == 0) typeToString(m.tp) else m.name + "_map"
+
+  protected def queryTypeToString(q: Query) = 
+    if (q.expr.ovars.size == 0) typeToString(q.expr.tp) else q.name + "_map"
+
+  protected def queryRefTypeToString(q: Query) = 
+    if (q.expr.ovars.size == 0) typeToString(q.expr.tp) else q.name + "_map&"
+
+  protected def cmpToString(op: OpCmp) = op match {
+    case OpEq => "=="
+    case OpNe => "!="
+    case OpGt => ">"
+    case OpGe => ">="
+  }
 
   private val ifReleaseMode = stringIf(isReleaseMode, "// ")
   private val ifPrintTimingInfo = stringIf(!printTiminingInfo, "// ")
@@ -81,14 +98,14 @@ trait ICppGen extends IScalaGen {
   def tup(ks:List[String],vs:String) = "("+ks.mkString(",")+","+vs+")"
   
   def tupType(ksTp:List[Type], vsTp:Type):String = {
-    val tupleTp="tuple"+(ksTp.size+1)+"_"+ksTp.map(_.simpleName).mkString+"_"+vsTp.simpleName
+    val tupleTp="tuple"+(ksTp.size+1)+"_"+ksTp.map(typeToChar).mkString+"_"+typeToChar(vsTp)
     tempTupleTypes.update(tupleTp,(ksTp, vsTp))
     tupleTp
   }
 
   override def consts = cs.map{ case (Apply(f,tp,as),n) =>
     val vs=as.map(a=>cpsExpr(a))
-    "/*const static*/ "+tp.toCpp+" "+n+";\n"
+    "/*const static*/ "+typeToString(tp)+" "+n+";\n"
   }.mkString+"\n" // constant member definition
 
   def constsInit = cs.map{ case (Apply(f,tp,as),n) => f match {
@@ -104,7 +121,7 @@ trait ICppGen extends IScalaGen {
   // Create a variable declaration
   //XXXXX TODO
   override def genVar(n:String,vsTp:Type,ksTp:List[Type]) = if (ksTp==Nil) {
-    vsTp.toCpp+" "+n+" = "+vsTp.zeroCpp+";\n"
+    typeToString(vsTp)+" "+n+" = "+zeroOfType(vsTp)+";\n"
   } else {
     tmpMapDefs += (n -> (ksTp,vsTp))
     n+".clear();\n"
@@ -120,9 +137,9 @@ trait ICppGen extends IScalaGen {
     // }
     case _ =>
       if(withIfThenElse)
-        "(/*if */("+arg1+" "+op+" "+arg2+")"+" ? 1L : 0L)"
+        "(/*if */("+arg1+" "+cmpToString(op)+" "+arg2+")"+" ? 1L : 0L)"
       else
-        arg1+" "+op+" "+arg2
+        arg1+" "+cmpToString(op)+" "+arg2
   }
 
   // extract cond and then branch of "if (c) t else 0"
@@ -156,7 +173,7 @@ trait ICppGen extends IScalaGen {
     }
 
     case Exists(e) => cpsExpr(e, (v: String) => 
-      co(cmpFunc(TypeLong, OpNe, v, ex.tp.zeroCpp)))
+      co(cmpFunc(TypeLong, OpNe, v, zeroOfType(ex.tp))))
 
     case Cmp(l,r,op) =>
       co(cpsExpr(l, (ll: String) => cpsExpr(r, (rr: String) => cmpFunc(l.tp, op, ll, rr))))
@@ -208,9 +225,9 @@ trait ICppGen extends IScalaGen {
           
           val body = 
             ki.map { case ((k,ktp), i) => 
-              ktp.toCpp + " " + rn(k) + " = " + e0 + "->" + mapDef.keys(i)._1 + ";\n"
+              typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDef.keys(i)._1 + ";\n"
             }.mkString + 
-            tp.toCpp + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
+            typeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
             co(v0)
 
           if (ko.size > 0) { //slice
@@ -272,10 +289,10 @@ trait ICppGen extends IScalaGen {
         else { //only foreach for Temp map
           val body = 
             ki.map { case ((k,ktp), i) => 
-              s"    ${ktp.toCpp} ${rn(k)} = ${e0}->_${(i + 1)};"
+              s"    ${typeToString(ktp)} ${rn(k)} = ${e0}->_${(i + 1)};"
             }.mkString("\n") +
             s"""|
-                |    ${tp.toCpp} ${v0} = ${e0}->${VALUE_NAME};
+                |    ${typeToString(tp)} ${v0} = ${e0}->${VALUE_NAME};
                 |${ind(co(v0),2)}
                 |    ${e0} = ${e0}->nxt;
                 |""".stripMargin
@@ -304,7 +321,7 @@ trait ICppGen extends IScalaGen {
         // will fail without a renaming.
         case _ =>
           ctx.add(n,(e.tp,fresh("l")))
-          cpsExpr(e,(v:String)=> e.tp.toCpp+" "+rn(n)+" = "+v+";\n"+co("1L"),am)
+          cpsExpr(e,(v:String)=> typeToString(e.tp)+" "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
     // Mul(el,er)
     // ==
@@ -318,15 +335,15 @@ trait ICppGen extends IScalaGen {
         val body = cpsExpr(er, (vr: String) => {
           (extractBooleanExp(vl), extractBooleanExp(vr)) match {
               case (Some((cl,tl)), Some((cr,tr))) =>
-                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + ex.tp.zeroCpp + ")") }
-                else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl,tr) + " : " + ex.tp.zeroCpp + ")")
+                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + zeroOfType(ex.tp) + ")") }
+                else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl,tr) + " : " + zeroOfType(ex.tp) + ")")
 
               case (Some((cl,tl)), _) =>
                 if (unionDepth == 0) { ifcond = cl; co(vx(tl,vr)) }
-                else co("(/*if */(" + cl + ") ? " + vx(tl,vr) + " : " + ex.tp.zeroCpp + ")")
+                else co("(/*if */(" + cl + ") ? " + vx(tl,vr) + " : " + zeroOfType(ex.tp) + ")")
 
               case (_, Some((cr,tr))) =>
-                co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + ex.tp.zeroCpp + ")")
+                co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + zeroOfType(ex.tp) + ")")
 
               case _ => co(vx(vl,vr))
             }
@@ -399,7 +416,7 @@ trait ICppGen extends IScalaGen {
         cpsExpr(e, (v: String) =>
           extractBooleanExp(v) match {
             case Some((c,t)) =>
-              "(/*if */(" + c + ") ? " + a0 + " += " + t + " : " + a.tp.zeroCpp+");\n"
+              "(/*if */(" + c + ") ? " + a0 + " += " + t + " : " + zeroOfType(a.tp)+");\n"
             case _ =>
               a0 + " += " + v + ";\n"
           }) +
@@ -497,14 +514,14 @@ trait ICppGen extends IScalaGen {
         }
         else {
           val schema = t.event.schema
-          s"""|void on_batch_update_${schema.name}(${schema.deltaName}_map &${schema.deltaName}) {
-              |  tN += ${schema.deltaName}.count() - 1; ++tN;
+          s"""|void on_batch_update_${schema.name}(${delta(schema.name)}_map &${delta(schema.name)}) {
+              |  tN += ${delta(schema.name)}.count() - 1; ++tN;
               |${ind(sTriggerBody)}
               |}
               |""".stripMargin
         }
       case EventInsert(s) =>
-        val params = fields.map(f => s"const ${f._2.toCppRefType} ${f._1}").mkString(", ")
+        val params = fields.map(f => s"const ${refTypeToString(f._2)} ${f._1}").mkString(", ")
         val schema = s0.sources.filter(_.schema.name == s.name).head.schema
         val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
         s"""|void on_insert_${s.name}(${params}) {
@@ -519,7 +536,7 @@ trait ICppGen extends IScalaGen {
                 |""".stripMargin)
 
       case EventDelete(s) =>
-        val params = fields.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
+        val params = fields.map(a => s"const ${refTypeToString(a._2)} ${a._1}").mkString(", ")
         val schema = s0.sources.filter(_.schema.name == s.name).head.schema
         val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
         s"""|void on_delete_${s.name}(${params}) {
@@ -548,7 +565,7 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genMap(m: MapDef):String = 
-    m.toCppType + " " + m.name + ";\n"
+    mapTypeToString(m) + " " + m.name + ";\n"
  
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = 
     map + ".add(" + keyNamesConcat + ", 1L)"
@@ -563,12 +580,12 @@ trait ICppGen extends IScalaGen {
   def genTempMapDefs = 
     if (EXPERIMENTAL_HASHMAP) {
       tmpMapDefs.map{ case (n, (ksTp, vsTp)) =>
-        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", PrimaryHashIndex<" + tupType(ksTp, vsTp) + "> > " + n + ";\n"
+        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + typeToString(vsTp) + ", PrimaryHashIndex<" + tupType(ksTp, vsTp) + "> > " + n + ";\n"
       }.mkString
     }
     else {
       tmpMapDefs.map{ case (n, (ksTp, vsTp)) =>
-        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", HashIndex<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + "> > " + n + ";\n"
+        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + typeToString(vsTp) + ", HashIndex<" + tupType(ksTp, vsTp) + ", " + typeToString(vsTp) + "> > " + n + ";\n"
       }.mkString
     }
 
@@ -589,14 +606,14 @@ trait ICppGen extends IScalaGen {
 
   private def getInitializationForIntermediateValues(maps:List[MapDef],queries:List[Query]) = 
     maps.filter { m => (queries.filter(_.name == m.name).size == 0) && (m.keys.size == 0)}
-        .map { m => ", " + m.name + "(" + m.tp.zeroCpp + ")"}
+        .map { m => ", " + m.name + "(" + zeroOfType(m.tp) + ")"}
         .mkString
 
   private def getInitializationForTempMaps = tmpMapDefs.map{ case (n, (ksTp, vsTp)) => ", "+n+"(16U)" }.mkString
 
   private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = 
     maps.filter { m => (queries.filter(_.name == m.name).size != 0) && (m.keys.size == 0)}
-        .map { m => ", " + m.name + "(" + m.tp.zeroCpp + ")"}
+        .map { m => ", " + m.name + "(" + zeroOfType(m.tp) + ")"}
         .mkString
 
   private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) =
@@ -614,7 +631,7 @@ trait ICppGen extends IScalaGen {
     implicit val s0_ = s0
 
     def register_maps = s0.maps.map { m =>
-        "pb.add_map<" + m.toCppType + ">( \"" + m.name + "\", " + m.name + " );\n"
+        "pb.add_map<" + mapTypeToString(m) + ">( \"" + m.name + "\", " + m.name + " );\n"
       }.mkString
 
     def register_relations = s0.sources.map { s => 
@@ -649,7 +666,7 @@ trait ICppGen extends IScalaGen {
         s0.sources.filter(!_.isStream).map { s =>
           val name = s.schema.name
           val fields = s.schema.fields
-          val params = s.schema.fields.map { case (fld,tp) => "const " + tp.toCpp + " " + fld  }.mkString(", ")
+          val params = s.schema.fields.map { case (fld,tp) => "const " + typeToString(tp) + " " + fld  }.mkString(", ")
           val args = s.schema.fields.map(_._1).mkString(", ")
 
           s"""|void on_insert_${name}(${params}) {
@@ -671,7 +688,7 @@ trait ICppGen extends IScalaGen {
             val fields = s.schema.fields
             
             "void on_insert_" + name + "(" + fields.map { 
-                case (fld,tp) => "const " + tp.toCpp + " " + fld 
+                case (fld,tp) => "const " + typeToString(tp) + " " + fld 
               }.mkString(", ") + ") {\n"+
             "  " + name + "_entry e(" + entryParam + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
             (if (usingPardis) "  " + INSERT_TO_MAP_FUNC(name) + "(e);\n"
@@ -687,7 +704,7 @@ trait ICppGen extends IScalaGen {
               "  size_t sz = eaList.size();\n"+
               "  for(size_t i=0; i < sz; i++){\n"+
               "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-              "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + tp.toCpp + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
+              "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + typeToString(tp) + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
               (if (usingPardis) "    " + INSERT_TO_MAP_FUNC(name) + "(e);\n"
                else "    " + ADD_TO_MAP_FUNC(name) + "(e, 1L);\n") +
               "  }\n" +
@@ -705,7 +722,7 @@ trait ICppGen extends IScalaGen {
       val mapName = m.name
       val mapType = mapName + "_map"
       val mapEntry = mapName + "_entry"
-      val mapValueType = m.tp.toCpp
+      val mapValueType = typeToString(m.tp)
       val fields = m.keys ++ List(VALUE_NAME -> m.tp)
       val fieldsWithIdx = fields.zipWithIndex
       val indices = sx.getOrElse(m.name, List[List[Int]]())
@@ -714,8 +731,8 @@ trait ICppGen extends IScalaGen {
       val multiKeyIndices = allIndices.filter{case (is,_) => is.size > 1}
 
       def genEntryStruct = {
-        val sFields = fields.map { case (fld,tp) => tp.toCpp + " " + fld + "; "}.mkString + mapEntry + "* nxt; " + mapEntry + "* prv;"
-        val sConstructorParams = fieldsWithIdx.map { case ((_,tp), i) => "const " + tp.toCppRefType + " c" + i }.mkString(", ")
+        val sFields = fields.map { case (fld,tp) => typeToString(tp) + " " + fld + "; "}.mkString + mapEntry + "* nxt; " + mapEntry + "* prv;"
+        val sConstructorParams = fieldsWithIdx.map { case ((_,tp), i) => "const " + refTypeToString(tp) + " c" + i }.mkString(", ")
         val sConstructorBody = fieldsWithIdx.map { case ((fld,_), i) => fld + " = c" + i + "; " }.mkString
         val sInitializers = fieldsWithIdx.map { case ((fld,tp),i) => fld + "(other." + fld + "), "}.mkString + "nxt(nullptr), prv(nullptr)"
         val sStringInit = m.keys.zipWithIndex.map { case ((fld,tp),i) =>
@@ -728,7 +745,7 @@ trait ICppGen extends IScalaGen {
           }.mkString(" ") + s" ${VALUE_NAME} = v; nxt = nullptr; prv = nullptr;" 
         val sModifyFn = allIndices.map { case (is,unique) =>
           s"FORCE_INLINE ${mapEntry}& modify" + stringIf(!unique, getIndexId(mapName, is)) + 
-          "(" + is.map { case i => "const " + fields(i)._2.toCppRefType + " c" + i }.mkString(", ") + ") { " +
+          "(" + is.map { case i => "const " + refTypeToString(fields(i)._2) + " c" + i }.mkString(", ") + ") { " +
           is.map { case i => fields(i)._1 + " = c" + i + "; "}.mkString + " return *this; }"
         }.mkString("\n")
         val sSerialization = fields.map { case (fld,_) => 
@@ -737,7 +754,7 @@ trait ICppGen extends IScalaGen {
                 |""".stripMargin
           }.mkString
         val initFromString = stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, 
-          s"${mapEntry}(const std::vector<std::string>& f, const ${m.tp.toCppRefType} v) { /* if (f.size() < ${m.keys.size}) return; */ ${sStringInit} }")
+          s"${mapEntry}(const std::vector<std::string>& f, const ${refTypeToString(m.tp)} v) { /* if (f.size() < ${m.keys.size}) return; */ ${sStringInit} }")
 
         s"""|struct ${mapEntry} {
             |  ${sFields}
@@ -800,9 +817,9 @@ trait ICppGen extends IScalaGen {
         tempTupleTypes.map { case (name, (ksTp, vsTp)) =>
           val ksTpWithIdx = ksTp.zipWithIndex
           s"""|struct ${name} {
-              |  ${ksTpWithIdx.map { case (k,i) => k.toCpp + " _" + (i + 1) + "; "}.mkString} ${vsTp.toCpp} ${VALUE_NAME}; ${name}* nxt; ${name}* prv;
+              |  ${ksTpWithIdx.map { case (k,i) => typeToString(k) + " _" + (i + 1) + "; "}.mkString} ${typeToString(vsTp)} ${VALUE_NAME}; ${name}* nxt; ${name}* prv;
               |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
-              |  FORCE_INLINE ${name}& modify(${ksTpWithIdx.map { case (k,i) => "const " + k.toCppRefType + " c" + i}.mkString(", ")}) { ${ksTpWithIdx.map { case (k,i) => "_" + (i + 1) + " = c" + i + "; "}.mkString} return *this; }
+              |  FORCE_INLINE ${name}& modify(${ksTpWithIdx.map { case (k,i) => "const " + refTypeToString(k) + " c" + i}.mkString(", ")}) { ${ksTpWithIdx.map { case (k,i) => "_" + (i + 1) + " = c" + i + "; "}.mkString} return *this; }
               |  static bool equals(const ${name} &x, const ${name} &y) {
               |    return (${ksTpWithIdx.map { case (v,i) => "(x._" + (i + 1) + "==y._" + (i + 1) + ")"}.mkString(" && ")});
               |  }
@@ -820,12 +837,12 @@ trait ICppGen extends IScalaGen {
           val ksTpWithIdx = ksTp.zipWithIndex
           val valVarName = VALUE_NAME
           "struct " + name +" {\n"+
-          "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
-          "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
-          "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+          "  "+ksTpWithIdx.map{case (k,i) => typeToString(k)+" _"+(i+1)+"; "}.mkString+(typeToString(vsTp)+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
+          "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+zeroOfType(k)+"; "}.mkString+(valVarName+" = "+zeroOfType(vsTp)+";")*/+"}\n"+
+          "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+refTypeToString(k)+" c"+(i+1)+", "}.mkString+(typeToString(vsTp)+" c"+valVarName+"="+zeroOfType(vsTp))+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
           "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
           "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-          "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+          "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+refTypeToString(k)+" c"+i+", "}.mkString+typeToString(vsTp)+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
           "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
           "  static long hash(const "+name+" &e) {\n"+
           "    size_t h = 0;\n"+
@@ -846,7 +863,7 @@ trait ICppGen extends IScalaGen {
     s0.triggers.foreach(_.event match { //delta relations
       case EventBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-        val deltaRel = schema.deltaName
+        val deltaRel = delta(schema.name)
         mapDefsList += (deltaRel -> MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp))
       case _ => //nothing to do
     })
@@ -856,7 +873,7 @@ trait ICppGen extends IScalaGen {
     deltaRelationNames = s0.triggers.flatMap(_.event match { //delta relations
       case EventBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-        List(schema.deltaName)
+        List(delta(schema.name))
       case _ => Nil
     }).toSet
 
@@ -888,8 +905,8 @@ trait ICppGen extends IScalaGen {
             case EventBatchUpdate(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
               genMapStructDef(MapDef(schema.name, TypeLong, schema.fields, null, LocalExp)) + 
-              s"""|typedef ${schema.name}_entry ${schema.deltaName}_entry;
-                  |typedef ${schema.name}_map ${schema.deltaName}_map;
+              s"""|typedef ${schema.name}_entry ${delta(schema.name)}_entry;
+                  |typedef ${schema.name}_map ${delta(schema.name)}_map;
                   |""".stripMargin
             case EventInsert(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
@@ -901,7 +918,7 @@ trait ICppGen extends IScalaGen {
           s0.triggers.map(_.event match {
             case EventBatchUpdate(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
-              genMapStructDef(MapDef(schema.deltaName, TypeLong, schema.fields, null, LocalExp))
+              genMapStructDef(MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp))
             case _ => ""
           }).mkString 
         }
@@ -1001,7 +1018,7 @@ trait ICppGen extends IScalaGen {
 
         for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
-          val deltaRel = schema.deltaName
+          val deltaRel = delta(schema.name)
           code = code + "    "+deltaRel+".clear();\n"
         }
         
@@ -1011,31 +1028,31 @@ trait ICppGen extends IScalaGen {
         
         for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
-          val deltaRel = schema.deltaName
+          val deltaRel = delta(schema.name)
           val entryClass = deltaRel + "_entry"  
        
           code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
           code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
-          code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
-          code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+          code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+typeToString(tp)+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+typeToString(TypeLong)+"*>((*ea)["+schema.fields.size+"].get())));\n"
+          code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+typeToString(TypeLong)+"*>((*ea)["+schema.fields.size+"].get())));\n"
           code = code + "      }\n"
         }
         code = code +   "    }\n"
         for (sources <- s0.sources.filter(_.isStream)) {
           val schema = sources.schema;
-          val deltaRel = schema.deltaName
+          val deltaRel = delta(schema.name)
           code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
         }            
         code = code +   "}\n\n"
 
         val schema = s0.sources.filter(_.schema.name == name)(0).schema
-        val deltaRel = schema.deltaName
+        val deltaRel = delta(schema.name)
         val entryClass = deltaRel + "_entry"            
         code +
         (if(hasOnlyBatchProcessingForAdd(s0,b))
           "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
           "  "+deltaRel+".clear();\n"+
-          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
+          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+typeToString(tp)+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
           (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
           "  on_batch_update_"+name+"("+deltaRel+");\n"+
           "}\n\n"
@@ -1043,14 +1060,14 @@ trait ICppGen extends IScalaGen {
         (if(hasOnlyBatchProcessingForDel(s0,b))
           "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
           "  "+deltaRel+".clear();\n"+
-          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
+          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+typeToString(tp)+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
           (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
           "  on_batch_update_"+name+"("+deltaRel+");\n"+
           "}\n\n"
          else "")
       case _ =>
         "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-        "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
+        "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+typeToString(tp)+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
         "}\n\n"
     }
   })
@@ -1059,12 +1076,12 @@ trait ICppGen extends IScalaGen {
   private def helperResultAccessor(s0:System) = {
     def compile_serialization = s0.queries.map{q =>
       "ar << \"\\n\";\n"+
-      "const " + q.toCppRefType + " _" + q.name + " = get_" + q.name + "();\n"+ 
+      "const " + queryRefTypeToString(q) + " _" + q.name + " = get_" + q.name + "();\n"+ 
       "dbtoaster::serialize_nvp_tabbed(ar, STRING(" + q.name+"), _" + q.name + ", \"\\t\");\n"
     }.mkString
 
     def compile_tlqs = s0.queries.map{ query =>
-      "const " + query.toCppRefType + " get_" + query.name + "() const {\n"+
+      "const " + queryRefTypeToString(query) + " get_" + query.name + "() const {\n"+
       (query.expr match {
         case MapRef(n,_,_,_) if (n == query.name) => "  return " + query.name + ";"
         case _ => 
@@ -1091,7 +1108,7 @@ trait ICppGen extends IScalaGen {
     }.mkString
 
     def compile_tlqs_decls = s0.queries.map { q =>
-      q.toCppType + " " +q.name + ";\n"
+      queryTypeToString(q) + " " +q.name + ";\n"
     }.mkString
 
     def compile_expressive_tlqs = stringIf(isExpressiveTLQSEnabled(s0.queries), 

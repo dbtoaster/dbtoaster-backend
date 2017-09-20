@@ -4,6 +4,7 @@ import java.io._
 import java.util.concurrent.{ BlockingQueue, LinkedBlockingQueue }
 import Compiler._
 import ddbt.lib.Helper
+import ddbt.lib.TypeHelper.Scala._
 import ddbt.codegen.Optimizer
 
 /**
@@ -333,9 +334,9 @@ object UnitTest {
           case (n,o) =>
             val (kt,vt) = qt(n)
             val tn = codegen.ScalaGen.tupleNameOfTps(kt)
-            val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
-            val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
-            val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
+            val qtp = "["+tup(kt.map(typeToString))+","+typeToString(vt)+"]"
+            val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+typeToString(t)}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
+            val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else typeToString(vt))+"], "+(o match {
               case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+ks.mkString("(",",",")")+","+v+")" }.mkString(",")+")"// inline in the code
               case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+pathRepo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
               case QuerySingleton(v) => v
@@ -381,18 +382,18 @@ object UnitTest {
             case (n,o) => if (!qt.contains(n)) "" else {
               val (kt, vt) = qt(n)
               val tn = codegen.ScalaGen.tupleNameOfTps(kt)
-              val qtp = "[" + tup(kt.map(_.toScala)) + ", " + vt.toScala + "]"
+              val qtp = "[" + tup(kt.map(typeToString)) + ", " + typeToString(vt) + "]"
               val kv = if (kt.size == 0) "" 
                 else { 
                   val ll = (kt ::: vt :: Nil).zipWithIndex
                   "def kv(l: List[Any]) = l match { case List(" + 
-                  ll.map { case (t, i) => "v" + i + ": " + t.toScala }.mkString(", ") + ") => (" + 
+                  ll.map { case (t, i) => "v" + i + ": " + typeToString(t) }.mkString(", ") + ") => (" + 
                   tup(ll.init.map { case (t, i) => "v" + i + 
                     (if (t.toString == "string") ".take(30)" else "") 
                   }) + ", v" + ll.last._2 + ") }\n" 
                 }
               val cmp = "diff(res(" + qid(n) + ").asInstanceOf[" + 
-                (if (kt.size > 0) "Map" + qtp else vt.toScala) + "], " + 
+                (if (kt.size > 0) "Map" + qtp else typeToString(vt)) + "], " + 
                 (o match {
                   case QueryMap(m) => 
                     "Map" + qtp + "(" + m.map { case (ks, v) => 

@@ -36,11 +36,15 @@ class ScalaGen(override val cls: String = "Query", override val printProgress: L
 
 object ScalaGen {
 
+  import ddbt.lib.TypeHelper.Scala._
+
   val STORE_WATCHED = "StoreOps.watched"
 
+  val VALUE_NAME = "__av"
+
   def tupleNameOfTps(types: List[Type]) =
-    if (types.length == 1) types.head.toScala
-    else "T" + types.map(t => t.simpleName).mkString
+    if (types.length == 1) typeToString(types.head)
+    else "T" + types.map(typeToChar).mkString
 }
 
 trait IScalaGen extends CodeGen {
@@ -49,7 +53,8 @@ trait IScalaGen extends CodeGen {
 
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear, stringIf } // common functions
+  import ddbt.lib.TypeHelper.Scala._
+  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear, stringIf, delta } // common functions
 
   def addToTempMap(m: String, ks: List[String], vs: String) = 
     extractBooleanExp(vs) match {
@@ -70,7 +75,7 @@ trait IScalaGen extends CodeGen {
   override def consts: String = 
     cs.map { case (Apply(f, tp, as), n) => 
       val vs = as.map(a => cpsExpr(a))
-      "val " + n + ":" + tp.toScala + " = U" + f + "(" + vs.mkString(", ") + ")\n" 
+      "val " + n + ":" + typeToString(tp) + " = U" + f + "(" + vs.mkString(", ") + ")\n" 
     }.mkString +  // constant function applications
     regexpCacheMap.map { case (regex, preg) => 
       "val " + preg + " = java.util.regex.Pattern.compile(\"" + regex + "\");\n"
@@ -108,9 +113,16 @@ trait IScalaGen extends CodeGen {
     // }
     case _ => 
       if (withIfThenElse) 
-        "(if (" + arg1 + " " + op + " " + arg2 + ") 1L else 0L)"
+        "(if (" + arg1 + " " + cmpToString(op) + " " + arg2 + ") 1L else 0L)"
       else
-        arg1 + " " + op + " " + arg2
+        arg1 + " " + cmpToString(op) + " " + arg2
+  }
+
+  private def cmpToString(op: OpCmp) = op match {
+    case OpEq => "=="
+    case OpNe => "!="
+    case OpGt => ">"
+    case OpGe => ">="
   }
 
   // extract cond and then branch of "if (cond) t else 0"
@@ -132,8 +144,8 @@ trait IScalaGen extends CodeGen {
 
   // Create a variable declaration
   def genVar(n: String, tp: Type, ks: List[Type] = Nil) = 
-    if (ks == Nil) "var " + n + " = " + tp.zeroScala + "\n" 
-    else "val " + n + " = M3Map.temp[" + genTupleDef(ks) + ", " + tp.toScala + "]()\n"
+    if (ks == Nil) "var " + n + " = " + zeroOfType(tp) + "\n" 
+    else "val " + n + " = M3Map.temp[" + genTupleDef(ks) + ", " + typeToString(tp) + "]()\n"
 
   var tuples = Map[String, String]()
 
@@ -173,7 +185,7 @@ trait IScalaGen extends CodeGen {
 
       def classDef = 
         "class " + tupleName + "(" + types.zipWithIndex.map { 
-          case(t, i) => "val _" + (i + 1) + ":" + t.toScala 
+          case(t, i) => "val _" + (i + 1) + ":" + typeToString(t) 
         }.mkString(", ") + ") extends Product {\n" +
         ind(prodDef + eqDef) + "\n}\n"
 
@@ -322,13 +334,13 @@ trait IScalaGen extends CodeGen {
         (extractBooleanExp(vl), extractBooleanExp(vr)) match {
           case (Some((cl, tl)), Some((cr, tr))) => 
             "(if (" + cl + " && " + cr + ") " + vx(tl, tr) +
-            " else " + ex.tp.zeroScala + ")"
+            " else " + zeroOfType(ex.tp) + ")"
           case (Some((cl, tl)), _) => 
             "(if (" + cl + ") " + vx(tl, vr) + 
-            " else " + ex.tp.zeroScala + ")"
+            " else " + zeroOfType(ex.tp) + ")"
           case (_, Some((cr, tr))) => 
             "(if (" + cr + ") " + vx(vl,tr) +
-            " else " + ex.tp.zeroScala + ")"
+            " else " + zeroOfType(ex.tp) + ")"
           case _ => vx(vl, vr)
         }
       }
@@ -400,7 +412,7 @@ trait IScalaGen extends CodeGen {
           val cur = ctx.save
           val s1 = 
             "val " + a0 + " = M3Map.temp[" + genTupleDef(aks.map(_._2)) +
-            ", " + e.tp.toScala + "]()\n" +
+            ", " + typeToString(e.tp) + "]()\n" +
             cpsExpr(e, (v: String) => addToTempMap(a0, aks.map(_._1),v), tmp)
           ctx.load(cur)
           s1 + cpsExpr(MapRef(a0, e.tp, aks, true), co)
@@ -470,9 +482,9 @@ trait IScalaGen extends CodeGen {
         val rel = s0.sources.filter(_.schema.name == n)(0).schema
         val ks = rel.fields.map(_._2)
         val tp = TypeLong
-        rel.deltaName + ":M3Map[" + genTupleDef(ks) + ", " + tp.toScala + "]"
+        delta(rel.name) + ":M3Map[" + genTupleDef(ks) + ", " + typeToString(tp) + "]"
       case _ =>
-        as.map(a => a._1 + ": " + a._2.toScala).mkString(", ")
+        as.map(a => a._1 + ": " + typeToString(a._2)).mkString(", ")
     }
     "def on" + n + "(" + params + ") " + 
     (if (body == "") "{ }" else "{\n" + ind(body) + "\n}")
@@ -493,7 +505,7 @@ trait IScalaGen extends CodeGen {
     else {
       val tk = genTupleDef(m.keys.map(_._2))
       val s = sx.getOrElse(m.name, List[List[Int]]())
-      "val " + m.name + " = M3Map.make[" + tk + ", " + m.tp.toScala + "](" +
+      "val " + m.name + " = M3Map.make[" + tk + ", " + typeToString(m.tp) + "](" +
       s.map { is => "(k: " + tk + ") => " + 
         tup(is.map { i => "k._" + ( i + 1) }) 
       }.mkString(", ") + ");"
@@ -520,7 +532,7 @@ trait IScalaGen extends CodeGen {
           case ((s, t), i) => ("v" + i, t) 
         } 
         else s.fields
-      (fs.map { case(s, t) => s.toLowerCase + ":" + t.toScala }.mkString(","),
+      (fs.map { case(s, t) => s.toLowerCase + ":" + typeToString(t) }.mkString(","),
        genTuple(fs.map { case (v, t) => (t, v) }), 
        "(" + fs.map { case (s, t) => s.toLowerCase }.mkString(",") + ")",
        fs)
@@ -555,10 +567,9 @@ trait IScalaGen extends CodeGen {
 
     val batchStr = if (batchEvents.size == 0) "" else {
       val sBatchEvents = batchEvents.map(_.event match { 
-        case EventBatchUpdate(s) =>
-          val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+        case EventBatchUpdate(schema) =>
           val (params, _, _, _) = ev(schema)
-          val deltaName = schema.deltaName
+          val deltaName = delta(schema.name)
           """|case ("%s", dataList) => 
              |  %s.clear
              |  dataList.foreach { case List(%s,vv:%s) =>
@@ -607,7 +618,7 @@ trait IScalaGen extends CodeGen {
           case ((s, t), i) => ("v" + i, t)
         }
         else s.fields
-      (fs.map { case(s, t) => s.toLowerCase + ":" + t.toScala }.mkString(","),
+      (fs.map { case(s, t) => s.toLowerCase + ":" + typeToString(t) }.mkString(","),
         genTuple(fs.map { case (v, t) => (t, v) }),
         "(" + fs.map { case (s, t) => s.toLowerCase }.mkString(",") + ")",
         fs)
@@ -648,10 +659,10 @@ trait IScalaGen extends CodeGen {
           if (query.expr.ovars.length == 0) cpsExpr(query.expr)
           else {
             val mName = "m" + query.name
-            val tk = tup(query.expr.ovars.map(_._2.toScala))
+            val tk = tup(query.expr.ovars.map(x => typeToString(x._2)))
             val nk = query.expr.ovars.map(_._1)
             "val " + mName + " = M3Map.make[" + tk + "," + 
-            query.expr.tp.toScala + "]()\n" +
+            typeToString(query.expr.tp) + "]()\n" +
             cpsExpr(query.expr, (v: String) => 
               mName + ".add(" + genTuple(nk map ctx) + "," + v + ")"
             ) + "\n" +
@@ -670,7 +681,7 @@ trait IScalaGen extends CodeGen {
     val res = nodeName + "_mres"
     if (q.expr.ovars.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" +
-      tup(mapKeys.map(_.toScala)) + ", " + q.expr.tp.toScala + "](); " +
+      tup(mapKeys.map(typeToString)) + ", " + typeToString(q.expr.tp) + "](); " +
       map + ".foreach{ case (e,v) => " + res + " += (" +
       ( if (mapKeys.size > 1)
           tup(mapKeys.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
@@ -700,14 +711,15 @@ trait IScalaGen extends CodeGen {
     else {
       // triggers (need to be generated before maps)
       val ts = s0.triggers.map(genTrigger(_, s0)).mkString("\n\n") 
-      val ms = s0.triggers.map(_.event match { //delta relations
-        case EventBatchUpdate(s) =>
-          val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-          val deltaRel = schema.deltaName
-          genMap(MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp)) + "\n"
-        case _ => ""
-      }).mkString +
-      s0.maps.map(m => genMap(m)).mkString("\n") // maps
+      // val ms = s0.triggers.map(_.event match { //delta relations
+      //   case EventBatchUpdate(schema) =>
+      //     val deltaRel = delta(schema.name)
+      //     genMap(MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp)) + "\n"
+      //   case _ => ""
+      // }).mkString +
+      
+      val ms = s0.maps.map(m => genMap(m)).mkString("\n") // maps
+
       ms + "\n" + genQueries(s0.queries) + "\n" + ts
     }
     val (str, ld0, gc) = if (lms != null) (strLMS, ld0LMS, gcLMS)

@@ -3,112 +3,65 @@ package ddbt.ast
 import ddbt.lib.Utils.ind
 
 /**
- * This defines the generic nodes that we manipulate during transformations
- * and optimization phases between SQL/M3 and target code. To obtain the exact
- * syntax, refer to ddbt.frontend.Parsers (to avoid outdated documentation).
- * @author TCK
- */
-sealed abstract class Tree // Generic AST node
+  * Defines basic types AST nodes for M3 and SQL 
+  */
+sealed abstract class Tree    // Generic AST node
 
-// ---------- Data types
-sealed abstract class Type extends Tree { 
-  def zero: String
-  def zeroScala: String = zero
-  def zeroCpp: String = zero
-  def toScala: String = toString.capitalize
-  def toCpp: String = toString
-  def toCppRefType: String = toCpp
-  def simpleName: String = toString.substring(0, 1).toUpperCase 
-  def castScala: String = "to" + toScala
+// ------ Data types 
+sealed abstract class Type extends Tree
+case object TypeLong extends Type {  override def toString = "long" }
+case object TypeDouble extends Type { override def toString = "double" }
+case object TypeDate extends Type { override def toString = "date" }
+case object TypeString extends Type { override def toString = "string" }
+
+// ------ Comparison operators
+sealed abstract class OpCmp extends Tree
+case object OpEq extends OpCmp { override def toString = "=" }
+case object OpNe extends OpCmp { override def toString = "!=" }
+case object OpGt extends OpCmp { override def toString = ">" }
+case object OpGe extends OpCmp { override def toString = ">=" }
+
+// ---------- Schema, adaptor, and source definitions
+case class Source(isStream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
+  override def toString = 
+    "CREATE " + (if (isStream) "STREAM" else "TABLE") + " " + schema + 
+    "\n  FROM " + in + " " + split + " " + adaptor + 
+    (locality match {
+      case LocalExp => ""
+      case DistRandomExp => "\n  PARTITIONED RANDOMLY"
+      case DistByKeyExp(pk) => "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
+    }) + ";"
 }
 
-// case object TypeChar extends Type /*  8 bit */ { 
-//   val zero = "0"
-//   override def toString = "char" 
-// }
-
-// case object TypeShort extends Type /*16 bit */ { 
-//   val zero = "0"
-//   override def toString = "short" 
-// }
-
-// case object TypeInt  extends Type /* 32 bit */ { 
-//   val zero = "0"
-//   override def toString = "int" 
-// }
-
-case object TypeLong extends Type /* 64 bit */ { 
-  val zero = "0L"
-  override def toString = "long"
+case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
+  override def toString = 
+    name + " (" + fields.map { case (n, t) => n + " " + t }.mkString(", ") + ")"
 }
 
-// case object TypeFloat extends Type /*32 bit */ { 
-//  val zero = "0.0F"
-//  override def toString = "float" 
-// }
-
-case object TypeDouble extends Type /* 64 bit */ { 
-  val zero = "0.0"
-  override def toString = "double"
-  override def toCpp = "DOUBLE_TYPE"
+sealed abstract class SourceIn extends Tree
+case class SourceFile(path: String) extends SourceIn { 
+  override def toString = "FILE '" + path + "'" 
 }
 
-case object TypeDate extends Type {
-  val zero = "0L"
-  override def toString = "date"
-  override def toScala = "Long"
-  // override def toCpp = "long"
-  override def zeroScala = "0"
-  override def zeroCpp = "00000000"
-  override def simpleName = "A" 
+sealed abstract class Split extends Tree
+case object SplitLine extends Split {
+  override def toString = "LINE DELIMITED" 
 }
-
-//case object TypeTime extends Type { 
-//  override def toString = "timestamp" 
-//}
-
-case object TypeString extends Type { 
-  val zero="\"\""
-  override def toString = "string"
-  override def toCpp = "STRING_TYPE"
-  override def toCppRefType = toCpp + "&"
+case class SplitSize(bytes: Int) extends Split {
+  override def toString = "FIXEDWIDTH " + bytes 
 }
-
-//case class TypeBinary(maxBytes:Int) extends Type { 
-//  override def toString = "binary(" + max + ")" 
-//} 
-// prefix with number of bytes such that prefix minimize number of bytes used
-
-case class TypeTuple(ts: List[Type]) extends Type { 
-  val zero = "<" + ts.map(_.zero).mkString(", ") + ">"
-  override val zeroScala = "<" + ts.map(_.zeroScala).mkString(", ") + ">" 
-  override def toString = "<" + ts.mkString(", ") + ">"  
-  override def simpleName = ts.map(_.simpleName).mkString
+case class SplitSep(delim: String) extends Split { 
+  override def toString = "'" + delim + "' DELIMITED" 
 }
+case class SplitPrefix(bytes: Int) extends Split {
+  override def toString = "PREFIXED " + bytes 
+} // records are prefixed with their length in bytes
 
-// ---------- Comparison operators
-sealed abstract class OpCmp extends Tree { 
-  def toM3 = toString
-  def toSQL = toString 
-} // toString is C/Scala notation
-
-case object OpEq extends OpCmp { 
-  override def toString = "=="
-  override def toM3 = "="
-  override def toSQL = "=" 
+case class Adaptor(name: String, options: Map[String, String]) extends Tree {
+  override def toString = 
+    name + ( if (options.isEmpty) ""
+             else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")" )
 }
-
-case object OpNe extends OpCmp { 
-  override def toString = "!="
-  override def toSQL = "<>" 
-}
-
-// OpLt by reversing arguments
-case object OpGt extends OpCmp { override def toString = ">" } 
-
-// OpGe by reversing arguments
-case object OpGe extends OpCmp { override def toString = ">=" } 
-
 
 // ------ Expression locality types
 abstract sealed class LocalityType extends Tree
@@ -121,59 +74,6 @@ case object DistRandomExp extends LocalityType {
 case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
   override def toString = "<DistByKey(" + pkeys.map(_._1).mkString(", ") + ")>"
 }
-
-// ---------- Source definitions, see ddbt.frontend.ExtParser
-case class Source(isStream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
-  override def toString = 
-    "CREATE " + (if (isStream) "STREAM" else "TABLE") + " " + schema + 
-    "\n  FROM " + in + " " + split + " " + adaptor + 
-    (locality match {
-      case LocalExp => ""
-      case DistRandomExp => "\n  PARTITIONED RANDOMLY"
-      case DistByKeyExp(pk) =>
-        "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
-    }) + ";"
-}
-
-case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
-  val deltaName = "DELTA_" + name 
-  override def toString = 
-    name + " (" + fields.map(x => x._1 + " " + x._2).mkString(", ") + ")"
-}
-
-case class Adaptor(name: String, options: Map[String, String]) extends Tree { 
-  override def toString =     
-    name + (if (options.isEmpty) "" 
-            else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")")
-}
-
-sealed abstract class SourceIn extends Tree
-
-case class SourceFile(path: String) extends SourceIn { 
-  override def toString = "FILE '" + path + "'" 
-}
-
-//case class SourcePort(port: Int) // TCP server
-//case class SourceRemote(host: String, port: Int, proto: Protocol)
-// proto=bootstrap/authentication protocol (TCP client)
-
-sealed abstract class Split extends Tree
-
-case object SplitLine extends Split { 
-  override def toString = "LINE DELIMITED" 
-} // deal with \r, \n and \r\n ?
-
-case class SplitSize(bytes: Int) extends Split { 
-  override def toString = "FIXEDWIDTH " + bytes 
-}
-
-case class SplitSep(delim: String) extends Split { 
-  override def toString = "'" + delim + "' DELIMITED" 
-}
-
-case class SplitPrefix(bytes: Int) extends Split { 
-  override def toString = "PREFIXED " + bytes 
-} // records are prefixed with their length in bytes
 
 
 // -----------------------------------------------------------------------------
@@ -193,19 +93,10 @@ object M3 {
   case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
   case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
   case object LogStore     extends StoreType       // Columnar store (only append and foreach)
-  case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores  
+  case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores
 
   // -------- M3 system
   case class System(sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
-    lazy val mapType =              // String => (List[Type], Type)
-      ( maps.map { m => 
-          (m.name, (m.keys.map {_._2}, m.tp)) 
-        } ++
-        sources.map { s => 
-          (s.schema.deltaName, (s.schema.fields.map {_._2}, TypeLong)) 
-        } 
-      ).toMap
-
     override def toString =
       "-------------------- SOURCES --------------------\n" + 
       sources.mkString("\n\n") + "\n\n" + 
@@ -219,7 +110,7 @@ object M3 {
 
   // ---------- Map definition statement
   case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends M3 {
-    override def toString = 
+    override def toString =
       "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" +
       keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" +
       ind(expr.toString) +
@@ -229,19 +120,11 @@ object M3 {
         case DistByKeyExp(pk) =>
           "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
       }) + ";"
-
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
-
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
   // -------- Query definition
   case class Query(name: String, expr: Expr) extends M3 {
     override def toString = "DECLARE QUERY " + name + " := " + expr + ";"
-    
-    def toCppType = if (expr.ovars.size == 0) expr.tp.toCpp else name + "_map"
-    
-    def toCppRefType = if (expr.ovars.size == 0) toCppType else toCppType + "&"
   }
 
   // -------- Trigger definition
@@ -491,14 +374,10 @@ object M3 {
   // Map reference
   case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], val isTemp: Boolean = false) extends Expr {
     var locality: Option[LocalityType] = Some(LocalExp)
-    
+
     override def toString = 
       name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
       keys.map(_._1).mkString(", ") + "]" + locality.getOrElse("")
-
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
-
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
   // Lifting operator ('Let name=e in ...' semantics)
@@ -520,9 +399,8 @@ object M3 {
     val tp = TypeLong
     var locality: Option[LocalityType] = None
     override def toString = "(DELTA " + name + ")(" + keys.map(_._1).mkString(", ") + ")"
-    def deltaName = Schema(name, null).deltaName 
-  } //used for delta relations used while batching is used
-  
+  }
+
   // Sum aggregate
   case class AggSum(var keys: List[(String, Type)], e: Expr) extends Expr {
     def tp = e.tp
@@ -636,8 +514,6 @@ object M3 {
 sealed abstract class SQL // see ddbt.frontend.Parsers
 
 object SQL {
-
-  import ddbt.lib.Utils.ind
 
   sealed abstract class OpAgg extends SQL
   case object OpSum extends OpAgg
