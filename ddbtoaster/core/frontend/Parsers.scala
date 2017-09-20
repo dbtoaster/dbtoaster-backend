@@ -249,21 +249,10 @@ object M3Parser extends ExtParser with (String => M3.System) {
     )
 
   lazy val stmt = 
-    (
-      mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ 
-      ("+=" | ":=") ~ expr <~ ";" ^^ { 
-        case m ~ oi ~ op ~ e =>
-          StmtMap(
-            m, 
-            e, 
-            op match { 
-              case "+=" => OpAdd 
-              case ":=" => OpSet 
-            },
-            oi) 
-       }
-    | map
-    )
+    mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+=" | ":=") ~ expr <~ ";" ^^ { 
+      case m ~ oi ~ op ~ e =>
+        TriggerStmt(m, e, op match { case "+=" => OpAdd case ":=" => OpSet }, oi)
+    }
 
   lazy val system = 
     rep(source) ~ rep(map) ~ rep(query) ~ 

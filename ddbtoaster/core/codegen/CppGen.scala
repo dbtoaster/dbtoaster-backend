@@ -426,8 +426,8 @@ trait ICppGen extends IScalaGen {
     case _ => sys.error("Don't know how to generate " + ex)
   }
 
-  override def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) =>
+  override def genStmt(s: TriggerStmt):String = s match {
+    case TriggerStmt(m,e,op,oi) =>
       val (fop, sop) = op match { 
         case OpAdd => (ADD_TO_MAP_FUNC(m.name), "+=") 
         case OpSet => (ADD_TO_MAP_FUNC(m.name), "=") 
@@ -474,9 +474,6 @@ trait ICppGen extends IScalaGen {
               s"${fop}(${sampleEnt}.modify(${argList}), ${v});\n"
           }
         }), /*if (op==OpAdd)*/ Some(m.keys) /*else None*/)
-
-    case m: MapDef => "" //nothing to do
-    case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
   override def genTrigger(t: Trigger, s0: System): String = {
@@ -853,12 +850,6 @@ trait ICppGen extends IScalaGen {
         mapDefsList += (deltaRel -> MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp))
       case _ => //nothing to do
     })
-    s0.triggers.foreach{ t => //local maps
-      t.stmts.map{
-        case m: MapDef => mapDefsList += (m.name -> m)
-        case _ => //nothing to do
-      }
-    }
     mapDefs = mapDefsList.toMap
     val (tsSC, msSC, tmpEntrySC) = genPardis(s0)
 
@@ -915,8 +906,6 @@ trait ICppGen extends IScalaGen {
           }).mkString 
         }
       ) +
-      // local maps
-      s0.triggers.flatMap { _.stmts.map { case m: MapDef => genMapStructDef(m) case _ => "" }}.mkString +
       // maps
       s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString + 
       // temp tuples

@@ -218,7 +218,7 @@ object M3 {
   }
 
   // ---------- Map definition statement
-  case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends Stmt {    
+  case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends M3 {
     override def toString = 
       "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" +
       keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" +
@@ -248,7 +248,7 @@ object M3 {
   }
 
   // -------- Trigger definition
-  case class Trigger(event: EventTrigger, stmts: List[Stmt]) extends M3 { 
+  case class Trigger(event: EventTrigger, stmts: List[TriggerStmt]) extends M3 {
     override def toString = "ON " + event + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
 
@@ -283,7 +283,13 @@ object M3 {
     override val name = "batch_" + schema.name 
     override val params = Nil
     override def toString = "BATCH UPDATE OF " + schema.name
-  } 
+  }
+
+  // ---------- Update or assign statement
+  case class TriggerStmt(target: MapRef, expr: Expr, op: OpMap, initExpr: Option[Expr]) extends M3 { 
+    override def toString =
+      target + initExpr.map(":(" + _ + ")").getOrElse("") + " " + op + " " + expr + ";"
+  }
 
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
@@ -625,15 +631,6 @@ object M3 {
     val locality = Some(LocalExp)    
     override def toString = "Gather(" + e + ")"  
   } 
-
-  // ---------- Statements (no return)
-  sealed abstract class Stmt extends M3 { var stmtId: Int = (-1) }
-
-  case class StmtMap(m: MapRef, e: Expr, op: OpMap, init: Option[Expr]) extends Stmt { 
-    override def toString = 
-      m + (init match { case Some(i) => ":(" + i + ")" case None => "" }) + 
-      " " + op + " " + e + ";" 
-  } // case class StmtCall(external function) extend Stmt
 }
 
 // -----------------------------------------------------------------------------

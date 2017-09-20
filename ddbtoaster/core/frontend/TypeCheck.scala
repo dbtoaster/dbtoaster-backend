@@ -25,11 +25,9 @@ object TypeCheck extends (M3.System => M3.System) {
         used += d.deltaName
         MapRef(d.deltaName, TypeLong, ks)
     }
-    def rst(s: Stmt): Stmt = s match {
-      case StmtMap(m, e, op, in) => 
-        StmtMap(m, re(e), op, in map re)
-      case MapDef(n, tp, ks, e, l) => 
-        MapDef(n, tp, ks, if (e != null) re(e) else e, l)
+    def rst(s: TriggerStmt): TriggerStmt = s match {
+      case TriggerStmt(m, e, op, in) => 
+        TriggerStmt(m, re(e), op, in map re)
     }
     val triggers = s0.triggers.map { t => Trigger(t.event, t.stmts map rst) }
     val queries = s0.queries.map { q => Query(q.name, re(q.map)) }
@@ -66,18 +64,9 @@ object TypeCheck extends (M3.System => M3.System) {
       localMaps += (name -> newName)
       newName
     }
-    def rst(s: Stmt, t: Trigger): Stmt = s match {
-      case StmtMap(m, e, op, in) => 
-        StmtMap(re(m, t).asInstanceOf[MapRef], re(e, t), op, in.map(re(_, t)))
-      case MapDef(n, tp, ks, e, l) => 
-        MapDef(localMap(n, t), tp, ks.map(k => (r(k._1), k._2)), 
-               if (e != null) re(e, t) else e,
-               l match { 
-                 case LocalExp => LocalExp 
-                 case DistRandomExp => DistRandomExp
-                 case DistByKeyExp(pk) => 
-                  DistByKeyExp(pk.map(k => (r(k._1), k._2)))
-               })
+    def rst(s: TriggerStmt, t: Trigger): TriggerStmt = s match {
+      case TriggerStmt(m, e, op, in) => 
+        TriggerStmt(re(m, t).asInstanceOf[MapRef], re(e, t), op, in.map(re(_, t)))
     }
     val sources = s0.sources.map { 
       case Source(st, sch, in, sp, ad, loc) => Source(st, rs(sch), in, sp, ad, loc) 
@@ -110,8 +99,7 @@ object TypeCheck extends (M3.System => M3.System) {
     }, t.stmts))
     val mtp = 
       triggers.flatMap(t => t.stmts map {
-        case StmtMap(m, _, _, _) => (m.name, m.tp)
-        case MapDef(n, tp, ks, e, l) => (n, tp)
+        case TriggerStmt(m, _, _, _) => (m.name, m.tp)
       }).toMap ++
       s0.sources.filter(!_.isStream).map { s => 
         (s.schema.name, TypeLong)
@@ -153,13 +141,10 @@ object TypeCheck extends (M3.System => M3.System) {
                            .map((_, fresh("lift"))).toMap
         AggSum(ks, sub.rename(mapping))
     }
-    def rst(s: Stmt, locked: Set[String] = Set()): Stmt = s match {
-      case StmtMap(m, e, op, in) => 
+    def rst(s: TriggerStmt, locked: Set[String] = Set()): TriggerStmt = s match {
+      case TriggerStmt(m, e, op, in) => 
         val lck = locked ++ m.keys.map(_._1).toSet
-        StmtMap(m, re(e, lck), op, in map { x => re(x, lck) })
-      case MapDef(n, tp, ks, e, l) => 
-        val lck = locked ++ ks.map(_._1).toSet
-        MapDef(n, tp, ks, if (e != null) re(e, lck) else e, l)
+        TriggerStmt(m, re(e, lck), op, in map { x => re(x, lck) })
     }
     val triggers = s0.triggers.map { 
       case Trigger(e, ss) => 
@@ -251,26 +236,6 @@ object TypeCheck extends (M3.System => M3.System) {
                 }
                 m.keys = (ks zip rel.schema.fields.map(_._2)).map { case ((n, _), t) => (n, t) }
               } 
-              else { //local map def
-                s0.triggers.filter(_ == t.getOrElse(null)).foreach { trig =>
-                  trig.stmts.foreach { 
-                    case MapDef(md_n, md_tp, md_ks, _, _) if (md_n == n) =>
-                      cr = c ++ md_ks.toMap
-                      if (tp == null) m.tp = md_tp 
-                      else if (tp != md_tp) {
-                        err("Bad value type: expected " + md_tp + 
-                            ", got " + tp + " for " + ex)
-                      }
-                      md_ks.foreach { 
-                        case(k, tp) => if(c.contains(k) && tp != c(k)) {
-                          err("Key type (" + k + ") mismatch in " + ex) 
-                        }
-                      }
-                      m.keys = (ks zip (md_ks.map(_._2))).map { case ((n, _), t) => (n, t) }
-                    case _ => //ignore
-                  }
-                }
-              } 
           }
         case r @ Repartition(ks, e) => 
           cr = ie(e, c, t)
@@ -284,12 +249,11 @@ object TypeCheck extends (M3.System => M3.System) {
       if (ex.tp == null) err("Untyped: " + ex)
       cr
     }
-    def ist(s:Stmt,b:Map[String,Type]=Map(),t:Option[Trigger]) = s match {
-      case StmtMap(m, e, op, in) => 
+    def ist(s:TriggerStmt,b:Map[String,Type]=Map(),t:Option[Trigger]) = s match {
+      case TriggerStmt(m, e, op, in) => 
         ie(e, b, t)
         in.map(e => ie(e, b, t))
-        ie(m, b, t)
-      case MapDef(n, tp, ks, e, l) => if (e != null) ie(e, b, t) // XXX ie(MapRef(...),b,t)
+        ie(m, b, t)      
     }
     s0.triggers.foreach { t=> t.stmts foreach (x => ist(x, t.event.params.toMap, Some(t))) }
     s0.queries.foreach {

@@ -234,8 +234,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => super.cpsExpr(ex,co,am)
   }
 
-  override def genStmt(s:Stmt) = s match {
-    case StmtMap(m,e,op,oi) => val r=ref(m.name);
+  override def genStmt(s:TriggerStmt) = s match {
+    case TriggerStmt(m,e,op,oi) => val r=ref(m.name);
       def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks,_)=>List(ref(n)) }).map(x=>","+x).mkString
       def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
                                 ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
@@ -245,7 +245,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         cl_add(1); "pre("+r+",false"+rd(ie,true)+"){\n"+cpsExpr(ie,co)
       }
       ctx.load(); inuse.load(m.keys.map(_._1).toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mo(op,v))
-    case _ => sys.error("Unimplemented")
   }
 
   override def genTrigger(t:Trigger, s0:System):String = { // add pre and deq/ready calls in master's triggers

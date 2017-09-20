@@ -342,11 +342,7 @@ if(Optimizer.initialStoreSize) {
     IR.BooleanExtra.conditional(condition(l, op, r, tp), IR.unit(1L), IR.unit(0L))
   }
 
-  def filterStatement(s: Stmt) = s match {
-    case StmtMap(m, _, _, _) if m.name.endsWith("_DELTA") => false
-    case _ => true
-  }
-
+  def filterStatement(s: TriggerStmt) = !s.target.name.endsWith("_DELTA")
 
   def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + tp.toScala + " = " + tp.zero
 
@@ -399,7 +395,7 @@ if(Optimizer.initialStoreSize) {
         ).toMap)
       // Execute each statement
       t.stmts.filter(filterStatement).map {
-        case StmtMap(m, e, op, oi) => cx.load()
+        case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val (mm, mmtp) = m.tp match {
               case TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
@@ -436,8 +432,6 @@ if(Optimizer.initialStoreSize) {
               }
             }, /*if (op==OpAdd)*/ Some(m.keys) /*else None*/) // XXXX commented out the if expression
           }
-        case m@MapDef(name, tp, keys, _, _) =>
-        case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       IR.unit(())
     }
@@ -467,15 +461,6 @@ if(Optimizer.initialStoreSize) {
         MapDef(deltaRel, tp, keys, null, LocalExp)
       case _ => null
     }) ++
-      s0.triggers.flatMap { t => //local maps
-        t.stmts.filter {
-          case MapDef(_, _, _, _, _) => true
-          case _ => false
-        }.map {
-          case m@MapDef(_, _, _, _, _) => m
-          case _ => null
-        }
-      } ++
       mapDefs.map {
         case (_, m@MapDef(_, _, _, _, _)) => m
       } // XXX missing indexes

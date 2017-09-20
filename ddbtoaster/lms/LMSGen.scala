@@ -303,7 +303,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
     )
   }
 
-  def filterStatement(s: Stmt) = true
+  def filterStatement(s: TriggerStmt) = true
 
   // Trigger code generation
   def genTriggerLMS(t: Trigger, s0: System) = {
@@ -347,7 +347,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       ).toMap)
       // Execute each statement
       t.stmts.filter(filterStatement).map {
-        case StmtMap(m, e, op, oi) => cx.load()
+        case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val mm = m.tp match {
               case TypeLong => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
@@ -387,14 +387,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
             /*if (op==OpAdd)*/ Some(m.keys) /*else None*/) 
             // XXXX commented out the if expression
           }
-        case m @ MapDef(name, tp, keys, _, _) =>
-          // val m = me(keys.map(_._2),tp)
-          // val s = impl.named(name, true)(manStore(m))
-          // impl.collectStore(s)(m)
-          // cx = Ctx(cx.ctx0 + (name -> s))
-        
-        // we leave room for other type of events
-        case _ => sys.error("Unimplemented") 
       }
       impl.unit(())
     }
@@ -471,15 +463,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         MapDef(deltaRel, tp, keys, null, LocalExp)
       case _ => null
     }) ++
-    s0.triggers.flatMap { t => //local maps
-      t.stmts.filter{
-        case m: MapDef => true
-        case _ => false
-      }.map{
-        case m: MapDef => m
-        case _ => null
-      }
-    } ++
     mapDefs.map {
       case (_, m: MapDef) => m
     } // XXX missing indexes

@@ -278,12 +278,11 @@ object Compiler {
       import ddbt.ast._
       import M3._
       //XXX: Make this work with EXPRESSIVE-TLQS
-      val (qns, qss) = (m3.queries.map(_.name), collection.mutable.HashMap[String,Stmt]())
+      val (qns, qss) = (m3.queries.map(_.name), collection.mutable.HashMap[String,TriggerStmt]())
       val triggers = m3.triggers.map(t => Trigger(t.event, t.stmts.filter {
-        case s @ StmtMap(m,e,op,i) => 
+        case s @ TriggerStmt(m,e,op,i) => 
           if (qns.contains(m.name)) { qss += ((m.name, s)); false } else true
         // case case MapDef(n,tp,ks,e) => XXXXXX
-        case _ => true
       }))
       val r = cg.pkgWrapper(pkg, cg(System(m3.sources, m3.maps, m3.queries, 
         Trigger(EventInsert(Schema("__execute__", Nil)), qss.map(_._2).toList) :: triggers)))
@@ -426,12 +425,12 @@ object Compiler {
   def postProc(s0: ast.M3.System) = {
     //fixing the unique id for each statement
     //used in debugging and performance measurements
-    var stmtId = 0
-    s0.triggers.foreach{ trg => trg.stmts.map { stmt =>
-        stmt.stmtId = stmtId
-        stmtId += 1
-      }
-    }
+    // var stmtId = 0
+    // s0.triggers.foreach{ trg => trg.stmts.map { stmt =>
+    //     stmt.stmtId = stmtId
+    //     stmtId += 1
+    //   }
+    // }
     s0
   }
 

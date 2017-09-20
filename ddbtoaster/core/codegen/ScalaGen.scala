@@ -411,8 +411,8 @@ trait IScalaGen extends CodeGen {
     case _ => sys.error("Don't know how to generate " + ex)
   }
 
-  def genStmt(s: Stmt): String = s match {
-    case StmtMap(m, e, op, oi) =>
+  def genStmt(s: TriggerStmt): String = s match {
+    case TriggerStmt(m, e, op, oi) =>
       val (fop, sop, clear) = op match { 
         case OpAdd => ("add", " += ", "") 
         case OpSet => ("add", " = " , if (m.keys.size > 0) m.name + ".clear()\n" else "" ) 
@@ -453,11 +453,6 @@ trait IScalaGen extends CodeGen {
         ),
         /*if (op==OpAdd)*/ Some(m.keys)/* else None*/
       ) // XXXX commented out the if expression
-    
-    case m: MapDef => "" //nothing to do
-
-    // we leave room for other type of events
-    case _ => sys.error("Unimplemented") 
   }
 
   def genTrigger(t: Trigger, s0: System): String = {
@@ -712,15 +707,7 @@ trait IScalaGen extends CodeGen {
           genMap(MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp)) + "\n"
         case _ => ""
       }).mkString +
-      s0.triggers.flatMap { t=> //local maps
-        t.stmts.filter{
-          case m: MapDef => true
-          case _ => false
-        }.map{
-          case m: MapDef => genMap(m)+"\n"
-          case _ => ""
-        }
-      }.mkString + s0.maps.map(m => genMap(m)).mkString("\n") // maps
+      s0.maps.map(m => genMap(m)).mkString("\n") // maps
       ms + "\n" + genQueries(s0.queries) + "\n" + ts
     }
     val (str, ld0, gc) = if (lms != null) (strLMS, ld0LMS, gcLMS)

@@ -88,11 +88,10 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
         case EventInsert(s) => s.fields 
         case EventDelete(s) => s.fields 
         case EventBatchUpdate(s) => s.fields }).map(_._1)
-      t.stmts.foreach { case StmtMap(m,e,_,oi) =>
+      t.stmts.foreach { case TriggerStmt(m,e,_,oi) =>
         cm0.foreach(x=>join(m,x))
         if (!(ctx0.toSet & m.keys.map(_._1).toSet).isEmpty) cm0=m::cm0
         expr(e,List(m)); oi match { case Some(ei) => expr(ei,List(m)) case _ => }
-        case m: MapDef =>
       }
     }
     // merge without and with key reduction
