@@ -9,6 +9,34 @@ import java.io._
  */
 object Utils {
 
+  // Fresh variables name provider
+  private val counter = scala.collection.mutable.HashMap[String, Int]()  
+  
+  def fresh(name: String = "x") = {
+    val c = counter.getOrElse(name, 0) + 1
+    counter.put(name, c)
+    name + c 
+  }
+
+  def freshClear() = counter.clear
+
+  // Indent text by n*2 spaces (and trim trailing space)
+  def ind(s: String, n: Int = 1) = {
+    val i = "  " * n
+    i + s.replaceAll("\n? *$", "").replaceAll("\n", "\n" + i) 
+  }
+
+  def tup(vs: List[String]) = 
+    if (vs.size > 1) "(" + vs.mkString(", ") + ")" else vs.mkString(", ")
+
+  def block(s: String) = 
+    if (s == null || s.trim() == "") s.trim() else "\n" + s + "\n"
+
+  def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
+
+  def delta(name: String) = "DELTA_" + name
+
+
   // Display a warning to the user
   def warning(msg: String) = {
     val sb = new StringBuilder(("@" * 80) + "\n@" + (" " * 78) + "@\n")
@@ -371,33 +399,6 @@ object Utils {
     finally { if (writer != null) writer.close() }
   }
 
-  // String manipulation
-  def ind(s: String, n: Int = 1) = { 
-    val i = "  " * n
-    i + s.replaceAll("\n? *$", "").replaceAll("\n", "\n" + i) 
-  }
-
-  def block(s: String) = 
-    if (s == null || s.trim() == "") s.trim() else "\n" + s + "\n"
-
-  def tup(vs: List[String]) = { 
-    val v = vs.mkString(", ")
-    if (vs.size > 1) "(" + v + ")" else v 
-  }
-
-
-  // Fresh variables name provider
-  private val counter = scala.collection.mutable.HashMap[String, Int]()  
-  
-  def fresh(name: String = "x") = { 
-    val c = counter.getOrElse(name, 0) + 1
-    counter.put(name, c) 
-    name + c 
-  }
-
-  def freshClear() = counter.clear
-
-
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path: String = null, auto_delete: Boolean = false): File = {
     val tmp = if (path != null) new File(path) else new File("ddbtoaster/target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
@@ -480,6 +481,4 @@ object Utils {
     val rawMod = x % mod
     rawMod + (if (rawMod < 0) mod else 0)
   }
-
-  def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
 }
