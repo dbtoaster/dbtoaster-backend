@@ -581,7 +581,7 @@ trait ICppGen extends IScalaGen {
     * This optimization is not activated by default at any optimization level.
     */
   def isExpressiveTLQSEnabled(queries:List[Query]) =
-    queries.exists { query => query.map match {
+    queries.exists { query => query.expr match {
         case MapRef(n,_,_,_) => (n != query.name)
         case _ => true
       }
@@ -880,8 +880,8 @@ trait ICppGen extends IScalaGen {
     //map definitions in the body (part 2)
     val sDataStructures = if(msSC != null) msSC else {
       // queries without a map (with -F EXPRESSIVE-TLQS)
-      s0.queries.filter(q => (s0.maps.filter(_.name == q.name).size == 0) && (q.keys.size > 0))
-                .map(q => genMapStructDef(MapDef(q.name, q.tp, q.keys, q.map, LocalExp))).mkString("\n") +
+      s0.queries.filter(q => (s0.maps.filter(_.name == q.name).size == 0) && (q.expr.ovars.size > 0))
+                .map(q => genMapStructDef(MapDef(q.name, q.expr.tp, q.expr.ovars, q.expr, LocalExp))).mkString("\n") +
       // delta relations
       ( if (EXPERIMENTAL_RUNTIME_LIBRARY) {
           s0.triggers.map(_.event match {
@@ -1065,15 +1065,16 @@ trait ICppGen extends IScalaGen {
 
     def compile_tlqs = s0.queries.map{ query =>
       "const " + query.toCppRefType + " get_" + query.name + "() const {\n"+
-      (query.map match {
+      (query.expr match {
         case MapRef(n,_,_,_) if (n == query.name) => "  return " + query.name + ";"
         case _ => 
           ctx = Ctx[(Type,String)]()
           ind(
-            if (query.keys.length == 0) cpsExpr(query.map, (v: String) => "return " + v + ";") + "\n"
+            if (query.expr.ovars.length == 0) cpsExpr(query.expr, (v: String) => "return " + v + ";") + "\n"
             else {
-              val nk = query.keys.map(_._1)
-              val nkTp = query.keys.map(_._2)
+              val ovars = query.expr.ovars
+              val nk = ovars.map(_._1)
+              val nkTp = ovars.map(_._2)
               val mapName = query.name
               val mapType = mapName+"_map"
               val mapEntry = mapName+"_entry"
@@ -1081,7 +1082,7 @@ trait ICppGen extends IScalaGen {
               sampleEntDef+=(if(nk.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
               // "val "+mapName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
               mapName + ".clear();\n"+
-              cpsExpr(query.map, (v:String) =>ADD_TO_MAP_FUNC(query.name)+"("+sampleEnt+".modify("+(nk map rn).mkString(",")+"),"+v+");")+"\n"+
+              cpsExpr(query.expr, (v:String) =>ADD_TO_MAP_FUNC(query.name)+"("+sampleEnt+".modify("+(nk map rn).mkString(",")+"),"+v+");")+"\n"+
               "return " + mapName + ";"
             }
           )

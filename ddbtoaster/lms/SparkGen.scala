@@ -1271,7 +1271,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   override def toMapFunction(q: Query) = {
     val mapName = q.name
-    val mapType = q.map.tp.toScala
+    val mapType = q.expr.tp.toScala
     val mapDef = mapInfo(mapName)
     val mapKeyTypes = mapDef.keys.map(_._2)
     val args = tup(mapKeyTypes.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
@@ -1305,7 +1305,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   override protected def emitGetSnapshotBody(queries: List[Query]): String = {
     val sCreateHashMap = queries.map(q => 
-      if (q.keys.size > 0) toMapFunction(q) else q.name
+      if (q.expr.ovars.size > 0) toMapFunction(q) else q.name
     ).mkString(", ")
     s"""|(StreamStat(endTime - startTime, tuplesProcessed, tuplesSkipped), List(
         |

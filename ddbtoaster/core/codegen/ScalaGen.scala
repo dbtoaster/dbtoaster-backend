@@ -639,20 +639,20 @@ trait IScalaGen extends CodeGen {
   }
 
   def genQueries(queries: List[Query]) = {
-    queries.map { query => { query.map match {
+    queries.map { query => { query.expr match {
       case MapRef(n,_,_,_) if (n == query.name) => ""
       case _ =>
         ctx = Ctx[(Type, String)]()
         "def " + query.name + "() = {\n" +
         ind(
-          if (query.keys.length == 0) cpsExpr(query.map)
+          if (query.expr.ovars.length == 0) cpsExpr(query.expr)
           else {
             val mName = "m" + query.name
-            val tk = tup(query.keys.map(_._2.toScala))
-            val nk = query.keys.map(_._1)
+            val tk = tup(query.expr.ovars.map(_._2.toScala))
+            val nk = query.expr.ovars.map(_._1)
             "val " + mName + " = M3Map.make[" + tk + "," + 
-            query.tp.toScala + "]()\n" +
-            cpsExpr(query.map, (v: String) => 
+            query.expr.tp.toScala + "]()\n" +
+            cpsExpr(query.expr, (v: String) => 
               mName + ".add(" + genTuple(nk map ctx) + "," + v + ")"
             ) + "\n" +
             mName
@@ -668,9 +668,9 @@ trait IScalaGen extends CodeGen {
     val mapKeys = m.keys.map(_._2)
     val nodeName = map + "_node"
     val res = nodeName + "_mres"
-    if (q.keys.size > 0)
+    if (q.expr.ovars.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" +
-      tup(mapKeys.map(_.toScala)) + ", " + q.map.tp.toScala + "](); " +
+      tup(mapKeys.map(_.toScala)) + ", " + q.expr.tp.toScala + "](); " +
       map + ".foreach{ case (e,v) => " + res + " += (" +
       ( if (mapKeys.size > 1)
           tup(mapKeys.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
@@ -802,9 +802,9 @@ trait IScalaGen extends CodeGen {
   // Helper that contains the main and stream generator
   private def emitMainClass(queries: List[Query], sources: List[Source]) = {
     val sResults = queries.zipWithIndex.map { case (q, i) => 
-        val skeys = q.keys.map(k => "\"" + k._1 + "\"").mkString(", ")
+        val skeys = q.expr.ovars.map(k => "\"" + k._1 + "\"").mkString(", ")
         "println(\"<" + q.name + ">\\n\" + M3Map.toStr(res(" + i + ")" +
-        stringIf(q.keys.nonEmpty, ", List(" + skeys + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
+        stringIf(q.expr.ovars.nonEmpty, ", List(" + skeys + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
       }.mkString("\n")
     val sStreams = streams(sources)
     s"""|import ddbt.lib._

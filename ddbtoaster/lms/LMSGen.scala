@@ -395,7 +395,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   }
 
   override def toMapFunction(q: Query) = {
-    if (q.keys.nonEmpty) {
+    if (q.expr.ovars.nonEmpty) {
       val map = q.name
       val m = mapDefs(map)
       val mapKeys = m.keys.map(_._2)
@@ -403,7 +403,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       val res = nodeName + "_mres"
 
       "{ val " + res + " = new scala.collection.mutable.HashMap[" +
-      tup(mapKeys.map(_.toScala)) + ", " + q.map.tp.toScala + "](); " +
+      tup(mapKeys.map(_.toScala)) + ", " + q.expr.tp.toScala + "](); " +
       map + ".foreach { e => " + res+" += (" +
       tup(mapKeys.zipWithIndex.map { case (_, i) => "e._" + (i + 1) }) +
       " -> e._" + (mapKeys.size + 1) + ") }; " + res + ".toMap }"
@@ -566,7 +566,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
   override protected def emitGetSnapshotBody(queries: List[Query]): String = {
     val snap = "List(" +
       queries.map(q =>
-        (if (q.keys.size > 0) toMapFunction(q) else (if (watch && resultMapNames.contains(q.name)) q.name + ".value" else q.name))).mkString(", ") +
+        (if (q.expr.ovars.size > 0) toMapFunction(q) else (if (watch && resultMapNames.contains(q.name)) q.name + ".value" else q.name))).mkString(", ") +
       ")"
     snap
   }

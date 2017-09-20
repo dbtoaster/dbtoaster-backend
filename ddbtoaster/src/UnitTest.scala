@@ -323,7 +323,7 @@ object UnitTest {
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
       val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-      val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
+      val qt = sys.queries.map{q=>(q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
       val body = 
       "import scala.language.implicitConversions\n"+
       "implicit def strConv(d: Long) = d.toString\n\n"+ // fix for TPCH22
@@ -372,7 +372,7 @@ object UnitTest {
     // Correctness
     def spec(sys: ddbt.ast.M3.System, full: Boolean = true) = {
       val qid = sys.queries.map(_.name).zipWithIndex.toMap
-      val qt = sys.queries.map { q => (q.name, (q.keys.map(_._2), q.tp)) }.toMap
+      val qt = sys.queries.map { q => (q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
       val body = 
         "import scala.language.implicitConversions\n" +
         "implicit def strConv(d: Long) = d.toString\n" + // fix for TPCH22
@@ -497,11 +497,11 @@ object UnitTest {
         val snap = XML.loadString(output.substring(startIdx, endIdx))
 
         val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-        val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
+        val qt = sys.queries.map{q=>(q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
         val qn = if (lang == "cpp")
-          sys.queries.map { q => (q.name, ((1 to q.keys.size).map("_"+_).toList, "_"+(q.keys.size+1))) }.toMap
+          sys.queries.map { q => (q.name, ((1 to q.expr.ovars.size).map("_"+_).toList, "_"+(q.expr.ovars.size+1))) }.toMap
         else
-          sys.queries.map { q => (q.name, (q.keys.map(_._1), "__av")) }.toMap
+          sys.queries.map { q => (q.name, (q.expr.ovars.map(_._1), "__av")) }.toMap
         q.sets.filter(_._1 == dataset).map { case (sz,set) =>
           set.out.foreach { case (n,o) =>
             val (kt,vt) = qt(n)

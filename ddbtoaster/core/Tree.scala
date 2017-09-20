@@ -236,15 +236,12 @@ object M3 {
   }
 
   // -------- Query definition
-  case class Query(name: String, map: Expr) extends M3 {
-    var keys: List[(String, Type)] = null
-    var tp: Type = null
-
-    override def toString = "DECLARE QUERY " + name + " := " + map + ";"
+  case class Query(name: String, expr: Expr) extends M3 {
+    override def toString = "DECLARE QUERY " + name + " := " + expr + ";"
     
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
+    def toCppType = if (expr.ovars.size == 0) expr.tp.toCpp else name + "_map"
     
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
+    def toCppRefType = if (expr.ovars.size == 0) toCppType else toCppType + "&"
   }
 
   // -------- Trigger definition
