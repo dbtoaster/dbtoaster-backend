@@ -70,10 +70,10 @@ addCommandAlias("toast", ";runMain ddbt.Compiler ") ++
 addCommandAlias("unit", ";runMain ddbt.UnitTest ") 
 
 // // --------- Custom tasks
-// val LANG_SCALA = "vscala"
-// val LANG_SCALA_LMS = "scala"
+val LANG_SCALA = "vscala"
+val LANG_SCALA_SC = "scala"
 
-// addCommandAlias("queries", "unit -dd -v -x -s 0 -l " + LANG_SCALA + " ") ++
+addCommandAlias("queries", "unit -dd -v -x -s 0 -l " + LANG_SCALA_SC + " ")
 // addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc ") ++
 // addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/query2 -qx tpch/query21 ") // too long to compile/execute
 
@@ -81,9 +81,9 @@ addCommandAlias("unit", ";runMain ddbt.UnitTest ")
 // addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 
 // addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
-// addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l " + LANG_SCALA + " -l " + LANG_SCALA_LMS + " -l lscala -l llms ") ++ // usage: sbt 'bench-all'
-// //addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l lscala -l llms -l "+LANG_SCALA+" -l "+LANG_SCALA_LMS+" -l cpp -l lcpp -w 2 -s 3 -t 60000 -d big_del -q tpch.*query[0-9]+.sql ")
-// addCommandAlias("bench-all-tpch", ";unit -x -xsc -xvm -p 2 -w 2 -s 3 -t 60000 -csv bench-all.csv -dump bench-all-dump.txt -l " + LANG_SCALA + " -l " + LANG_SCALA_LMS + " -l cpp -d big_del -q tpch.*query[0-9]+ ")
+// addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l " + LANG_SCALA + " -l " + LANG_SCALA_SC + " -l lscala -l llms ") ++ // usage: sbt 'bench-all'
+// //addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l lscala -l llms -l "+LANG_SCALA+" -l "+LANG_SCALA_SC+" -l cpp -l lcpp -w 2 -s 3 -t 60000 -d big_del -q tpch.*query[0-9]+.sql ")
+// addCommandAlias("bench-all-tpch", ";unit -x -xsc -xvm -p 2 -w 2 -s 3 -t 60000 -csv bench-all.csv -dump bench-all-dump.txt -l " + LANG_SCALA + " -l " + LANG_SCALA_SC + " -l cpp -d big_del -q tpch.*query[0-9]+ ")
 
 
 // addCommandAlias("test-regression-cpp-single", 

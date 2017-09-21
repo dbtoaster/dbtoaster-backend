@@ -19,15 +19,17 @@ Currently the project matches original DBToaster code generation based on M3 and
 2. Checkout the repository `$ git clone https://github.com/epfldata/dbtoaster-backend`
 3. Get some data/queries to play with: add `bin/dbtoaster_frontend` and `examples/{data,queries}` from [here](https://dbtoaster.github.io/) to the `dbtoaster-backend` folder (keep the same paths).
 4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. The list of available options is show using `$ sbt 'toast --help'`.
-5. You can also use LMS and Akka by following the extended setup, however, you will not be able to run the tests as they are stored in DBToaster (private) repository.
+5. You can also run the whole test suit by following the extended setup.
 
 #### Extended setup (to connect with dbtoaster-frontend)
-1. Checkout and compile DBToaster. You'll need [OCaml](http://caml.inria.fr/download.en.html) and [Boost](http://www.boost.org/users/download/) to compile the front-end. Please checkout the [front-end repository](https://github.com/dbtoaster/dbtoaster-a5) for more instructions.
+1. Checkout and compile DBToaster. You'll need [OCaml](http://caml.inria.fr/download.en.html) to compile the front-end. Please checkout the [front-end repository](https://github.com/dbtoaster/dbtoaster-a5) for more instructions.
 2. Create a file `conf/ddbt.properties` to suit your needs. In particular:
    - `ddbt.base_repo` path to dbtoaster-frontend repository (required for unit tests)
    - `ddbt.dbtoaster` dbtoaster binary (required if `base_repo` is not set)
    - Options to run unit tests and benchmarking: `$ sbt 'unit --help'`
    - Tests queries using `$ sbt queries`.
+
+   A sample configuration file named `conf/ddbt.properties.example` exists in the repository and you can create a copy of it, rename it to `conf/ddbt.properties` and modify it to have your desired parameters.
 
 #### Instructions for running the distributed version
 
