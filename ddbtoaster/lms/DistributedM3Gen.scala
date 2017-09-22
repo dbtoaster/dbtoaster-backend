@@ -7,8 +7,8 @@ import ddbt.ast._
   *
   * @author Milos Nikolic, Mohammad Dashti
   */
-class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen) 
-    extends LMSGen(cls, impl) with IScalaGen {
+class DistributedM3Gen(cgOpts: CodeGenOptions, impl: LMSExpGen) 
+    extends LMSGen(cgOpts, impl) with IScalaGen {
   
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
@@ -96,8 +96,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
   }
   //----------
 
-  val sSparkObject = cls
-  val sLocalMapContextClass  = s"${cls}LocalMapContext"
+  val sSparkObject = cgOpts.className
+  val sLocalMapContextClass  = s"${cgOpts.className}LocalMapContext"
   val sGlobalMapContextClass = s"GlobalMapContext[${sLocalMapContextClass}]"
   val sEscapeFn = "context.become(receive_skip)"
 

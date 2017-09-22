@@ -30,7 +30,7 @@ class ExtParser extends StandardTokenParsers {
   }
 
   // Add case insensitivity to keywords
-  override val lexical:StdLexical = new CaseInsensitiveLexical
+  override val lexical: StdLexical = new CaseInsensitiveLexical
 
   // Allow matching non-reserved keywords
   import scala.language.implicitConversions
@@ -45,9 +45,6 @@ class ExtParser extends StandardTokenParsers {
   import lexical._
   //lexical.reserved ++= List("")
   lexical.delimiters ++= List("(", ")", ",", ".", ";", "+", "-", ":=", "<", ">")
-
-  // Verifies that the parse result matches a predicate
-  // def check[T](p:Parser[T],pred:T=>Boolean,msg:String) = new Parser[T] { def apply(i:Input) = p(i) match { case Success(res,next) => if (pred(res)) Success(res,next) else new Failure(msg,i) case f=>f } }
 
   // ------------ Literals
   lazy val longLit = 
@@ -72,6 +69,7 @@ class ExtParser extends StandardTokenParsers {
     | ("char" | "short" | "int" | "long") ^^^ TypeLong
     | ("float" | "decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
+    // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
     | failure("Bad type")
   )
 
@@ -123,7 +121,8 @@ class ExtParser extends StandardTokenParsers {
 
 object M3Parser extends ExtParser with (String => M3.System) {
 
-  import ddbt.ast.M3._
+  import M3._
+
   lexical.delimiters ++= 
     List("{", "}", ":", ":=", "+", "-", "*", "/", "=", "!=", "<", "<=", ">=", ">", "[", "]", "^=", "+=")
 
@@ -160,7 +159,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
     | ("(" ~> "DELTA" ~> ident <~ ")") ~ 
       ("(" ~> repsep(ident, ",") <~ ")") ^^ { 
         case n ~ f => DeltaMapRefConst(n, f.map((_, null))) 
-      } // only for delta relation in batching
+      }
     | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ 
       ("(" ~> expr <~ ")") ^^ { 
         case t ~ e => Apply("/", t, List(e)) 
@@ -192,9 +191,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
         case v ~ consts => CmpOrList(v, consts)
       }
     | ident ^^ { Ref(_) }
-    // | floatLit ^^ { Const(TypeFloat, _) }
     | doubleLit ^^ { Const(TypeDouble, _) }
-    // | intLit ^^ { Const(TypeInt, _) }
     | longLit ^^ { Const(TypeLong, _) }
     | stringLit ^^ { Const(TypeString, _) }
     // Tupling
@@ -209,18 +206,14 @@ object M3Parser extends ExtParser with (String => M3.System) {
     ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe), ",") <~ "]") ~ 
     opt(":=" ~> expr) ~ opt(partitioning) <~ ";" ^^ { 
       case n ~ t ~ ks ~ e ~ p => 
-        MapDef(
-          n, 
-          t.getOrElse(null), 
-          ks.map { case n ~ t => (n, t) }, 
-          e.getOrElse(null),
-          p.getOrElse(LocalExp)
-        ) 
+        MapDef(n, t.getOrElse(null), ks.map { case n ~ t => (n, t) }, 
+               e.getOrElse(null), p.getOrElse(LocalExp))
     }
 
   lazy val query = 
-    ( ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ 
-        { case n ~ m => Query(n, m) }
+    ( ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ { 
+        case n ~ e => Query(n, e) 
+      }
     | failure("Bad M3 query")
     )
 

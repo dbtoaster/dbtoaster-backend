@@ -174,13 +174,13 @@ commands += Command.command("release")((state: State) => {
   Project.runTask(pack, state)
 
   println("copy all the Scala dependency libraries")
-  val sourceDir = baseDir/"target"/"pack"/"lib";
+  val sourceDir = baseDirectory.value/"target"/"pack"/"lib";
   if (sourceDir.exists) {
     val targetDir = releaseDir/"lib"/"dbt_scala"
     targetDir.mkdirs
 
     copyFiles(IO.listFiles(sourceDir).filter { _.getName.matches(
-      "(akka-actor|config|scala-library|scala-reflect|scala-parser-combinators" + 
+      "(akka-actor|config|scala-library|scala-reflect|scala-parser-combinators|scala-xml" + 
       "|sc-shared|sc-pardis-compiler|sc-pardis-core-compiler|sc-pardis-library|sc-pardis-quasi|scala-yinyang|squid-sc-backend" +
       "|dbtoaster|lms|scalariform).*") }, targetDir)
 

@@ -53,7 +53,9 @@ trait M3StoreOpsExp extends BaseExp
 
   def named[T](name: String, mutable: Boolean)(implicit mT: Manifest[T]) = { 
     val n = Named(name)(mT)
-    if (mutable) reflectMutable(n) else n 
+    var rep: Exp[T] = if (mutable) reflectMutable(n) else n
+    rep.asInstanceOf[Sym[_]].attributes.update(NAME_ATTRIBUTE, name)
+    rep
   }
 
   override def namedVar(name: String, tp: Type): Rep[_] = {

@@ -7,7 +7,7 @@ import ddbt.lib.spark.GlobalMapContext
   *
   * @author Milos Nikolic, Mohammad Dashti
   */
-class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpGen) {  
+class LMSSparkGen(cgOpts: CodeGenOptions) extends DistributedM3Gen(cgOpts, SparkExpGen) {  
   
   import ddbt.ast.M3._
   import ddbt.ast._
@@ -39,7 +39,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
     // Create delta MapInfo definitions
     deltaMapInfo = s0.triggers.flatMap { _.event match {
-      case EventBatchUpdate(s @ Schema(name, _)) => 
+      case EventBatchUpdate(Schema(name, _)) => 
         val source = s0.sources.filter(_.schema.name == name).head
         val keys = source.schema.fields
         val storeType = if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) ArrayStore else IndexedStore
@@ -382,7 +382,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
 
         val strConstRenaming =
-          (cs.map { case (_, n) => s"val $n = localCtx.$n" } ++
+          (hoistedConsts.map { case (_, n) => s"val $n = localCtx.$n" } ++
            regexpCacheMap.map { case (_, n) => s"val $n = localCtx.$n" }).mkString("\n")
 
         // Generate foreach header
@@ -703,7 +703,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
 
         val strConstRenaming = 
-          (cs.map { case (_, n) => s"val $n = localCtx.$n" } ++
+          (hoistedConsts.map { case (_, n) => s"val $n = localCtx.$n" } ++
            regexpCacheMap.map { case (_, n) => s"val $n = localCtx.$n" }).mkString("\n")
 
         // Generate foreach header 
@@ -1221,9 +1221,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         s"val ${name}_BATCHES = new ArrayBuffer[${impl.codegen.storeEntryType(ctx0(name)._1)}](16)"
       }).mkString("\n")
 
-    val sQueueList = streams.map (s => 
-        s"localCtx.${delta(s.schema.name)}_QUEUE.enqueue(${delta(s.schema.name)}_BATCHES)"
-      ).mkString("\n")
+    val sQueueList = streams.map (s => {
+        val name = delta(s.schema.name)
+        s"localCtx.${name}_QUEUE.enqueue(${name}_BATCHES)"
+      }).mkString("\n")
 
     val sCaseList = streams.zipWithIndex.map { case (s, ind) => {
         val name = delta(s.schema.name)

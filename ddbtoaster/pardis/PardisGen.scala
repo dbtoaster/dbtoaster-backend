@@ -1,30 +1,33 @@
 package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.types.{PardisType, RecordType, UnitType}
+import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 import ch.epfl.data.sc.pardis.utils.TypeUtils
 import ch.epfl.data.sc.pardis.utils.document._
-import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
-import ddbt.lib.Utils._
-import java.io.{File, PrintWriter, StringWriter}
-
 import ch.epfl.data.sc.pardis.ir.CTypes.{Pointer, PointerType}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
+import ch.epfl.data.sc.pardis.optimization._
+
+import ddbt.ast._
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
-import ddbt.ast._
+
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.{StoreDSL, StoreDSLOptimized}
-import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
+import ddbt.lib.Utils
+import ddbt.lib.Utils._
 import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreCppCodeGenerator, StoreScalaCodeGenerator}
-import ch.epfl.data.sc.pardis.optimization._
 import ddbt.transformer._
 
+import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.util.parsing.json.JSON
+import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
 
-abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
+
+abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) extends CodeGen {
 
   import Optimizer._;
   val opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts,
@@ -39,22 +42,22 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import IR._
-  import ddbt.lib.TypeHelper.Scala._
 
   val infoFile = new File(s"../runtime/stats/${if (Optimizer.infoFileName == "") "default" else Optimizer.infoFileName}.json")
   val infoFilePath = infoFile.getAbsolutePath
   var StoreArrayLengths = Map[String, String]()
   var idxSymNames: List[String] = null
-if(Optimizer.initialStoreSize) {
-  if (infoFile.exists()) {
-    java.lang.System.err.println(s"Loading runtime info from $infoFilePath")
-    val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
-    val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
-    StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
-  } else {
-    java.lang.System.err.println("Runtime info file missing!!  Using default initial sizes")
+  
+  if(Optimizer.initialStoreSize) {
+    if (infoFile.exists()) {
+      java.lang.System.err.println(s"Loading runtime info from $infoFilePath")
+      val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
+      val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
+      StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
+    } else {
+      java.lang.System.err.println("Runtime info file missing!!  Using default initial sizes")
+    }
   }
-}
 
   val codeGen: StoreCodeGenerator
   val tempMapSchema = collection.mutable.ArrayBuffer[(Sym[_], List[TypeRep[_]])]()
@@ -134,10 +137,10 @@ if(Optimizer.initialStoreSize) {
         case Nil => co(IR.m3apply(fn, vs.reverse, tp))
       }
       if (as.forall(_.isInstanceOf[Const])) {
-        val cName = constApply(a)
+        val cName = hoistedConsts.getOrElseUpdate(a, Utils.fresh("c"))
         co(nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(typeToTypeRep(tp)))) // hoist constants resulting from function application
       } else if (Optimizer.regexHoister && fn.equals("regexp_match") && as(0).isInstanceOf[Const]) {
-        val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, ddbt.lib.Utils.fresh("preg"))
+        val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, Utils.fresh("preg"))
         val regex = nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(RegexType))
         expr(as(1), (v: Rep[_]) => co(IR.m3apply("preg_match", List(regex, v), tp)))
       }
@@ -345,32 +348,6 @@ if(Optimizer.initialStoreSize) {
 
   def filterStatement(s: TriggerStmt) = !s.target.name.endsWith("_DELTA")
 
-  def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + typeToString(tp) + " = " + zeroOfType(tp)
-
-  override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
-    if (Optimizer.analyzeEntry) {
-      val ctx = ctx0(map)
-      val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert($name(" + (if (Optimizer.secondaryIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
-    }
-    else
-      map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
-  }
-
-  override def toMapFunction(q: Query) = {
-    val map = q.name
-    val m = mapDefs(map)
-    val mapKeys = m.keys.map(_._2)
-    val nodeName = map + "_node"
-    val res = nodeName + "_mres"
-    def get(i: Int) = if (Optimizer.analyzeEntry) s"e._$i" else s"e.get($i)"
-    if (q.expr.ovars.size > 0)
-      "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(typeToString)) + "," + typeToString(q.expr.tp) + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
-    else {
-      q.name
-    }
-  }
-
   var cx: Ctx[Rep[_]] = null
 
   def getTriggerNameArgs(t: Trigger): (String, List[(String, Type)])
@@ -382,7 +359,6 @@ if(Optimizer.initialStoreSize) {
 
     val block = IR.reifyBlock {
 
-      //println(s"HELLO AGAIN2 ${ctx0}")
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         ctx0.map { case (name, (sym, keys, tp)) => (name, sym) }.toList union {
@@ -407,9 +383,8 @@ if(Optimizer.initialStoreSize) {
               case _ => sys.error("Unsupported type " + m.tp)
             }
 
-            //            println(s"tpe here! ${mm}, ${mmtp}, ${m.tp}}");
             expr(e, (r: Rep[_]) => op match {
-              case OpAdd => debug(s"tpe here! ${mm}, ${mm.tp}}"); IR.var_plusequals(mm, r)(mmtp.asInstanceOf[TypeRep[Any]])
+              case OpAdd => IR.var_plusequals(mm, r)(mmtp.asInstanceOf[TypeRep[Any]])
               case OpSet => IR.__assign(mm, r)
             })
           } else {
@@ -449,15 +424,24 @@ if(Optimizer.initialStoreSize) {
     ExpressionSymbol.globalId = 0
     m3System = s0
     val classLevelMaps = 
-    // s0.triggers.filter(_.event match {
-    //   case EventBatchUpdate(s) => true
-    //   case _ => false
-    // }).map(_.event match {
-    //   //delta relations
-    //   case EventBatchUpdate(schema) =>
-    //     MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp)
-    //   case _ => null
-    // }) ++
+      // s0.triggers.filter(_.event match {
+      //   case EventBatchUpdate(s) => true
+      //   case _ => false
+      // }).map(_.event match {
+      //   //delta relations
+      //   case EventBatchUpdate(schema) =>
+      //     MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp)
+      //   case _ => null
+      // }) ++
+      // s0.triggers.flatMap { t => //local maps
+      //   t.stmts.filter {
+      //     case MapDef(_, _, _, _, _) => true
+      //     case _ => false
+      //   }.map {
+      //     case m@MapDef(_, _, _, _, _) => m
+      //     case _ => null
+      //   }
+      // } ++
       mapDefs.map {
         case (_, m@MapDef(_, _, _, _, _)) => m
       }.toList // XXX missing indexes
@@ -547,7 +531,7 @@ if(Optimizer.initialStoreSize) {
 
     val res = genCodeForProgram(optTP)
 //    val ext = if(cTransformer) "hpp" else "scala"
-//    val trigs = new PrintWriter(s"$cls.$ext")
+//    val trigs = new PrintWriter(s"$cgOpts.className.$ext")
 //    trigs.print(res._1)
 //    trigs.close()
     res
@@ -555,10 +539,9 @@ if(Optimizer.initialStoreSize) {
 
   def genCodeForProgram[T](prg: TransactionProgram[T]): (String, String, String)
 
-  override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)
 }
 
-class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) {
+class PardisScalaGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) with IScalaGen {
 
   import IR._
   import ddbt.lib.TypeHelper.Scala._
@@ -601,16 +584,45 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
 
     (ts, ms, tempEntries)
   }
+
+  override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
+    if (Optimizer.analyzeEntry) {
+      val ctx = ctx0(map)
+      val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
+      map + s".unsafeInsert($name(" + (if (Optimizer.secondaryIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
+    }
+    else
+      map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
+  }
+
+  override def toMapFunction(q: Query) = {
+    val map = q.name
+    val m = mapDefs(map)
+    val mapKeys = m.keys.map(_._2)
+    val nodeName = map + "_node"
+    val res = nodeName + "_mres"
+    def get(i: Int) = if (Optimizer.analyzeEntry) s"e._$i" else s"e.get($i)"
+    if (q.expr.ovars.size > 0)
+      "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(typeToString)) + "," + typeToString(q.expr.tp) + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
+    else {
+      q.name
+    }
+  }
+
+  override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)  
 }
 
-class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) with ICppGen {
+class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) with ICppGen {
   override val codeGen: StoreCppCodeGenerator = new StoreCppCodeGenerator(IR)
 
   import IR._
 
-  override val usingPardis = true
-  override val pardisExtendEntryParam = !Optimizer.analyzeEntry || !Optimizer.secondaryIndex
-  override val pardisProfilingOn = Optimizer.profileStoreOperations || Optimizer.profileBlocks
+  val pardisExtendEntryParam = !Optimizer.analyzeEntry || !Optimizer.secondaryIndex
+  val pardisProfilingOn = Optimizer.profileStoreOperations || Optimizer.profileBlocks
+
+  var streamTriggers = ""
+  var mapTypes = ""
+  var entryDefs = ""
 
   override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
@@ -638,7 +650,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       }
       ts += doc"void on${x._1}(${x._2.map(s => argTypeToDoc(s.tp) :: doc" $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
-    m3System.triggers.filter(_.event != EventReady).foreach(t => ts += (generateUnwrapFunction(t.event)(m3System) + "\n"))
+    m3System.triggers.filter(_.event != EventReady).foreach(t => ts += (emitUnwrapFunction(t.event, m3System.sources) + "\n"))
 
     def getEntryIdxNames(ops: Seq[Expression[EntryIdx[Entry]]]) = ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
@@ -773,7 +785,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     case EventDelete(Schema(n, cs)) => ("_delete_" + n, cs)
   }
 
-  override def genTrigger(t: Trigger, s0: System): String = {
+  def genTrigger(t: Trigger, s0: System): String = {
     val (name, params, block) = genTriggerPardis(t, s0)
     val Cname = t.event match {
       case EventReady => "system_ready_event"
@@ -783,5 +795,54 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     val code = codeGen.blockToDocument(block)
     s"void on_$Cname(" + params.map(i => "const")
+  }
+
+  override def emitIncludeHeaders = 
+    s"""|#define SC_GENERATED 1
+        |#include "program_base.hpp"
+        |#include "hpds/KDouble.hpp"
+        |#include "hash.hpp"
+        |#include "mmap/mmap.hpp"
+        |#include "hpds/pstring.hpp"
+        |#include "hpds/pstringops.hpp"
+        |""".stripMargin +    
+    stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
+    "#include \"ExecutionProfiler.h\"\n"
+
+  override protected def emitMapTypes(s0: System) = mapTypes  // genPardis._2
+
+  override protected def emitTempEntryTypes = ""
+
+  override protected def emitLocalEntryDefinitions = entryDefs   // genPardis._3  tmpEntrySC
+
+  override protected def emitMapDefinitions(maps: List[MapDef], queries: List[Query]) = "" 
+
+  override protected def emitTempMapDefinitions = ""
+
+  override protected def emitStreamTriggers(triggers: List[Trigger], sources: List[Source]) = streamTriggers // genPardis._1  
+
+  override protected def emitNonTLQMapInitializer(maps: List[MapDef], queries: List[Query]) = ""
+
+  override protected def emitTLQDefinitions(queries: List[Query]) = ""
+
+  override protected def emitTLQMapInitializer(maps: List[MapDef], queries: List[Query]) = ""
+
+  override protected def emitTakeSnapshotBody = 
+    super.emitTakeSnapshotBody + 
+    "\n// checkAll(); //print bucket statistics\n" +
+    stringIf(pardisProfilingOn, "// ") + 
+    "ExecutionProfiler::printProfileToFile(\"profile${cgOpts.className}.csv\");\n"
+
+  override protected def emitFieldNames(fields: List[(String, Type)]) = 
+    stringIf(pardisExtendEntryParam, "false_type(), ") + super.emitFieldNames(fields)
+
+  override protected def emitInsertToMapFunc(map: String, entry: String) = 
+    map + ".insert_nocheck(" + entry + ");"
+
+  override protected def prepareCodegen(s0: System): Unit = {
+    val x = genPardis(s0)
+    streamTriggers = x._1
+    mapTypes = x._2
+    entryDefs = x._3
   }
 }

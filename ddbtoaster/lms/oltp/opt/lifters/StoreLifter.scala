@@ -651,8 +651,9 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
 
       val indices = sym.attributes.get(ENTRY_INDICES_KEY) match {
         case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
-                     m += ((IList, (1 to sym.tp.typeArguments.size),false,-1))
+        case None =>
+          val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+          m += ((IList, (1 to sym.tp.typeArguments.size), false, -1))
       }
       // ------------- EntryIdx
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>

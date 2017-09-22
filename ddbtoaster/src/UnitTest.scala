@@ -2,10 +2,9 @@ package ddbt
 
 import java.io._
 import java.util.concurrent.{ BlockingQueue, LinkedBlockingQueue }
-import Compiler._
 import ddbt.lib.Helper
-import ddbt.lib.TypeHelper.Scala._
 import ddbt.codegen.Optimizer
+import Compiler._
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
@@ -19,770 +18,679 @@ object UnitTest {
 
   import ddbt.lib.Utils
   import ddbt.lib.Utils._
+  import ddbt.ast._
+  import ddbt.ast.M3
+  import scala.collection.mutable.{Set => MSet}
 
-  def med(ts: Seq[Long]) = 
-    if (ts.size == 0) 0L 
-    else { 
-      val s = ts.sorted
-      val n = ts.size
-      if (n % 2 == 0) (s(n / 2) + s(n / 2 - 1)) / 2 else ts(n / 2) 
+  private val datasets = MSet[String]()           // selected datasets
+  private val languages = MSet[String]()          // selected languages
+  private var queryFilter = (s: String) => true   // query filter (by sql filename)
+
+  private var runBenchmark = false                // enable benchmark
+  private var verifyOutput = false                // enforce correctness verification in benchmark
+  private var numRuns = 1                         // number of runs
+  private var numWarmups = 0                      // number of warm-ups
+
+  private var readMode = 2                        // input stream read mode
+  private var cacheM3 = false                     // M3 cache is disabled
+  private var replaceQuery = true                 // replaceQuery is enabled
+  
+  // query test (.sql) -> (dataset -> result set)
+  private var unitTestResults = Map[String, Map[String, QueryResultSet]]()
+
+  val skipQueries = Set(
+      // front-end failure (SQL constructs not supported)
+      "employee/query11.sql",
+      "employee/query11a.sql",
+      "employee/query12.sql",
+      "employee/query17.sql",   // IS NULL
+      "employee/query18.sql",   // ORDER BY
+      "employee/query19.sql",
+      "employee/query20.sql",
+      "employee/query21.sql",
+      "employee/query23.sql",   // MAX
+      "employee/query24.sql",
+      "employee/query34.sql",
+      "employee/query41.sql",
+      "employee/query44.sql",   // ANY
+      "employee/query52.sql",
+      "employee/query53.sql",
+      "employee/query56.sql",
+      "employee/query57.sql",
+      "employee/query58.sql",
+      "employee/query62.sql",
+      "employee/query63.sql",
+      "employee/query64.sql",
+      "employee/query65.sql",
+      "employee/query66.sql",
+      "employee/query66a.sql",
+      // regular expressions not supported by front-end 
+      "employee/query15.sql",
+      // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+      "employee/query35b.sql",
+      "employee/query36b.sql",
+      // too long to compile
+      "mddb/query3.sql",
+      "finance/missedtrades.sql",
+      "finance/chrissedtrades.sql",
+      // dataset missing
+      "simple/matrixmult.sql",
+      "simple/r_case2.sql",
+      // Nested subqueries not supported outside of aggregates
+      "simple/selectnesting.sql",
+      "simple/type_mappings.sql"
+    )
+
+  private val pathExamples = "examples/queries"
+  private val pathSources = "ddbtoaster/test/gen"
+  private val pathClasses = "ddbtoaster/target/scala-2.11/test-classes"
+  private val pathM3 = "ddbtoaster/target/m3"
+
+  private var zeusEnabled = false      // zeus mode
+  private var zeusSeed = 0             // zeus seed  
+
+
+  private var csv: PrintWriter = null
+  private var csvFile: String = null
+
+  private var tmpDir = makeTempDir() //(auto_delete=false)
+
+  private val samplePattern = "(?m)(SAMPLE = (.*), (.*), (.*), (.*)\n)?(?s)(.*)".r
+
+  private def tf(ns: Long) = "%7s".format(time(ns, false))
+
+  private def print(k: String, v: String) = { 
+    System.out.println("%-70s".format("%-30s".format(k) + ": " + v))
+  }
+
+  private val repo = if (Utils.pathRepo != null) new File(Utils.pathRepo) else null
+
+  private val find = if (Utils.pathFindBin != null) Utils.pathFindBin else "find"
+
+  def findQueries: Array[String] = {
+    if (repo != null) {
+      val (out, _) = exec(Array(find, "test/queries", "-name", "*.sql", "-and", "-not", "-name", "schemas*.sql"), repo)
+      out.split("\n")
     }
+    else if (new File(pathExamples).exists) {
+      val (out, _) = exec(Array(find, pathExamples, "-name", "*.sql", "-and", "-not", "-name", "schemas*.sql"))
+      out.split("\n")
+    }
+    else Array()
+  }
 
-  val path_examples = "examples/queries"
-  val path_sources = "ddbtoaster/test/gen"
-  val path_classes = "ddbtoaster/target/scala-2.11/test-classes"
-  val path_cache = "ddbtoaster/target/m3"
-  val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
-                  "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
-                  "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
-             List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
-             // Also TPCH-8, TPCH-17, TPCH-17a and TPCH-19 are incorrect with -O3 (front-end) option
-  var csv: PrintWriter = null
-  var csvFile: String = null
-  var dump: PrintWriter = null
-  var dumpFile: String = null
-  var tmp = makeTempDir() //(auto_delete=false)
-  var cache = false     // cache is disabled
-  var replaceQuery=true // replaceQuery is enabled
-  var benchmark = false // enable benchmarks
-  var samples = 3       // number of samples to take in the benchmark
-  var warmup = 2        // number of warm-up transients to remove
-  var timeout = 0L      // test duration timeout (milliseconds)
-  var verify = false    // enforce correctness verification in benchmark
-  var parallel = 2      // parallel streams mode
-  var zeus = false      // zeus mode
-  var seed = 0          // zeus seed
-  var modes = List[String]() // selected modes
-  var datasets = List[String]() // selected datasets
-  var q_f = (s: String) => true // query filter (sql file name)
-  var no_output: Boolean = false  // do not print the output result in the standard output
+  def loadUnitTests: Map[String, Map[String, QueryResultSet]] = {
+    if (repo != null) {
+      val (out, _) = exec(Array(find, "test/unit/queries", "-type", "f"), repo)
+      out.split("\n").filterNot(_ contains "/.")      // to exclude test/unit/queries/.DS_Store
+         .map(f => UnitParser(read(repo.getPath + "/" + f)))
+         .map(queryTest => queryTest.sql -> queryTest.queryResultsByDataset).toMap
+    }
+    else Map()
+  }  
 
-  def parseArgs(args: Array[String]) {
-    import scala.collection.mutable.{Set => MSet}
-
+  def parseArgs(args: Array[String]) = {    
     val qinc = MSet[String]()
     val qexcl = MSet[String]()
     var qfail = false
-    var i = 0
-    val l = args.length
+
     var as = List[String]()
+    var i = 0
     def eat(f: String => Unit, s: Boolean = false) { 
       i += 1
-      if (i < l) f(if (s) args(i).toLowerCase else args(i)) 
+      if (i < args.length) f(if (s) args(i).toLowerCase else args(i)) 
     }
-    while (i < l) { args(i) match {
-        case "-d" => eat(s => if (!datasets.contains(s)) datasets = datasets :+ s, true)
-        case "-dd" => val ds = List("tiny", "tiny_del", "standard", "standard_del")
-                      datasets = ds ::: datasets.filter(!ds.contains(_))
-        case "-m" | "-l" => eat(s => if (!modes.contains(s)) modes = modes :+ s, true)
+    while (i < args.length) { args(i) match {
+        case "-d" => eat(s => datasets += s, true)
+        case "-dd" => datasets += ("tiny", "tiny_del", "standard", "standard_del")
+        case "-l" => eat(s => languages += s, true)
         case "-q" => eat(s => qinc += s)
-        case "-qx" => eat(s => qexcl += s)
+        case "-qx" => eat(s => qexcl += s)        
         case "-qfail" => qfail = true
-        case "-x" => benchmark = true
-        case "-v" => verify = true
-        case "-p" => eat(s => parallel = s.toInt)
-        case "-z" => zeus = true
-        case "-seed" => eat(s => seed = s.toInt)
-        case "-s" => eat(s => samples = s.toInt)
-        case "-w" => eat(s => warmup = s.toInt)
-        case "-t" => eat(s => timeout = s.toLong)
-        case "-csv" => eat(s => csvFile = s)
-        case "-dump" => eat(s => dumpFile = s)
-        case "-cache" => cache = true
+        case "-x" => runBenchmark = true
+        case "-v" => verifyOutput = true
+        case "-r" => eat(s => numRuns = s.toInt)
+        case "-w" => eat(s => numWarmups = s.toInt)
+        case "-p" => eat(s => readMode = s.toInt)
+        case "-z" => zeusEnabled = true
+        case "-seed" => eat(s => zeusSeed = s.toInt)
+        case "-cache" => cacheM3 = true
         case "-noreplace" => replaceQuery = false
-        case "--no-output" => no_output = true
-        case "-h"|"-help"|"--help" => import Compiler.{error => e}
-          e("Usage: Unit [options] [compiler options]")
-          e("Zeus mode:")
-          e("  -z            enable zeus mode")
-          e("  -s <n>        number of samples to test (default: 10, 0=infinite)")
-          e("  -seed <int>   set the seed to test (implies 1 sample)")
-          e("Filtering options:")
-          e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
-          e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-          e("  -m <mode>     add mode: " + 
-                              List(LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS, 
-                                   LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, 
-                                   LANG_SPARK_LMS, LANG_AKKA)
-                                .mkString(", ") + " (_spec|_full|_0-10)?")
-          // e("                          lscala, lcpp, llms")
-          e("  -q <filter>   add an inclusion filter for queries")
-          e("  -qx <filter>  add an exclusion filter for queries")
-          e("  -qfail        also include queries that are known to fail")
-          e("Benchmarking options:")
-          e("  -x            enable benchmarks (compile and execute)")
-          e("  -v            verification against reference result") // consistency verification is always enabled
-          e("  -p <mode>     parallel streams (0=off"/*+", 1=thread"*/+", 2=deterministic)")
-          e("  -s <n>        number of samples to take (default: 10)")
-          e("  -w <n>        number of warm-up transients (default: 0)")
-          e("  -t <ms>       test duration timeout (in ms, default: 0)")
-          e("  -csv <file>   store benchmark results in a file")
-          e("  -dump <file>  dump raw benchmark samples in a file")
-          e("  -cache        enable M3 cache")
-          e("  -xbs <n>      execute with batches of certain size")
-          e("  -noreplace    disable replacing generated trigger programs, if any exists")
-          e("")
-          e("Other options are forwarded to the compiler:")
-          Compiler.parseArgs(Array[String]())
+        case "-csv" => eat(s => csvFile = s)
+        case "-h" | "-help" | "--help" => 
+          error("Usage: Unit [options] [compiler options]")
+          error("Filtering options:")
+          error("  -d <dataset>  add a dataset")
+          error("  -dd           add tiny, tiny_del, standard, standard_del datasets")
+          error("  -l <lang>     add language: " + 
+                                  List(
+                                    LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS, 
+                                    LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, 
+                                    LANG_SPARK_LMS, LANG_AKKA
+                                  ).mkString(", ") /* + " (_spec|_full|_0-10)?" */)
+          error("  -q <filter>   add an inclusion filter for queries")
+          error("  -qx <filter>  add an exclusion filter for queries")
+          error("  -qfail        also include queries that are known to fail")
+          error("Benchmarking options:")
+          error("  -x            enable benchmarks (compile and execute)")
+          error("  -v            verification against reference result")
+          error("  -r <n>        number of runs (default = 1)")
+          error("  -w <n>        number of warm-ups (default = 0)")
+          error("  -p <mode>     parallel streams: 0 = off" /*+", 1 = thread"*/ + ", 2 = deterministic (default)")
+
+          error("  -csv <file>   store benchmark results in a file")
+          error("  -cache        enable M3 cache")
+          error("  -xbs <n>      execute with batches of certain size")
+          error("  -noreplace    disable replacing generated trigger programs, if any exists")
+
+          error("Zeus mode:")
+          error("  -z            enable zeus mode")
+          error("  -r <n>        number of runs to test (default: 10, 0=infinite)")
+          error("  -seed <int>   set the seed to test (implies 1 sample)")
+          error("")
+          error("Other options are forwarded to the compiler:")
+          Compiler.parseArgs(Array[String](), true)
         case s => as = s :: as
       }
       i += 1 
     }
-    if (verify && no_output) { 
+    if (verifyOutput && as.contains("--no-output")) { 
       sys.error("Result validation is impossible while the --no-output option is enabled.\n" +
-                "Please disable one of these options (-v or --no-output) and try again.") 
+                "Disable one of these options (-v or --no-output) and try again.") 
     }
 
-    if (datasets.size == 0) datasets = List("standard")
+    if (datasets.isEmpty) datasets += "standard"
 
-    if (modes.size == 0) modes = List(DEFAULT_LANG_CPP)
+    if (languages.isEmpty) languages += DEFAULT_LANG_CPP
     
-    // if ((modes.toSet & Set("lscala", "lcpp", "llms")).size > 0 && !benchmark) 
-    //   warning("Legacy modes are meaningful only with benchmarks enabled")
-
-    def re(set: MSet[String]) = java.util.regex.Pattern.compile(".*(" + set.mkString("|") + ")(\\.sql)?")
-    if (qinc.size > 0) { 
-      val pi = re(qinc)
-      q_f = (s :String) => pi.matcher(s).matches 
+    if (qinc.size > 0) {
+      val pattern = (".*(" + qinc.mkString("|") + ")(\\.sql)?$").r
+      queryFilter = (s: String) => pattern.findFirstIn(s) != None
     }
     if (qexcl.size > 0) { 
-      val px = re(qexcl)
-      val q0 = q_f
-      q_f = (s: String) => q0(s) && !px.matcher(s).matches 
+      val pattern = (".*(" + qexcl.mkString("|") + ")(\\.sql)?$").r
+      val q0 = queryFilter
+      queryFilter = (s: String) => q0(s) && pattern.findFirstIn(s) == None
     }
     if (!qfail) { 
-      val q0 = q_f
-      println("Front-end skip : %4d".format(skip.size))
-      q_f = (s: String) => !skip.exists(e => s.endsWith(e + ".sql")) && q0(s) 
+      val q0 = queryFilter
+      println("Front-end skip   : %4d".format(skipQueries.size))
+      queryFilter = (s: String) => !skipQueries.exists(s.endsWith) && q0(s) 
     }
-    Compiler.in = List("")
-    Compiler.parseArgs(as.reverse.toArray)
-    if (benchmark && Compiler.batching_enabled && Compiler.exec_bs <= 0) {
-      sys.error("Invalid batch size")
-    }
+    
+    Compiler.parseArgs(as.reverse.toArray, true)
   }
 
-  private def tf(ns: Long) = "%7s".format(time(ns, false))
-
-  def name(f: String) = {
-    val s = f.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "")
-    (s(0) + "").toUpperCase + s.substring(1)
+  def toast(lang: String, inputFile: String, name: String) = {
+    val ext = Compiler.frontendFileExtensions(lang)
+    var outputFile = "ddbtoaster/target/m3/" + name + "." + ext
+    if (cacheM3 && new File(outputFile).exists)
+        Utils.ns(() => Utils.read(outputFile))
+    else {
+      val queryName = if (replaceQuery) name
+                      else Utils.generateNewFileName(name, "ddbtoaster/target/m3/%s." + ext)
+      outputFile = "ddbtoaster/target/m3/" + queryName + "." + ext
+      val (t, src) = Utils.ns(() => Compiler.toast(inputFile, lang))
+      Utils.write(outputFile, src)
+      print("SQL -> " + lang.toUpperCase, tf(t))
+      (t, src)
+    }
   }
   
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
 
     parseArgs(args)
 
-    // Zeus mode
-    if (zeus) { genZeus; return }
-
-    // Regular mode
-    val sel = all.filter(q => q_f(q.sql)).map{ q => 
-      QueryTest(q.sql, 
-        q.sets.filterKeys(datasets.contains(_))
-              .filterKeys{d => q.sql.indexOf("missedtrades") == -1 || 
-                               d.matches("tiny.*")}) // missedtrades is very slow
-    }.filter(_.sets.size > 0)
-    scala.util.Sorting.quickSort(sel)(OrdQueryTest)
-
-    println("Tests total    : %4d".format(all.size))
-    println("Tests selected : %4d".format(sel.size))
-    if (sel.size == 0) { System.err.println("No tests selected, exiting."); return }
-    val dir = new File(path_sources)
-    if (dir.isDirectory()) dir.listFiles().foreach(_.delete()) else dir.mkdirs() // directory cleanup (erase previous tests)
-
-    if (csvFile != null) 
-      csv = new PrintWriter(new File (csvFile + (if (csvFile.endsWith(".csv")) "" else ".csv")))
-    if (dumpFile != null) { 
-      dump = new PrintWriter(new File (dumpFile))
-      dump.println("Mode,Dataset,Time,Processed,Skipped") 
+    // TODO: Zeus mode
+    if (zeusEnabled) { 
+      testZeus()
+      return 
     }
 
-    def mn(s: String) = (s(0) + "").toUpperCase + s.substring(1)
+    val total = findQueries
+    val selected = total.filter(queryFilter).sorted
 
-    if (csv != null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
-      csv.print("s" + samples + "_w" + warmup + "_t" + timeout + "_b" + Compiler.exec_bs + ",,")
-      for (m <- modes) csv.print(mn(m) + ",," + datasets.map(_ + ",,,,,,,,,").mkString)
-      csv.println
-      csv.print("Query,SQLtoM3,")
-      for (m <- modes) csv.print("M3toCode,Compile," + datasets.map(_ => "MedT,MedN,_,MaxT,MaxN,_,MinT,MinN,_,").mkString)
-      csv.println
+    println("Queries total    : %4d".format(total.size))
+    println("Queries selected : %4d".format(selected.size))
+    
+    if (selected.isEmpty) { 
+      error("No queries selected, exiting...", true)
     }
 
-    if (cache) new File(path_cache).mkdirs
-    for (q <- sel) {
-      try {
-        println("---------[[ " + name(q.sql) + " ]]---------")
-        var queryName = name(q.sql)
+    if (verifyOutput) {
+      unitTestResults = loadUnitTests
+    }
+
+    // directory cleanup (erase previous tests)
+    val outputDir = new File(pathSources)
+    if (!outputDir.exists) outputDir.mkdirs()
+    outputDir.listFiles().foreach(_.delete())
+
+    val cacheDir = new File(pathM3)
+    if (!cacheDir.exists) cacheDir.mkdirs
+
+
+    if (csvFile != null) {
+      csv = new PrintWriter(new File (csvFile + stringIf(!csvFile.endsWith(".csv"), ".csv")))
+    }
+
+    if (csv != null) {
+      csv.println(
+        ( List("Query", "Dataset", "Language", "BatchSize", "SQLtoM3", "M3toCode", "AvgTime", "AvgRate") ++
+          (1 to numRuns).flatMap(i => List("Time" + i, "ProcTuples" + i, "SkipTuples" + i))).mkString(", "))
+    }
+
+    for (query <- selected) {
+      try {   
+        var queryName = query.replaceAll("test/queries/|.sql", "")
         Optimizer.infoFileName = queryName
 
-        val (tm3, m3) =
-          if (modes.exists(_ != LANG_SPARK_LMS)) {
-            var file = "ddbtoaster/target/m3/" + queryName + ".m3"
-            if (cache && new File(file).exists) ns(() => Utils.read(file))
-            else {
-              queryName = 
-                if (replaceQuery) name(q.sql) 
-                else Utils.generateNewFileName(name(q.sql), "ddbtoaster/target/m3/%s.m3")
-              file = "ddbtoaster/target/m3/" + queryName + ".m3"
-              val (t, m3) = Compiler.toast(LANG_M3, q.sql)
-              Utils.write(file, m3)
-              println("SQL -> M3           : " + tf(t))
-              (t, m3)
-            }  
-          } else (-1L, "")
-        val (tdm3, dm3) = 
-          if (modes.exists(_ == LANG_SPARK_LMS)) {
-            var file = "ddbtoaster/target/m3/" + queryName + ".dm3"
-            if (cache && new File(file).exists) ns(() => Utils.read(file))
-            else {
-              queryName = 
-                if (replaceQuery) name(q.sql) 
-                else Utils.generateNewFileName(name(q.sql), "ddbtoaster/target/m3/%s.dm3")
-              file = "ddbtoaster/target/m3/" + queryName + ".dm3"
-              val (t, dm3) = Compiler.toast(LANG_DIST_M3, q.sql)
-              Utils.write(file, dm3)
-              println("SQL -> DIST M3      : " + tf(t))
-              (t, dm3)
-            }  
-          } else (-1L, "")
-        ;
-        val t0 = if (tm3 != -1L) tm3 else tdm3
-        if (csv != null) csv.print(name(q.sql) + "," + time(t0) + ",")
-        ;
-        for (m <- modes) m match {
-          // case "lscala"|"llms" if (repo != null && benchmark) => 
-          //   legacyScala(queryName, q, new Printer(if (m == "llms") "LLMS" else "LScala"), t0, m == "llms")
-          // case "lcpp" if (repo != null && benchmark) => 
-          //   legacyCPP(queryName, q, new Printer("LCPP"), t0)
-          case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS => 
-            genQueryScala(queryName, q, new Printer(mn(m)), m3, m)
-          case LANG_SPARK_LMS => 
-            genQuerySpark(queryName, q, new Printer(mn(m)), dm3, m)
-          case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS => 
-            genQueryCpp(queryName, q, new Printer(mn(m)), m3, m)
-          case _ => sys.error("Mode is not supported: " + m)
+        println("---------[[ " + queryName + " ]]---------")
+               
+        val frontendExt = languages.map(Compiler.frontendFileExtensions(_)).toSet
+
+        val (timeM3, codeM3) = 
+          if (frontendExt.contains("m3")) toast(LANG_M3, query, queryName) else (-1L, "")
+        val (timeDM3, codeDM3) = 
+          if (frontendExt.contains("dm3")) toast(LANG_DIST_M3, query, queryName) else (-1L, "")
+
+        val t0 = if (timeM3 != -1L) timeM3 else timeDM3
+
+        for (dataset <- datasets) {
+          for (lang <- languages) lang match {
+            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SPARK_LMS => 
+              val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
+              testQueryScala(query, className, dataset, lang, tmpDir, codeM3)
+            case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS => 
+              val exeName = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
+              testQueryCpp(query, exeName, dataset, lang, tmpDir, codeM3)
+            case _ => sys.error("Language is not supported: " + lang)
+          }
         }
-        if (csv != null) csv.println
-      } catch {
+      }
+      catch {
         case e: Exception => e.printStackTrace
       }
 
       System.gc
     }
     if (csv != null) csv.close
-    if (dump != null) dump.close
-    if (!benchmark) println("Now run 'test-only ddbt.test.gen.*' to pass tests")
-
-    // XXX: Untested mode (execute non-tested queries)
-    // XXX: option for HTML report with bar graphs?
-    // XXX: Use tags to filter test sizes in ScalaTest
-    // XXX: use sbt ';reload;pkg;exec ddbt.test.gen.Axfinder -n10' to execute Akka distributed tests
   }
 
   // ---------------------------------------------------------------------------
   // Zeus mode
-  def genZeus = {
-    val num = if (seed != 0) 1 else samples
-    samples = 1; warmup = 0; timeout = 0; benchmark = true
+  def testZeus() = {
+    val num = if (zeusSeed != 0) 1 else numRuns
+    numRuns = 1; numWarmups = 0; runBenchmark = true
     for (i <- 1 to num) {
-      val sql = exec("scripts/zeus.rb" + (if (seed != 0) " -s " + seed else ""), true)._1.replaceAll("@@DATA@@", pathRepo + "/../../experiments/data/simple/tiny")
+      val (out, _) = exec("ddbtoaster/scripts/zeus.rb" + stringIf(zeusSeed != 0, " -s " + zeusSeed), true)
+      val dataset = "tiny"
+      val sql = out.replaceAll("@@DATA@@", pathRepo + "/../../experiments/data/simple/tiny")
       val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
       println("---------[[ Zeus " + id + " ]]---------")
 
-      val queryName = if(replaceQuery) "zeus" + id else Utils.generateNewFileName("zeus" + id, tmp + "/%s.sql")
-      val f = tmp + "/" + queryName + ".sql"
-      val m3 = {
-        write(f,sql)
-        Compiler.in = List(f)
-        Compiler.toast("m3")._2
+      val queryName = if (replaceQuery) "zeus" + id 
+                      else Utils.generateNewFileName("zeus" + id, tmpDir + "/%s.sql")
+      val fileName = tmpDir.getPath + "/" + queryName + ".sql"
+      val codeM3 = {
+        write(fileName, sql)
+        Compiler.toast(fileName, "m3", pathRepo = null)
       }
-
-      for (m <- modes) m match {
-        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS =>
-          genQueryScala(queryName, QueryTest(f), new Printer("Scala"), m3, m)
-        case LANG_SPARK_LMS =>
-          genQuerySpark(queryName, QueryTest(f), new Printer("Spark"), m3, m)
+      for (lang <- languages) lang match {
+        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SPARK_LMS =>
+          val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
+          testQueryScala(fileName, className, dataset, lang, tmpDir, codeM3)
         case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
-          genQueryCpp(queryName, QueryTest(f), new Printer("Cpp"), m3, m)
-        case _ => ()
+          val exeName = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
+          testQueryCpp(fileName, exeName, dataset, lang, tmpDir, codeM3)
+        case _ => sys.error("Language is not supported: " + lang)
       }
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Query generator
-  def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val cls = qName + (mode match {
-        case LANG_SCALA_VANILLA => "VScala"
-        case LANG_SCALA_LMS => "LMSScala"
-        case LANG_SCALA_PARDIS => "PardisScala"
-        case _ => sys.error("Unknown mode: " + mode)
-      })
-    var sp=""
-    // Correctness
-    def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
-      val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-      val qt = sys.queries.map{q=>(q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
-      val body = 
-      "import scala.language.implicitConversions\n"+
-      "implicit def strConv(d: Long) = d.toString\n\n"+ // fix for TPCH22
-      q.sets.filterKeys(datasets.contains).map { case (sz,set) =>
-        (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\",\"-b" + Compiler.exec_bs + "\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
-        set.out.map {
-          case (n,o) =>
-            val (kt,vt) = qt(n)
-            val tn = codegen.ScalaGen.tupleNameOfTps(kt)
-            val qtp = "["+tup(kt.map(typeToString))+","+typeToString(vt)+"]"
-            val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+typeToString(t)}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
-            val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else typeToString(vt))+"], "+(o match {
-              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+ks.mkString("(",",",")")+","+v+")" }.mkString(",")+")"// inline in the code
-              case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+pathRepo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
-              case QuerySingleton(v) => v
-            })+")"
-            (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
-        }.mkString("\n"))+"\n})"
-      }.mkString("\n")
-      if (full) "import org.scalatest._\n\n"+
-      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\nimport "+cls+"._\n"+body)+"\n}\n" else body
-    }
-    def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+".scala",src(0)+pre+str+src(1)) }
-    def post(sys:ddbt.ast.M3.System) { sp=spec(sys,true); if (verify) inject("  def main(args: Array[String]) {\n",ind(spec(sys,false),2)+"\n") }
-    def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) { /* result verification for scala is done in the generated main function */ }
-    // Benchmark (and codegen)
-    val m=mode.split("_"); // Specify the inlining as a suffix of the mode
-    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
-    Compiler.lang = m(0)
-    Compiler.name = cls
-    Compiler.pkg = "ddbt.test.gen"
-    Compiler.out = tmp.getPath+"/"+cls+".scala"
-    Compiler.exec = benchmark
-    Compiler.exec_sc |= Utils.isLMSTurnedOn
-    Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
-    p.close
-    // Append correctness spec and move to test/gen/
-    if (genSpec) inject("import akka.actor.Actor\n",sp,path_sources)
-  }
+  def verifyResult(output: String, queryFile: String, dataset: String, queries: Map[String, List[(String, Type)]]) = {
+    import scala.xml._
+    import ddbt.lib.TypeHelper
 
-  def genQuerySpark(qName: String, q: QueryTest, p: Printer, m3: String, mode: String, genSpec: Boolean = true) {
-    val cls = qName + "Spark"
-    var sp = ""   
-    // Correctness
-    def spec(sys: ddbt.ast.M3.System, full: Boolean = true) = {
-      val qid = sys.queries.map(_.name).zipWithIndex.toMap
-      val qt = sys.queries.map { q => (q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
-      val body = 
-        "import scala.language.implicitConversions\n" +
-        "implicit def strConv(d: Long) = d.toString\n" + // fix for TPCH22
-        q.sets.filterKeys(datasets.contains(_)).map { case (sz, set) =>
-          val execBody = set.out.map {
-            case (n,o) => if (!qt.contains(n)) "" else {
-              val (kt, vt) = qt(n)
-              val tn = codegen.ScalaGen.tupleNameOfTps(kt)
-              val qtp = "[" + tup(kt.map(typeToString)) + ", " + typeToString(vt) + "]"
-              val kv = if (kt.size == 0) "" 
-                else { 
-                  val ll = (kt ::: vt :: Nil).zipWithIndex
-                  "def kv(l: List[Any]) = l match { case List(" + 
-                  ll.map { case (t, i) => "v" + i + ": " + typeToString(t) }.mkString(", ") + ") => (" + 
-                  tup(ll.init.map { case (t, i) => "v" + i + 
-                    (if (t.toString == "string") ".take(30)" else "") 
-                  }) + ", v" + ll.last._2 + ") }\n" 
-                }
-              val cmp = "diff(res(" + qid(n) + ").asInstanceOf[" + 
-                (if (kt.size > 0) "Map" + qtp else typeToString(vt)) + "], " + 
-                (o match {
-                  case QueryMap(m) => 
-                    "Map" + qtp + "(" + m.map { case (ks, v) => 
-                      "(" + ks.mkString("(", ",", ")") + "," + v + ")" 
-                    }.mkString(",") + ")"// inline in the code
-                  case QueryFile(path,sep) => 
-                    "loadCSV" + qtp + "(kv, \"" + pathRepo + "/" + path + "\", \"" + 
-                      (kt ::: List(vt)).mkString(",") + "\"" + 
-                      (if (sep != null) 
-                         ", \"\\\\Q" + sep.replaceAll("\\\\\\|","|") + "\\\\E\"" 
-                       else "") + ")"
-                  case QuerySingleton(v) => v
-              })+")"
-              (if (full) "it(\"" + n + " correct\") " else "") + "{\n" + ind(kv + cmp) + "\n}"
+    val startIdx = output.indexOf("<snap>")
+    val endIdx = output.indexOf("</snap>")+"</snap>".length
+    val snap = XML.loadString(output.substring(startIdx, endIdx))
+
+    unitTestResults.get(queryFile) match {
+      case Some(m) => m.get(dataset) match {
+        case Some(resultSet) => 
+          queries.foreach { case (qname, schema) => 
+            val keys = schema.dropRight(1)
+            val value = schema.last
+
+            resultSet.queryResultByName.get(qname) match {
+              case Some(QueryResultMap(m)) =>
+                val res = (snap \ qname \ "item").map { item =>
+                    ( keys.map { case (k, tp) =>
+                       TypeHelper.fromString((item \ k.toUpperCase).text, tp)
+                      },
+                      TypeHelper.fromString((item \ value._1).text, value._2) )
+                  }.toMap
+                val refRes = m.map { case (kList, v) =>
+                    ( (kList zip keys).map { case (kv, (_, tp)) =>
+                        TypeHelper.fromString(kv, tp)
+                      },
+                      TypeHelper.fromString(v, value._2) )
+                  }    
+                Helper.diff(res, refRes)
+
+              case Some(QueryResultFile(path, sep)) =>
+                val res = (snap \ qname \ "item").map { item =>
+                    ( keys.map { case (k, tp) =>
+                       TypeHelper.fromString((item \ k.toUpperCase).text, tp)
+                      },
+                      TypeHelper.fromString((item \ value._1).text, value._2) )
+                  }.toMap
+                val refRes = 
+                  Helper.loadCSV(
+                    l => (l.dropRight(1), l.last),
+                    Utils.pathRepo + "/" + path,
+                    (keys.map(_._2) ::: List(value._2)).mkString(","),
+                    (if (sep != null) "\\Q" + sep.replaceAll("\\\\\\|", "|") + "\\E" else ",")
+                  )
+                Helper.diff(res,refRes)
+
+              case Some(QueryResultSingleton(v)) =>
+                val res = TypeHelper.fromString((snap \ qname).text, value._2)
+                val refRes = TypeHelper.fromString(v, value._2)
+                Helper.diff(res, refRes)
+
+              case None => error("Unexpected result type")
             }
-          }.mkString("\n")
-          val describe = if (full) "describe(\"Dataset '" + sz + "'\")" else ""
-          (if (full) cls + "." else "") +
-          s"""|execute(Array("-n1", "-m0", "-d${sz}", "-b${Compiler.exec_bs}"), (res: List[Any]) => ${describe} {
-              |${ind(execBody)}
-              |})""".stripMargin
-      }.mkString("\n")
-      if (full) 
-        s"""|import org.scalatest._
-            |class ${cls}Spec extends FunSpec {
-            |  import Helper._
-            |  import ${cls}._  
-            |${ind(body)}
-            |}""".stripMargin
-      else body
+          }
+        case None =>
+          warning("Verification failed, test result missing for " + queryFile + " and " + dataset + " dataset")
+          val e = new Exception
+          e.setStackTrace(Array[StackTraceElement]())
+          throw e
+      }
+      case None => 
+        warning("Verification failed, test result missing for " + queryFile)
+        val e = new Exception
+        e.setStackTrace(Array[StackTraceElement]())
+        throw e
     }
-    def inject(pre: String, str: String, dir: String = null) { 
-      val src = read(tmp.getPath + "/" + cls + ".scala").split("\\Q" + pre + "\\E")
-      write((if (dir != null) dir else tmp) + "/" + cls + ".scala", src(0) + pre + str + src(1)) 
-    }
-    def post(sys: ddbt.ast.M3.System) { 
-      sp = spec(sys, true)
-      if (verify) inject("    // START EXECUTION\n", ind(spec(sys, false), 2) + "\n") 
-    }
-    def verifyResult(output: String, sys: ddbt.ast.M3.System, dataset :String) {
-      /* result verification for scala is done in the generated main function */ 
-    }
-    // Benchmark (and codegen)
-    val m = mode.split("_") // Specify the inlining as a suffix of the mode
-    Compiler.inl = if (m.length == 1) 0 
-                   else if (m(1) == "spec") 5 
-                   else if (m(1) == "full") 10 
-                   else try { m(1).toInt } catch { case _: Throwable => 0 }
-    Compiler.lang = m(0)
-    Compiler.name = cls
-    Compiler.pkg = "ddbt.test.gen"
-    Compiler.out = tmp.getPath + "/" + cls + ".scala"
-    Compiler.exec = benchmark
-    Compiler.exec_sc |= Utils.isLMSTurnedOn
-    Compiler.exec_dir = path_classes
-    Compiler.exec_args = (
-      "-n" + (samples + warmup) :: 
-      "-t" + timeout :: 
-      "-p" + parallel :: 
-      "-m1" :: 
-      datasets /* .filter(q.sets.contains) */ .map("-d" + _).toList) ++ 
-      (if (no_output) List("--no-output") else Nil)
-    p.run(() => Compiler.compile(m3, post, p.gen, p.comp, p.run, verifyResult))
-    p.close
-    // Append correctness spec and move to test/gen/
-    // if (genSpec) inject("import java.util.Date\n", sp, path_sources)
   }
 
-
-  def genQueryCpp(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val CPP_SUFFIX = ".hpp"
-    val cls = qName + (mode match {
+  def testQueryCpp(sqlFile: String, queryName: String, dataset: String, 
+                   lang: String,  dir: File, sourceM3: String) = {
+    val langID = lang match {
         case LANG_CPP_VANILLA => "VCpp"
         case LANG_CPP_LMS => "LMSCpp"
-        case LANG_CPP_PARDIS => "PardisCpp"
-        case _ => sys.error("Unknown mode: " + mode)
-      })
-    var sp=""
-    def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args: Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
-
-    def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) {
-      import scala.xml._
-      import ddbt.ast._
-      // def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime
-      def conv(v:String, tp: Type) = tp match {
-        case TypeLong => v.toLong
-        case TypeDouble => v.toDouble
-        case TypeString => v
-        case TypeDate => v.toLong   // dateConv(v.toLong)
-        case _ => scala.sys.error("Bad Type")
+        case LANG_CPP_PARDIS => "Cpp"
+        case _ => sys.error("Unknown lang: " + lang)
       }
-      def convRef(v:String, tp: Type) = tp match {
-        case TypeLong => v.replace("L","").toLong
-        case TypeDouble => v.replace("L","").replace("D","").toDouble
-        case TypeString => if(v(0)=='\"' && v(v.length-1)=='\"') v.substring(1,v.length-1) else v.replace("L","") //for coverting Long to String
-        case TypeDate => v.replace("L","").toLong   //dateConv(v.replace("L","").toLong)
-        case _ => scala.sys.error("Bad Type")
+    val exeFile = dir.getPath + "/" + queryName + langID
+
+    val args =  List( "-l", lang, 
+                      "-o", exeFile + "." + Compiler.backendFileExtensions(lang),
+                      "-xa", "-p" + readMode) ++
+                (if (runBenchmark) List("-x", "-c", exeFile) else Nil)
+                
+    Compiler.parseArgs(args.toArray)
+
+    val sampleRecorder = SampleRecorder(queryName, dataset, langID, Compiler.batchSize)
+
+    def codegenFn(t: Long, code: String) = {
+      print(langID + " codegen", tf(t))
+      sampleRecorder.recordCodegenTime(Math.round(t / 1000000.0))
+    }
+    
+    def compileFn(t: Long) = {
+      print(langID + " compile", tf(t))
+      sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
+    }
+    
+    Compiler.compile(sourceM3, codegenFn, compileFn)
+
+    def runFn(t: Long, out: String, err: String) = {
+      if (err.trim != "") {
+        System.err.println(err)
       }
-      if(verify) {
-        val startIdx = output.indexOf("<snap>")
-        val endIdx = output.indexOf("</snap>")+"</snap>".length
-        val snap = XML.loadString(output.substring(startIdx, endIdx))
+      else if (verifyOutput) {
+        val samplePattern(sample, _, timeMicro, count, skipped, result) = out
 
-        val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-        val qt = sys.queries.map{q=>(q.name, (q.expr.ovars.map(_._2), q.expr.tp)) }.toMap
-        val qn = if (lang == "cpp")
-          sys.queries.map { q => (q.name, ((1 to q.expr.ovars.size).map("_"+_).toList, "_"+(q.expr.ovars.size+1))) }.toMap
-        else
-          sys.queries.map { q => (q.name, (q.expr.ovars.map(_._1), "__av")) }.toMap
-        q.sets.filter(_._1 == dataset).map { case (sz,set) =>
-          set.out.foreach { case (n,o) =>
-            val (kt,vt) = qt(n)
-            val qnn = qn(n)
-            val qtn = qt(n)
-            o match {
-              case QueryMap(m) =>
-                val res = (snap \ n \ "item").map{ i =>
-                  ((qnn._1 zip qtn._1).map{ case (k, tp) =>
-                    conv((i \ k.toUpperCase).text, tp)
-                  },conv((i \ qnn._2).text,qtn._2))
-                }.toMap
+        if (sample != null) {
+          sampleRecorder.recordRunInfo(Math.round(timeMicro.toLong / 1000.0), count.toLong, skipped.toLong)
+        }
 
-                val refRes = m.map { case (kList,v) =>
-                  ((kList zip qtn._1).map { case (k, tp) =>
-                    convRef(k, tp)
-                  },convRef(v,qtn._2))
-                }
-                Helper.diff(res,refRes)
-              case QueryFile(path,sep) =>
-                val res = (snap \ n \ "item").map{ i =>
-                  ((qnn._1 zip qtn._1).map{ case (k, tp) =>
-                    conv((i \ k.toUpperCase).text, tp)
-                  },conv((i \ qnn._2).text,qtn._2))
-                }.toMap
-                def kv(l:List[Any]) = (l.reverse.tail.reverse,l.reverse.head)
-                val refRes = Helper.loadCSV(kv,pathRepo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),(if (sep!=null) "\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E" else ","))
-                Helper.diff(res,refRes)
-              case QuerySingleton(v) =>
-                val res = conv((snap \ n).text,qtn._2)
-                val refRes = convRef(v,qtn._2)
-                Helper.diff(res,refRes)
-            }
-          }
+        import ddbt.codegen.CppGen
+
+        val m3 = Compiler.string2AST(sourceM3)
+
+        val queries = 
+          m3.queries.map { q =>
+            val schema = q.expr.ovars 
+            val (keys, value) = 
+              if (lang == LANG_CPP_PARDIS) 
+                (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
+                 ("_" + (schema.size + 1), q.expr.tp))
+              else
+                (schema, (CppGen.VALUE_NAME, q.expr.tp))
+            q.name -> (keys ++ List(value))
+          }.toMap 
+
+        try {
+          verifyResult(out, sqlFile, dataset, queries)
+          print(langID + " verification", "%7s".format("OK"))
+        }
+        catch { case ex: Exception => 
+          print(langID + " verification", "%7s".format("FAILED"))
+          ex.printStackTrace()
         }
       }
     }
-    // Benchmark (and codegen)
-    val m = mode.split("_"); // Specify the inlining as a suffix of the mode
-    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
-    Compiler.lang = m(0)
-    Compiler.name = cls
-    Compiler.pkg = "ddbt.test.gen"
-    Compiler.out = tmp.getPath+"/"+cls+CPP_SUFFIX
-    Compiler.exec = benchmark
-    Compiler.exec_sc |= Utils.isLMSTurnedOn
-    Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n" + (samples + warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
-    p.close
-    // Append correctness spec and move to test/gen/
-    // if (genSpec) inject("import java.util.Date\n",sp,path_sources)
+
+    (1 to numWarmups).foreach(x => 
+      Compiler.run((t, out, err) => ())
+    )
+
+    (1 to numRuns).foreach(x => 
+      Compiler.run(runFn)
+    )
+
+    print(langID + " run " + dataset, 
+          "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
+          "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
+          "%10s".format("(" + numRuns + " runs)"))
+
+    if (csv != null) csv.println(sampleRecorder.toCSV)
   }
 
-  // ---------------------------------------------------------------------------
-  // Legacy testing
-  private var legacySC:List[String]=>Unit = null
-  def legacyScala(qName:String,q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
-    val libs = (if (pathRepo!=null) pathRepo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
-    if (legacySC==null) {
-      legacySC=scalaCompiler(tmp,libs,Compiler.exec_sc)
-      write(tmp+"/RunQuery.scala","package org.dbtoaster\n"+
-      "import org.dbtoaster.dbtoasterlib.DBToasterExceptions._\n"+
-      "import org.dbtoaster.dbtoasterlib.QueryInterface._\n"+
-      "object RunQuery {\n"+
-      "  def run1(set:String,p:Int,timeout:Long, batchSize:Int = 1, noOutput: Boolean = false) = {\n"+
-      "    val to = timeout * 1000000L;\n"+
-      "    val q = new Query(); var time=0L; val t0=System.nanoTime; var tN=0L; var tS=0L;\n"+
-      "    val msgRcvr = new DBTMessageReceiver {\n"+
-      "      def onTupleProcessed { "+(if (timeout==0) "tN+=1" else "if (q.skip) tS+=1; else tN+=1; if(to>0 && (tN & 0xf)==0) { val t=System.nanoTime-t0; if(t>to) { time=t; q.skip=true } }")+" }\n"+
-      "      def onQueryDone { if (tS==0) time=System.nanoTime-t0; RunQuery.synchronized { RunQuery.notifyAll } }\n"+
-      "    }\n"+
-      "    val r = new QuerySupervisor(q, msgRcvr); RunQuery.synchronized { r.start; RunQuery.wait; }\n"+
-      "    (ddbt.lib.Messages.StreamStat(time,tN,tS),Nil)\n"+
-      "  }\n"+
-      "  def main(args: Array[String]) = ddbt.lib.Helper.bench(args,run1)\n}\n")
+  def testQueryScala(sqlFile: String, queryName: String, dataset: String, 
+                     lang: String,  dir: File, sourceM3: String) = {
+    val langID = lang match {
+        case LANG_SCALA_VANILLA => "VScala"
+        case LANG_SCALA_LMS => "LMSScala"
+        case LANG_SCALA_PARDIS => "Scala"
+        case LANG_SPARK_LMS => "Spark"
+        case _ => sys.error("Unknown lang: " + lang)
+      }
+
+    val className = queryName + langID
+    val outputSrcFile = dir.getPath + "/" + className
+
+    val args =  List( "-l", lang, 
+                      "-o", outputSrcFile + "." + Compiler.backendFileExtensions(lang),
+                      "-xd", pathClasses,
+                      "-n", "ddbt.test.gen." + className,
+                      "-xa", "-p" + readMode) ++
+                (if (runBenchmark) List("-x") else Nil) ++
+                (if (verifyOutput) List("-xa", "-m1") else Nil) ++
+                (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
+                
+    Compiler.parseArgs(args.toArray)
+
+    val sampleRecorder = SampleRecorder(queryName, dataset, langID, Compiler.batchSize)
+
+    def codegenFn(t: Long, code: String) = {
+      print(langID + " codegen", tf(t))
+      sampleRecorder.recordCodegenTime(Math.round(t / 1000000.0))
     }
-    var (t1,sc) = if (!lms) Compiler.toast("scala",q.sql) else {
-      val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
-      val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
-      (t1,s.replaceAll("../../experiments/data",pathRepo+"/../../experiments/data"))
+    
+    def compileFn(t: Long) = {
+      print(langID + " compile", tf(t))
+      sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
     }
-    if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): Unit")
-    p.gen(math.max(0,t1-t0))
-    p.all(q){case (dataset,_,_)=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
-      val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
-      val args = Array("-n"+(samples+warmup),"-m1","-t"+timeout,"-d"+dataset)
-      p.run(()=>scalaExec(tmp :: libs.split(":").map(new File(_)).toList,"org.dbtoaster.RunQuery",args,Compiler.exec_vm))
+
+    Compiler.compile(sourceM3, codegenFn, compileFn)
+    
+    def runFn(t: Long, out: String, err: String) = {
+      if (err.trim != "") {
+        System.err.println(err)
+      }
+      else if (verifyOutput) {
+        val samplePattern(sample, _, timeMilli, count, skipped, result) = out
+
+        if (sample != null) {
+          sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
+        }
+
+        import ddbt.codegen.ScalaGen
+
+        val m3 = Compiler.string2AST(sourceM3)
+
+        val queries = 
+          m3.queries.map { q =>
+            val keys = q.expr.ovars 
+            val value = (ScalaGen.VALUE_NAME, q.expr.tp)
+            q.name -> (q.expr.ovars ++ List(value))
+          }.toMap 
+
+        try {
+          verifyResult(result, sqlFile, dataset, queries)
+          print(langID + " verification", "%7s".format("OK"))
+        }
+        catch { case ex: Exception => 
+          print(langID + " verification", "%7s".format("FAILED"))
+          ex.printStackTrace()
+        }
+      }
     }
+
+    (1 to numWarmups).foreach(x => 
+      Compiler.run((t, out, err) => ())
+    )
+
+    (1 to numRuns).foreach(x => 
+      Compiler.run(runFn)
+    )
+
+    print(langID + " run " + dataset, 
+          "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
+          "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
+          "%10s".format("(" + numRuns + " runs)"))
+
+    if (csv != null) csv.println(sampleRecorder.toCSV)
   }
 
-  def legacyCPP(qNameInit:String,q:QueryTest,p:Printer,t0:Long) {
-    val boost = prop("lib_boost",null)
-    val qName = qNameInit+"_LCPP"
-    val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
-    p.all(q){case (dataset,_,_)=>
-      write(tmp+"/"+qName+".hpp", {
-        def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
-        val res=cc.replaceAll("/standard/","/"+dataset+"/")
-                .replaceAll("tlq_t().*\n +\\{\\}","struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }")
-                .replaceAll("(BEGIN_TRIGGER.*\n +\\{)","$1 "+(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } }" else "")+" ++tN;")
-                .replaceAll("(snapshot_t take_snapshot\\(\\)\\{)","$1 tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);")
-        if(dataset.contains("_del")) res.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else res
-      })
-      val pl = pathRepo+"/lib/dbt_c++"
-      val po = tmp.getPath+"/"+qName
-      val as = List("g++",pl+"/main.cpp","-include",po+".hpp","-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
-               List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_+prop("lib_boost_thread","")) ::: // thread-mt
-               (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
-      val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
-      p.run(()=>{ var i=0; while (i < warmup+samples) { i+=1
-        val (out,err)=exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
-        if (err!="") System.err.println(err); Utils.write(po+"_lcpp.txt",out); println(out)
-      }})
-    }
-  }
+  case class SampleRecorder(query: String, dataset: String, lang: String, batchSize: Long) {
 
-  // ---------------------------------------------------------------------------
-  // Common helpers
-  private val repo = if (pathRepo!=null) new File(pathRepo) else null
-  val all = if (repo!=null) exec(Array(Utils.pathFindBin,"test/unit/queries","-type","f"),repo)._1.split("\n").filterNot(_ contains "/.") //to exclude test/unit/queries/.DS_Store
-                                 .sorted.map(x => UnitParser(read(repo.getPath+"/"+x)))
-            else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
-            else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
-  
-  // Helper for other tests
-  def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
+    private val runInfo = scala.collection.mutable.ArrayBuffer[(Long, Long, Long)]()
 
-  // Helper for displaying information and emitting a CSV file
-  case class Sample(us:Long,count:Long,skip:Long) extends Ordered[Sample] {
-    override def toString = "%d.%06d,%d,%d,".format(us / 1000000L, us % 1000000L, count, skip) // CSV format
-    def compare(s: Sample) = { 
-      val (a, b) = (count * s.us, s.count * us); if (a < b) -1 else if (a > b) 1 else 0 
-    }
-    def t = { // time in seconds
-      val ms = math.round(us / 1000.0)
-      "%d.%03d".format(ms / 1000, ms % 1000) 
-    } 
-    def f = {  // frequency in views/sec
-      val tps = if (us == 0) 0 else count * 1000000.0 / us
-      val t = math.round(tps * 10)
-      "%d.%01d".format(t / 10, t % 10) 
-    }
-  }
+    private var codegenTimeMilli = 0L
 
-  class Printer(name:String) {
-    private val (c0,s0)=(scala.Console.out,System.out)
-    @inline private def pr(op:String,s:String,c:Boolean=false) = { c0.println("%-70s".format("%-20s".format(name+" "+op)+": "+s)); if (c) c0.print("\u001b[F"+"[info] "); c0.flush; s0.flush } // assumes terminal + SBT
-    @inline private def add(s:String=",,,,,,,,,") { tr+=s; ds+=1 }
-    var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
-    def gen(t:Long) { pr("codegen",tf(t)); tg=tg:+t; }
-    def comp(t:Long) { pr("compiler",tf(t)); tc=tc:+t; }
-    def run(f:()=>Unit) {
-      // Note: PipedInput/OutputStreams do not work here because multiple 
-      // thread might be printing to stdout
-      val queue = new LinkedBlockingQueue[Int]()
+    private var compileTimeMilli = 0L
 
-      val os = new OutputStream() {
-        override def close() = {
-          super.close()
-          queue.put(-1)
-        }
-        override def write(i:Int) = queue.put(i.toByte)
-      }
+    def recordCodegenTime(timeMilli: Long) = codegenTimeMilli = timeMilli
 
-      val is = new InputStream() {
-        var open = true
-        def read() = {
-          if(open) {
-            val next = queue.take
-            if(next >= 0)
-              next
-            else {
-              open = false
-              -1
-            }
-          }
-          else
-            -1
-        }
-      }
+    def recordCompileTime(timeMilli: Long) = compileTimeMilli = timeMilli
 
-      val o = new PrintStream(os)
-      var w=0; var dn=""; var ts=List[Sample]();
-      val t = new Thread {
-        override def run {
-          val r = new BufferedReader(new InputStreamReader(is))
-          var l=r.readLine
-          while(l!=null) {
-            if (l.startsWith("SAMPLE=")) {
-              val d=l.trim.substring(7).split(",")
-              if (dump!=null) {
-                dump.println(name+","+l.trim.substring(7))
-                dump.flush
-              }
-              if (d(0)!=dn) {
-                w=0
-                ts=Nil
-                dn=d(0)
-              }
-              if (w < warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
-              else {
-                ts = (Sample(d(1).toLong,d(2).toLong,d(3).toLong) :: ts).sorted
-                val n=ts.size; val m=ts(n/2);
-                val med = if (n%2==1) m else { val b=ts(n/2-1); Sample((m.us+b.us)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) } // if 1 skip, result must skip
-                val (min,max) = (ts(0),ts(n-1))
-                val abs_time = min.skip==0 && med.skip==0 && max.skip==0
-                pr(d(0),(if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/sec, ")+""+ts.size+(if (ts.size < samples) "/"+samples else "")+" samples)",n < samples)
-                if (ts.size==samples) { while (ds < datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
-              }
-            }
-            else if (l.startsWith("###")) {
-              java.lang.System.err.println(l)
-            }
-            l=r.readLine
-          }
-        }
-      }
-      t.start
-      try {        
-        scala.Console.withOut(o) {
-          System.setOut(o)
-          f()  
-        }        
-      }
-      finally {
-        scala.Console.withOut(c0) {
-          System.setOut(s0)
-          o.flush()
-          o.close() 
-        }
-      }
-      t.join
-    }
-    def all(q:QueryTest)(f:(String,Int,Long)=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d,parallel,timeout) }; close }
-    def close { while (ds < datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
+    def recordRunInfo(timeMilli: Long, numProcessedTuples: Long, numSkippedTuples: Long) =
+      runInfo += ((timeMilli, numProcessedTuples, numSkippedTuples))
+
+    def avgTimeMilli = if (runInfo.isEmpty) 0L else Math.round(runInfo.map(_._1.toDouble).sum / runInfo.size)
+
+    def avgRefreshRate = if (runInfo.isEmpty) 0.0 else runInfo.map(x => x._2.toDouble / x._1 * 1000).sum / runInfo.size
+
+    def toCSV =
+      ( List(query, dataset, lang, batchSize.toString, 
+             "%1.3f".format(codegenTimeMilli / 1000.0), 
+             "%1.3f".format(compileTimeMilli / 1000.0), 
+             "%1.3f".format(avgTimeMilli / 1000.0), 
+             "%1.2f".format(avgRefreshRate)) ++
+        runInfo.map { case (t, count, skip) => s"""${"%1.3f".format(t / 1000.0)}, $count, $skip""" }
+      ).mkString(", ")
   }
 
   // ---------------------------------------------------------------------------
   // AST of query unit tests
-  case class QueryTest(sql:String,sets:Map[String,QuerySet]=Map(("standard",QuerySet()))) { override def toString = sql+ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }
-  case class QuerySet(subs:List[(String,String)]=Nil,out:Map[String,QueryOut]=Map())
-  abstract sealed class QueryOut
-  case class QueryMap(m:Map[List[String],String]) extends QueryOut
-  case class QueryFile(path:String,sep:String=null) extends QueryOut
-  case class QuerySingleton(v:String) extends QueryOut
+  abstract sealed class QueryResult
+  case class QueryResultMap(m: Map[List[String], String]) extends QueryResult
+  case class QueryResultFile(path: String, sep: String = null) extends QueryResult
+  case class QueryResultSingleton(v: String) extends QueryResult
 
-  object OrdQueryTest extends Ordering[QueryTest] {
-    def compare(q1:QueryTest, q2:QueryTest) = {
-      val cmp = q1.sql.compare(q2.sql)
-      if(cmp == 0) 0 else {
-        def qName(start:Int,n:String)=n.substring(start,n.lastIndexOf('.'))
-        val commonPrefix = q1.sql.zip(q2.sql).takeWhile(Function.tupled(_ == _)).map(_._1).mkString
-        val (q1Name, q2Name) = (qName(commonPrefix.length,q1.sql),qName(commonPrefix.length,q2.sql))
-        if(q1Name.length == 0 || q2Name.length == 0) cmp
-        else if(Character.isDigit(q1Name(0)) && Character.isDigit(q2Name(0))) {
-          val NumQ = "(\\d+).*".r
-          val NumQ(q1Num) = q1Name
-          val NumQ(q2Num) = q2Name
-          q1Num.toInt - q2Num.toInt
-        }
-        else cmp
-      }
-    }
+  case class QueryResultSet(subs: List[(String, String)] = Nil, queryResultByName: Map[String, QueryResult] = Map())
+
+  case class QueryTest(sql: String, queryResultsByDataset: Map[String, QueryResultSet] = Map(("standard",QueryResultSet()))) { 
+    override def toString = 
+      sql + ind(queryResultsByDataset.map { case (k, v) => "\n - " + k + ": " + v.queryResultByName.toString }.mkString) 
   }
 
   // Parser for unit tests declarations
   import scala.util.parsing.combinator.RegexParsers
   object UnitParser extends RegexParsers {
+    
     lazy val str = "\"" ~> """(\\.|[^\"])*""".r <~ "\"" | "'" ~> """(\\.|[^'])*""".r <~ "'"
-    lazy val num = "-?[0-9]+(\\.[0-9]*)?([eE][\\-+]?[0-9]+)?".r ^^ { case x => if (x.matches("^-?[0-9]+$")) x+"L" else x }
-    lazy val pat = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ { x=>x.replaceAll("\\\\/","/") } // might need a better solution
-    private def map[T](p:Parser[T]) = "{" ~> repsep((str <~ "=>") ~ p,",") <~ "}" ^^ { case rs => rs.map{case n~v=>(n,v)}.toMap } // JSON-like map String -> T
-    lazy val qtest = ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ { case n~qs => QueryTest(n,qs) }
-    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ { case ss ~os => QuerySet(ss match { case Some(s)=>s case None=>Nil },os) }
-    lazy val qsub = ("[" ~> pat <~ ",") ~ (str <~ "]") ^^ { case p~r => (p,r) }
-    lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(n) })) <~ opt(",") <~"}" ^^ { case q => q }
-    lazy val qfile:Parser[QueryOut] = ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ { case f~op => QueryFile(f,op match { case Some(p)=>p case None => null}) }
-    lazy val qmap:Parser[QueryOut] = "{" ~> repsep(qrow,",") <~ opt(",") <~ "}" ^^ { case rs => QueryMap(rs.toMap) }
-    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (cs,n) }
-    def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
+
+    lazy val num = "-?[0-9]+(\\.[0-9]*)?([eE][\\-+]?[0-9]+)?".r ^^ {
+        case x => x // if (x.matches("^-?[0-9]+$")) x + "L" else x
+      }
+
+    lazy val pat = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ {
+        _.replaceAll("\\\\/","/")
+      } // might need a better solution
+   
+    lazy val qrow = ("[" ~> repsep(num|(str ^^ { s => "\"" + s + "\"" }), ",") <~ "]") ~ ("=>" ~> num) ^^ { 
+        case cs ~ n => (cs, n)
+      }
+
+    lazy val qmap: Parser[QueryResult] =
+      "{" ~> repsep(qrow, ",") <~ opt(",") <~ "}" ^^ {
+        case rs => QueryResultMap(rs.toMap)
+      }
+
+    lazy val qfile: Parser[QueryResult] =
+      ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ {
+        case f ~ op => QueryResultFile(f, op match { case Some(p) => p case None => null })
+      }
+    
+    lazy val qout =
+      "{"~>":type"~>"=>"~> ((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) |
+                            (":singleton"~>","~>":expected"~>"=>"~>num ^^ {
+                              case n => QueryResultSingleton(n) })) <~ opt(",") <~"}" ^^ {
+        case q => q
+      }
+    
+    lazy val qsub = ("[" ~> pat <~ ",") ~ (str <~ "]") ^^ {
+        case p ~ r => (p, r)
+      }
+
+    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ {
+        case ss ~ os => QueryResultSet(ss match { case Some(s) => s case None => Nil }, os)
+      }
+    
+    lazy val qtest = 
+      ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ 
+      (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ {
+        case n ~ qs => QueryTest(n, qs)
+      }
+
+    private def map[T](p:Parser[T]) = 
+      "{" ~> repsep((str <~ "=>") ~ p, ",") <~ "}" ^^ { 
+        case rs => rs.map { case n ~ v => (n, v) }.toMap 
+      } // JSON-like map String -> T
+
+    def apply(input: String): QueryTest =
+      parseAll(qtest, input) match {
+        case Success(r, _) => r
+        case f => sys.error(f.toString)
+    }
   }
 }

@@ -1,8 +1,12 @@
 package ddbt
 
-import ddbt.lib._
+import java.io._
+import ddbt.lib.Utils
+import ddbt.ast._
 import ddbt.frontend._
 import ddbt.codegen._
+import ddbt.codegen.Optimizer
+
 
 /**
  * This class is the main compiler executable. It coordinates compilation phases
@@ -10,11 +14,9 @@ import ddbt.codegen._
  * @author TCK
  */
 object Compiler {
-  import java.io._
 
   val DEPLOYMENT_STATUS_RELEASE = 1
   val DEPLOYMENT_STATUS_DEVELOPMENT = 2
-
   val DEPLOYMENT_STATUS = DEPLOYMENT_STATUS_DEVELOPMENT
 
   val PRINT_TIMING_INFO = false
@@ -31,44 +33,137 @@ object Compiler {
   val LANG_SPARK_LMS = "spark"
   val LANG_AKKA = "akka"
 
-  // Default languages 
-  val DEFAULT_LANG_CPP = LANG_CPP_VANILLA
+  val frontendFileExtensions = Map(
+      LANG_CALC -> "calc",
+      LANG_M3 -> "m3",
+      LANG_DIST_M3 -> "dm3",
+      LANG_CPP_VANILLA -> "m3",
+      LANG_CPP_LMS -> "m3",
+      LANG_CPP_PARDIS -> "m3",
+      LANG_SCALA_VANILLA -> "m3",
+      LANG_SCALA_LMS -> "m3",
+      LANG_SCALA_PARDIS -> "m3",
+      LANG_SPARK_LMS -> "dm3",
+      LANG_AKKA -> "m3"
+    )
+
+  val backendFileExtensions = Map(
+      LANG_CALC -> "calc",
+      LANG_M3 -> "m3",
+      LANG_DIST_M3 -> "dm3",
+      LANG_CPP_VANILLA -> "hpp",
+      LANG_CPP_LMS -> "hpp",
+      LANG_CPP_PARDIS -> "hpp",
+      LANG_SCALA_VANILLA -> "scala",
+      LANG_SCALA_LMS -> "scala",
+      LANG_SCALA_PARDIS -> "scala",
+      LANG_SPARK_LMS -> "scala",
+      LANG_AKKA -> "scala"
+    )
+  
+  val DEFAULT_LANG_CPP = LANG_CPP_PARDIS
   val DEFAULT_LANG_SCALA = LANG_SCALA_PARDIS
+  val DEFAULT_PACKAGE_NAME = "ddbt.gen"
+  val DEFAULT_DATASET_NAME = "standard"
 
-  val M3_FILE_SUFFIX = ".m3"
+  private var inputFile: String = null        // input file
+  private var outputSrcFile: String = null    // output file (defaults to stdout)
+  private var outputExeFile: String = null    // path for putting the compiled program
+  private var outputExeDir = new File("./")  // output directory
+  private var lang: String = null             // output language
 
-  var frontend_path_bin: String = null // the path to DBToaster's frontend
-  var batching_enabled: Boolean = false// determines whether batching is enabled or not
-  var in   : List[String] = Nil  // input files
-  var out  : String = null       // output file (defaults to stdout)
-  var lang : String = null       // output language
-  var cPath: String = null       // path for putting the compiled program
-  var name : String = null       // class/structures name (defaults to Query or capitalized filename)
-  var pkg  : String = "ddbt.gen" // class package
-  var optm3: String = "-O2"      // optimization level
-  var depth: Int = -1            // incrementalization depth (-1=infinite)
-  var flags: List[String] = Nil  // front-end flags
-  var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
-  var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
-  var inl  : Int = 0             // inlining level, in range [0-10]
-  var watch : Boolean = false    // stream of updates on result map
+  private var frontendPathBin = Utils.pathDBTBin    // the path to DBToaster's frontend
+  private var frontendOptLevel = "-O2"              // optimization level
+  private var frontendIvmDepth = -1                 // incrementalization depth (-1 = infinite)
+  private var frontendDebugFlags = List[String]()   // front-end flags
+  private var batchingEnabled = false               // determines whether batching is enabled or not
+
+  // Codegen options
+  private var className: String = null              // class/structures name (defaults to Query or capitalized filename)
+  private var packageName = DEFAULT_PACKAGE_NAME    // class package
+  private var datasetName = DEFAULT_DATASET_NAME    // dataset name (used for codegen)
+  private var datasetWithDeletions = false          // whether dataset contains deletions or not
+  
   // Execution
-  var exec    : Boolean = false  // compile and execute immediately
-  var exec_dir: String  = null   // execution classpath
-  var exec_sc : Boolean = false  // compile using fsc / external scalac
-  var exec_vm : Boolean = false  // execute in a fresh JVM
-  var exec_bs : Int     = 0      // execute as batches of certain size
+  private var execOutput = false               // compile and execute immediately
+  private var execArgs = List[String]()        // arguments passed for execution
+  private var execPrintProgress = 0            // print time and number of tuples processed every X tuples (0 = disable printing)
+  private var execBatchSize = 0                // execute as batches of certain size
+  private var execTimeoutMilli = 0L            // execution timeout in milliseconds
+  private var execRuntimeLibs = List[String]() // runtime libraries (defaults to lib/ddbt.jar for scala)
 
-  // Print the time and the number of tuples processed every X tuples (0 = disable printing)
-  var printProgress = 0
+  private var useExternalScalac = false        // compile using fsc / external scalac
+  private var useExternalJVM = false           // execute in a fresh JVM
 
-  var exec_args = List[String]() // arguments passed for execution
-  def opts(o: String) = o match{
-      case "entry" => Optimizer.analyzeEntry=true
-      case "index" => Optimizer.secondaryIndex=true
-      case "fixedrange" => Optimizer.fixedRange=true
-      case "online" => Optimizer.onlineOpts=true
-      case "m3cmpmult" => Optimizer.m3CompareMultiply=true
+  // private var ni   = false     // non-incremental query evaluation (implies depth=0)
+  // private var watch  = false    // stream of updates on result map
+
+  def isBatchingEnable = batchingEnabled
+
+  def batchSize = execBatchSize
+
+  def outputLang = lang
+
+  def timeoutMilli = execTimeoutMilli
+
+  def error(s: String, fatal: Boolean = false) = {
+    System.err.println(s)
+    if (fatal) System.exit(0)
+    null
+  }
+
+  private def output(s: String, file: String) =   
+    if (file == null) println(s) else Utils.write(file, s)
+
+  private def showHelp() = {
+    def pad(s: String) = f"${s}%8s"
+
+    error("Usage: Compiler [options] file")
+    error("Global options:")
+    error("  -h            show help message")
+    error("  -o <file>     output file (default: stdout)")
+    error("  -c <file>     invoke a second stage compiler on the source file")
+    error("  -l <lang>     defines the target language")
+    error("                - " + pad(LANG_CALC)          + ": relational calculus")
+    error("                - " + pad(LANG_M3)            + ": M3 program")
+    error("                - " + pad(LANG_DIST_M3)       + ": distributed M3 program")
+    error("                - " + pad(LANG_CPP_VANILLA)   + ": vanilla C++ code")
+    // error("                - " + pad(LANG_CPP_LMS)       + ": LMS-optimized C++")
+    error("                - " + pad(LANG_CPP_PARDIS)    + ": PARDIS-optimized C++")
+    error("                - " + pad(LANG_SCALA_VANILLA) + ": vanilla Scala code")
+    error("                - " + pad(LANG_SCALA_LMS)     + ": LMS-optimized Scala")
+    error("                - " + pad(LANG_SCALA_PARDIS)  + ": PARDIS-optimized Scala")
+    error("                - " + pad(LANG_SPARK_LMS)     + ": LMS-optimized Spark")
+    // error("                - " + pad(LANG_AKKA)          +": distributed Akka code")
+    error("Front-end options:")
+    error("  --depth <depth>    incrementalization depth (default: -1 = infinite)")
+    error("  --batch       Enable batch processing")
+    error("  -O[123]       optimization level for M3 (default: -O2)")
+    error("  -F <flag>     set a front-end optimization flag")
+    // error("  -ni           non-incremental (on-demand) query evaluation")
+    error("Code generation options:")
+    error("  -n <name>     name of internal structures (default: Query)")
+    error("  -d <name>     dataset name")
+    error("  --del         dataset contains deletions")
+    error("  -L            libraries for target language")
+    error("Execution options:")
+    error("  -x            compile and execute immediately")
+    error("  -xd <path>    destination for generated binaries")
+    error("  -xsc          use external fsc/scalac compiler (Scala)")
+    error("  -xvm          execute in a new JVM instance (Scala)")
+    error("  -t <n>        execution timeout in seconds")
+    error("  -xbs <n>      execute with batches of certain size")
+    error("  -xa <arg>     pass an argument to generated program")
+    error("", true)     // exit here
+  }
+
+  // TODO: FIX THIS
+  private def opts(o: String) = o match{
+      case "entry" => Optimizer.analyzeEntry = true
+      case "index" => Optimizer.secondaryIndex = true
+      case "fixedrange" => Optimizer.fixedRange = true
+      case "online" => Optimizer.onlineOpts = true
+      case "m3cmpmult" => Optimizer.m3CompareMultiply = true
       case "tmpvar" => Optimizer.tmpVarHoist = true
       case "tmpmap" => Optimizer.tmpMapHoist = true
       case "idxinline" => Optimizer.indexInline = true
@@ -91,364 +186,357 @@ object Compiler {
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
   }
 
-  def error(str: String, fatal: Boolean = false) = {
-    System.err.println(str)
-    if (fatal) System.exit(0)
-    null
+  private def resetParameters() = {
+    inputFile = null
+    outputSrcFile = null
+    outputExeFile = null
+    outputExeDir = new File("./")
+    lang = null
+
+    frontendPathBin = Utils.pathDBTBin
+    frontendOptLevel = "-O2"
+    frontendIvmDepth = -1 
+    frontendDebugFlags = Nil
+    batchingEnabled = false
+
+    className = null
+    packageName = DEFAULT_PACKAGE_NAME
+    datasetName = DEFAULT_DATASET_NAME
+    datasetWithDeletions = false
+  
+    execOutput = false
+    execArgs = Nil
+    execPrintProgress = 0
+    execBatchSize = 0
+    execTimeoutMilli = 0L
+    execRuntimeLibs = Nil
+
+    useExternalScalac = false
+    useExternalJVM = false
   }
 
-  def toast(lang: String, opts: String*): (Long, String) = { 
-    // if opts is empty we do _NOT_ use repository
-    val os = optm3 :: "-l" :: lang ::
-             (if (depth >= 0) List("--depth", depth.toString) else Nil) ::: 
-             flags.flatMap(f => List("-d", f)) ::: 
-             (if (!opts.isEmpty) opts.toList else in) ::: 
-             (if (batching_enabled) List("--batch") else Nil)
-    val repo = if (Utils.pathRepo != null && !opts.isEmpty) 
-                 new File(Utils.pathRepo) 
-               else null
-    val (t0, (m3, err)) = Utils.ns(() => 
-      Utils.exec(
-        ((if (frontend_path_bin == null) Utils.pathDBTBin
-          else frontend_path_bin) :: os).toArray,
-        repo,
-        fatal = false))
-    if (err.trim != "") { 
-      val e = new Exception("dbtoaster " + os.mkString(" ") +
-                            " failed because:\n" + err)
-      e.setStackTrace(Array())
-      throw e 
-    }
-    (t0, if (repo != null) 
-           m3.replaceAll(
-               "../../experiments/data", 
-               repo.getParentFile.getParent + "/experiments/data")
-             .replace(
-               "throw DBTFatalError(\"Event could not be dispatched: \" + event)", 
-               "supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") 
-         else m3)
-  }
+  def parseArgs(args: Array[String], reset: Boolean = false): Unit = {
+    if (reset) resetParameters()
 
-  def parseArgs(args: Array[String]) {
-    val l = args.length
     var i = 0 
-    def eat(f: String => Unit, s: Boolean = false) { 
+    def eat(f: String => Unit, lower: Boolean = false) = {
       i += 1
-      if (i < l) f(if (s) args(i).toLowerCase else args(i)) 
+      if (i < args.length) f(if (lower) args(i).toLowerCase else args(i)) 
     }
-    while (i < l) {
+    var inputFiles = List[String]()
+    while (i < args.length) {
       args(i) match {
+        case "-h"|"-help"|"--help" => showHelp()
+        case "-o" => eat(s => outputSrcFile = s)
+        case "-c" => eat(s => outputExeFile = s)
         case "-l" => eat(s => s match { 
             case LANG_CALC|LANG_M3|LANG_DIST_M3|
                  LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS|
                  LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|
                  LANG_SPARK_LMS|LANG_AKKA => lang = s
-            case _ => error("Unsupported language: " + s, true) 
+            case _ => sys.error("Unsupported language: " + s)
           }, true)
-        case "--frontend" => eat(s => frontend_path_bin = s)
-        case "--batch" => batching_enabled = true
-        case "-o" => eat(s => out = s)
-        case "-c" => eat(s => cPath = s)
+        case "--frontend" => eat(s => frontendPathBin = s)
+        case "--depth" => eat(s => frontendIvmDepth = s.toInt)
+        case "--batch" => batchingEnabled = true
+        case "-F" => eat(s => frontendDebugFlags = s :: frontendDebugFlags)
         case "-n" => eat(s => { val p = s.lastIndexOf('.')
-                                if (p != -1) { 
-                                  pkg = s.substring(0, p)
-                                  name = s.substring(p + 1) 
-                                } else name = s})
-        case "-L" => eat(s => libs = s :: libs)
-        case "--depth" => eat(s => depth = s.toInt)
-        case "-F" => eat(s => flags = s :: flags)
-        case "-inl" => eat(s => inl = if (s == "spec") 5 
-                                      else if (s == "full") 10 
-                                      else try { 
-                                        math.min(10, math.max(0, s.toInt)) 
-                                      } catch { case _: Throwable => 0 })
-        case "-wa" => watch = true;
-        case "-ni" => ni = true; depth = 0; flags = Nil
-        case "-x" => exec = true
-        case "-xd" => eat(s => exec_dir = s)
-        case "-xa" => eat(s => exec_args = exec_args ::: List(s))
-        case "-xsc" => exec_sc = true;
-        case "-xvm" => exec_vm = true;
-        case "-xbs" => eat { i => exec_bs = i.toInt; batching_enabled = true }
-        case "-pp" => eat(i => printProgress = i.toInt)
+                                if (p == -1) {
+                                  packageName = DEFAULT_PACKAGE_NAME
+                                  className = s
+                                }
+                                else {
+                                  packageName = s.substring(0, p)
+                                  className = s.substring(p + 1) 
+                                }
+                              })
+        case "-d" => eat(s => datasetName = s)
+        case "--del" => datasetWithDeletions = true
+        case "-L" => eat(s => execRuntimeLibs = s :: execRuntimeLibs)
+        // case "-wa" => watch = true;
+        // case "-ni" => ni = true; frontendIvmDepth = 0; frontendDebugFlags = Nil
+        case "-x" => execOutput = true
+        case "-xd" => eat(s => outputExeDir = new File(s))
+        case "-xsc" => useExternalScalac = true
+        case "-xvm" => useExternalJVM = true
+        case "-t" => eat(s => execTimeoutMilli = s.toLong * 1000)
+        case "-xbs" => eat { i => execBatchSize = i.toInt; batchingEnabled = true }
+        case "-xa" => eat(s => execArgs = execArgs ::: List(s))
+        case "-pp" => eat(i => execPrintProgress = i.toInt)
         case "-opt" => eat(s => opts(s), true)
-        case s @ "--no-output" => exec_args = exec_args ::: List(s)
-        case s if s.matches("-O[123]") => optm3 = s;
-        case s if s.startsWith("--") => exec_args = exec_args ::: List(s.substring(1)) // --flag is a shorthand for -xa -flag
-        case s => in = in ::: List(s)
-
+        case s @ "--no-output" => execArgs = execArgs ::: List(s)
+        case s if s.matches("-O[123]") => frontendOptLevel = s;
+        case s if s.startsWith("--") => execArgs = execArgs ::: List(s.substring(1)) // --flag is a shorthand for -xa -flag
+        case s => inputFiles = inputFiles ::: List(s)
       }
       i += 1
     }
-    if (in.size == 0) {
-      def pad(s: String) = f"${s}%6s"
-      error("Usage: Compiler [options] file1 [file2 [...]]")
-      error("Global options:")
-      error("  -o <file>     output file (default: stdout)")
-      error("  -c <file>     invoke a second stage compiler on the source file")
-      error("  -l <lang>     defines the target language")
-      error("                - " + pad(LANG_CALC)          + ": relational calculus")
-      error("                - " + pad(LANG_M3)            + ": M3 program")
-      error("                - " + pad(LANG_DIST_M3)       + ": distributed M3 program")
-      error("                - " + pad(LANG_CPP_VANILLA)   + ": vanilla C++ code")
-      // error("                - " + pad(LANG_CPP_LMS)       + ": LMS-optimized C++")
-      error("                - " + pad(LANG_CPP_PARDIS)    + ": PARDIS-optimized C++")
-      error("                - " + pad(LANG_SCALA_VANILLA) + ": vanilla Scala code")
-      error("                - " + pad(LANG_SCALA_LMS)     + ": LMS-optimized Scala")
-      error("                - " + pad(LANG_SCALA_PARDIS)  + ": PARDIS-optimized Scala")
-      error("                - " + pad(LANG_SPARK_LMS)     + ": LMS-optimized Spark")
-      // error("                - " + pad(LANG_AKKA)          +": distributed Akka code")
-      error("Front-end options:")
-      error("  --depth <depth>    incrementalization depth (default: infinite)")
-      error("  --batch       Enable batch processing")
-      error("  -O[123]       optimization level for M3 (default: -O2)")
-      error("  -F <flag>     set a front-end optimization flag")
-      // error("  -ni           non-incremental (on-demand) query evaluation")
-      error("Code generation options:")
-      error("  -n <name>     name of internal structures (default: Query)")
-      // error("  -L            libraries for target language")
-      // error("  -inl <level>  inlining level (0-10,none,spec,full,default:none)")
-      error("Execution options:")
-      // error("  -x            compile and execute immediately")
-      // error("  -xd <path>    destination for generated binaries")
-      // error("  -xsc          use external fsc/scalac compiler")
-      // error("  -xvm          execute in a new JVM instance")
-      error("  -xbs <n>        execute with batches of certain size")
-      // error("  -xa <arg>     pass an argument to generated program")
-      error("", true) //exit the application
+
+    if (inputFiles.size > 1) {
+      showHelp()  // exit here
+    }
+    inputFile = inputFiles.headOption.getOrElse(null)
+
+    if (lang == null && outputSrcFile != null) {
+      if (outputSrcFile.matches(".+\\.(cpp|c|hpp|h)$"))
+        lang = DEFAULT_LANG_CPP
+      else if (outputSrcFile.endsWith(".scala"))
+        lang = DEFAULT_LANG_SCALA
     }
 
-    if (exec && batching_enabled && exec_bs <= 0) { 
-      error("Invalid batch size")
-      exec = false 
+    if (outputSrcFile == null && outputExeFile != null) {
+      outputSrcFile = backendFileExtensions.get(lang).map(outputExeFile + "." + _).getOrElse(null)
     }
 
-    if(lang == null) {
-      lang = if (out == null || out.endsWith(".cpp") || out.endsWith(".hpp") ||
-                 out.endsWith(".h") || out.endsWith(".c")) DEFAULT_LANG_CPP
-             else DEFAULT_LANG_SCALA
-    }
-
-    if (out == null && exec) { 
-      error("Execution disabled, specify an output file")
-      exec = false 
-    }
-
-    if (name == null) {
-      val n = if (out != null) out.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "") else "query"
+    if (className == null) {
+      val n = if (outputSrcFile == null) "Query"
+              else outputSrcFile.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "")
       val firstChar = n.substring(0, 1)
-      name = (if(Character.isDigit(firstChar(0))) "_" + firstChar 
-              else firstChar.toUpperCase) + n.substring(1)
+      className = (if (Character.isDigit(firstChar(0))) "_" + firstChar else firstChar.toUpperCase) + n.substring(1)
     }
 
-    def lib(s: String) = if (new File(s).exists) { libs = s :: Nil; true } else false
-    if (libs == Nil && exec) lang match {
+    if (execOutput && outputSrcFile == null) {
+      error("Execution disabled, specify an output file")
+      execOutput = false
+    }
+
+    if (execOutput && batchingEnabled && execBatchSize <= 0) {
+      error("Execution disabled, invalid batch size: " + execBatchSize)
+      execOutput = false
+    }
+
+    // TODO: check runtime libs
+    def checkLib(s: String) = if (new File(s).exists) { execRuntimeLibs = s :: execRuntimeLibs; true } else false
+
+    if (execRuntimeLibs == Nil && execOutput) lang match {
       case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS => 
-        lib("lib/ddbt.jar") || lib("target/scala-2.11/classes") || 
-        ({ error("Cannot find runtime libraries"); exec = false; false })
+        if (!checkLib("lib/ddbt.jar") && !checkLib("target/scala-2.11/classes")) { 
+          error("Cannot find runtime libraries")
+          execOutput = false
+        }
       case _ =>
     }
   }
 
-  def output(s: String) = if (out == null) println(s) else Utils.write(out, s)
+  private def toast(repo: File, inputFile: String, lang: String, batchingEnabled: Boolean, 
+                    optLevel: String, debugFlags: List[String], ivmDepth: Int): String = {
 
-  // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src: String, post_gen: (ast.M3.System) => Unit = null,
-              t_gen: Long => Unit = null, t_comp: Long => Unit = null,
-              t_run: (() => Unit) => Unit = null, 
-              t_verify: (String, ast.M3.System, String) => Unit = null) {
-    val t0 = System.nanoTime
+    val options = debugFlags.flatMap(f => List("-d", f)) :::
+                  (if (batchingEnabled) List("--batch") else Nil) :::
+                  (if (ivmDepth >= 0) List("--depth", ivmDepth.toString) else Nil) :::
+                  List(optLevel, "-l", lang, inputFile)
+    
+    val command = (frontendPathBin :: options).toArray
+
+    val (m3, err) = Utils.exec(command, repo, fatal = false)
+
+    if (err.trim != "") {
+      val e = new Exception(command + " failed because:\n" + err)
+      e.setStackTrace(Array())
+      throw e
+    }
+    m3
+  }
+
+  def toast(inputFile: String, lang: String, batchingEnabled: Boolean = batchingEnabled,
+            optLevel: String = frontendOptLevel, debugFlags: List[String] = frontendDebugFlags,
+            ivmDepth: Int = frontendIvmDepth, pathRepo: String = Utils.pathRepo): String = {
+
+    if (inputFile == null) error("Missing input file", true)
+
+    if (pathRepo == null) {     // If not running from sbt (development env)
+      toast(null, inputFile, lang, batchingEnabled, optLevel, debugFlags, ivmDepth)
+    }
+    else {
+      val repo = new File(pathRepo)
+      val m3 = toast(repo, inputFile, lang, batchingEnabled, optLevel, debugFlags, ivmDepth)
+      m3.replaceAll("../../experiments/data", repo.getParentFile.getParent + "/experiments/data")
+    }
+  }
+
+  def string2AST = M3Parser andThen TypeCheck
+
+  def codegen(sourceM3: String, lang: String, codegenOpts: CodeGenOptions): String = {
+
     // Front-end phases
-    val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
+    val m3 = string2AST(sourceM3)
 
     // Back-end
-    val cg: CodeGen = lang match {
-      case LANG_CPP_VANILLA => new CppGen(name, DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO)
-      // case LANG_CPP_LMS => new LMSCppGen(name)
-      case LANG_CPP_PARDIS => Optimizer.cTransformer = true ; new PardisCppGen(name)
-      case LANG_SCALA_VANILLA => new ScalaGen(name, printProgress)
-      case LANG_SCALA_LMS => new LMSScalaGen(name, watch)
-      case LANG_SCALA_PARDIS => new PardisScalaGen(name) //DSL
-      case LANG_SPARK_LMS => new LMSSparkGen(name)
-      case LANG_AKKA => new AkkaGen(name)
+    val codegen: CodeGen = lang match {
+      case LANG_CPP_VANILLA => 
+        new CppGen(codegenOpts)
+      // case LANG_CPP_LMS => 
+      //   new LMSCppGen(codegenOpts)
+      case LANG_CPP_PARDIS => 
+        Optimizer.cTransformer = true 
+        new PardisCppGen(codegenOpts)
+      case LANG_SCALA_VANILLA => 
+        new ScalaGen(codegenOpts)
+      case LANG_SCALA_LMS => new 
+        LMSScalaGen(codegenOpts /*, watch */)
+      case LANG_SCALA_PARDIS => 
+        new PardisScalaGen(codegenOpts) //DSL
+      case LANG_SPARK_LMS => 
+        new LMSSparkGen(codegenOpts)
+      case LANG_AKKA => 
+        new AkkaGen(codegenOpts)
+
       case _ => error("Code generation for " + lang + " is not supported", true)
     }
-    if (ni) {
-      // ---- NON-INCREMENTAL START
-      import ddbt.ast._
-      import M3._
-      //XXX: Make this work with EXPRESSIVE-TLQS
-      val (qns, qss) = (m3.queries.map(_.name), collection.mutable.HashMap[String,TriggerStmt]())
-      val triggers = m3.triggers.map(t => Trigger(t.event, t.stmts.filter {
-        case s @ TriggerStmt(m,e,op,i) => 
-          if (qns.contains(m.name)) { qss += ((m.name, s)); false } else true
-        // case case MapDef(n,tp,ks,e) => XXXXXX
-      }))
-      val r = cg.pkgWrapper(pkg, cg(System(m3.sources, m3.maps, m3.queries, 
-        Trigger(EventInsert(Schema("__execute__", Nil)), qss.map(_._2).toList) :: triggers)))
-      // XXX: improve this RegExp
-      output(r.replaceAll("GetSnapshot\\(_\\) => ", 
-                          "GetSnapshot(_) => onAdd__execute__(); ")
-              .replaceAll("onAdd__execute__","onExecute")) // Scala transforms
-      // ---- NON-INCREMENTAL ENDS
-    } else {
-      output(cg.pkgWrapper(pkg, cg(m3)))
-    }
-    if (t_gen != null) t_gen(System.nanoTime - t0)
-    if (post_gen != null) post_gen(m3)
-    var dir: File = null
-    if (cPath != null || exec) {
-      dir = if (exec_dir != null) { 
-        val d = new File(exec_dir)
-        if (!d.exists) d.mkdirs
-        d 
-      } else Utils.makeTempDir()
-      lang match {        
-        case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_AKKA =>
-          val t2 = Utils.ns(() =>
-            Utils.scalaCompiler(dir, 
-                                if (libs != Nil) libs.mkString(":") else null,
-                                exec_sc)(List(out)))._1
-          if (t_comp != null) t_comp(t2)
 
-        case LANG_SPARK_LMS =>
-          val t2 = Utils.ns(() =>
-            Utils.sparkCompiler(dir, 
-                                if (libs != Nil) libs.mkString(":") else null,
-                                exec_sc)(List(out)))._1
-          if (t_comp != null) t_comp(t2)
-          exec_vm = true
-          val baseDir = new File("./")
-          val sharedDirPath = 
-            baseDir.getAbsolutePath + "/storelib/target/scala-2.11/classes"          
-          val sparkDirPath = 
-            baseDir.getAbsolutePath + "/ddbtoaster/spark/target/scala-2.11/classes"
-          val pkgDir = new File("./ddbtoaster/pkg")
-          if (!pkgDir.exists) pkgDir.mkdirs
-          Utils.exec(Array[String](
-            "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
-            "-C", dir.getAbsolutePath, "ddbt/test/gen",
-            "-C", sharedDirPath, "ddbt/lib",
-            "-C", sparkDirPath, "ddbt/lib/spark",
-            "-C", sparkDirPath, "log4j.properties", 
-            "-C", sparkDirPath, "spark.config"))
+    codegen(m3)
+  }
 
-        case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS => 
-          if (cPath != null) {
-            val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, "ddbtoaster/srccpp/lib"))._1; 
-            if (t_comp != null) t_comp(t2)
-          }
-      }
+  def compile(lang: String, inputFile: String, outputFile: String, outputDir: File, 
+              runtimeLibs: List[String], useExternalScalac: Boolean): Unit = {
+    
+    if (inputFile == null) {
+      error("Compilation failed, input source file missing", true)
     }
-    // Execution
-    lang match {        
+    if (outputDir == null) {
+      error("Compilation failed, output directory missing", true) 
+    }
+
+    if (!outputDir.exists) { outputDir.mkdirs() }
+
+    lang match {
       case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_AKKA =>
-        if (exec) { 
-          Utils.scalaExec(
-            dir :: libs.map(p => new File(p)), 
-            pkg + "." + name,
-            ("-b" + exec_bs :: exec_args).toArray,
-            exec_vm)
-        }
+        Utils.scalaCompiler(outputDir,
+                            runtimeLibs.mkString(":"),
+                            useExternalScalac) (List(inputFile))
 
       case LANG_SPARK_LMS =>
-        if (exec) {
-          Utils.sparkSubmit(
-            pkg + "." + name, 
-            ("-b" + exec_bs :: exec_args).toArray)
+        Utils.sparkCompiler(outputDir, 
+                            runtimeLibs.mkString(":"), 
+                            useExternalScalac) (List(inputFile))
 
-          // Utils.sparkExec(
-          //   dir :: libs.map(p => new File(p)), 
-          //   pkg + "." + name,
-          //   ("-b" + exec_bs :: exec_args).toArray,
-          //   exec_vm)
+        // Create a jar file
+        val baseDir = new File("./")
+        val sharedDirPath = baseDir.getAbsolutePath + "/storelib/target/scala-2.11/classes"
+        val sparkDirPath = baseDir.getAbsolutePath + "/ddbtoaster/spark/target/scala-2.11/classes"
+        val pkgDir = new File("./ddbtoaster/pkg")
+        if (!pkgDir.exists) pkgDir.mkdirs
+        Utils.exec(Array[String](
+          "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"),
+          "-C", outputDir.getAbsolutePath, "ddbt/test/gen",
+          "-C", sharedDirPath, "ch/epfl/data/dbtoaster/lib",
+          "-C", sparkDirPath, "ch/epfl/data/dbtoaster/lib/spark",
+          "-C", sparkDirPath, "log4j.properties",
+          "-C", sparkDirPath, "spark.config"))
+
+      case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS => 
+        if (outputFile == null) {
+          error("Compilation failed, output file name missing", true)
         }
+        Utils.cppCompiler(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")
 
-      case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS =>
-        if (out != null) {
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize, noOutput) =
-            ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
-          val actual_exec_args = List("-b " + exec_bs, "-p " + pMode) ++ (if (noOutput) List("--no-output") else Nil)
-          val compiledSrc = Utils.read(out)
-          datasets.foreach{ dataset =>
-            def tc(p: String = "") =
-              "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
-              p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" +
-              p + "t).tv_usec-(" + p + "t0).tv_usec);"
-            val srcTmp = compiledSrc.replace("standard", dataset)
-              .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if ((tN&127)==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
-            //TODO XXX dataset should be an argument to the program
-            val src = if (dataset.contains("_del"))
-                srcTmp.replace("make_pair(\"schema\",\"",
-                               "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
-                      .replace("\"),2,", "\"),3,")
-              else srcTmp
-            Utils.write(out, src)
-            if (exec) {
-              val pl = "ddbtoaster/srccpp/lib"
-              val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
-              val t2 = Utils.ns(() =>
-                Utils.cppCompiler(out, out.substring(0, out.lastIndexOf(".")), null, pl))._1;
-              if (t_comp != null) t_comp(t2)
-              if (t_run != null) {
-                t_run(() => {
-                  var i = 0
-                  while (i < samplesAndWarmupRounds) {
-                    i += 1
-                    val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
-                    if(t_verify != null) t_verify(out, m3, dataset)
-                    if (err != "") System.err.println(err)
-                    Utils.write(po + "_" + lang + ".txt", out)
-                    println(out)
-                  }
-                })
-              } 
-              else {
-                var i = 0
-                while (i < samplesAndWarmupRounds) {
-                  i += 1
-                  val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
-                  if(t_verify != null) t_verify(out, m3, dataset)
-                  if (err != "") System.err.println(err)
-                  Utils.write(po + "_" + lang + ".txt", out)
-                  println(out)
-                }
-              }
-            }
-          }
-        }
-
-        case _ => error("Execution not supported for " + lang, true)
-      }
+      case _ => error("Source compilation for " + lang + " is not supported", true)
+    }    
   }
 
-  def postProc(s0: ast.M3.System) = {
-    //fixing the unique id for each statement
-    //used in debugging and performance measurements
-    // var stmtId = 0
-    // s0.triggers.foreach{ trg => trg.stmts.map { stmt =>
-    //     stmt.stmtId = stmtId
-    //     stmtId += 1
-    //   }
-    // }
-    s0
+  def runCpp(file: String, args: List[String], batchSize: Int): (String, String) = {
+    if (file == null) {
+      error("Execution failed, executable file missing", true)
+    }
+    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    Utils.cppExec(file, execArgs)
   }
 
-  def main(args: Array[String]) {
-    parseArgs(args)
+  def runScala(dir: File, runtimeLibs: List[String], useExternalJVM: Boolean,
+               packageName: String, className: String, args: List[String], batchSize: Int): (String, String) = {
+    if (dir == null || !dir.exists) {
+      error("Execution failed, directory with executables missing", true)
+    }
+    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    Utils.scalaExec(dir :: runtimeLibs.map(new File(_)), 
+                    packageName + "." + className,
+                    execArgs.toArray, useExternalJVM)
+  }
+
+  def runSpark(packageName: String, className: String, args: List[String], batchSize: Int): (String, String) = {
+    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    Utils.sparkSubmit(packageName + "." + className, args.toArray)
+
+    // useExternalJVM = true
+    // Utils.sparkExec(
+    //   outputExeDir :: execRuntimeLibs.map(p => new File(p)), 
+    //   packageName + "." + className,
+    //   ("-b" + batchSize :: args).toArray,
+    //   useExternalJVM)
+  }
+
+  private def defaultRunFn(time: Long, out: String, err: String): Unit = {
+    if (err.trim != "") System.err.println(err)
+    else if (out.trim != "") System.out.println(out)
+  }
+
+  def compile(sourceM3: String, 
+              codegenFn: (Long, String) => Unit = { (t,c) => () },
+              compileFn: Long => Unit = (x => ()),
+              runFn: (Long, String, String) => Unit = defaultRunFn): Unit = {
+
+    // Codegen
+    val codegenOpts =
+      new CodeGenOptions(
+        className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli, 
+        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, execPrintProgress)
+
+    val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
+
+    output(code, outputSrcFile)
+
+    codegenFn(tCodegen, code)
+
+    if (execOutput && outputSrcFile != null && outputExeDir != null) {
+
+      // Compile generated output file    
+      val (tCompile, _) = 
+        Utils.ns(() => 
+          compile(lang, outputSrcFile, outputExeFile, outputExeDir, execRuntimeLibs, useExternalScalac)
+        )
+
+      compileFn(tCompile)
+    }
+  }
+
+  def run(runFn: (Long, String, String) => Unit = defaultRunFn): Unit = {
+    if (execOutput && outputExeDir != null) {      
+      // Run compiled files
+      val (tRun, (out, err)) = Utils.ns(() =>
+        lang match {
+          case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
+            runCpp(outputExeFile, execArgs, execBatchSize)
+          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
+            runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize)
+          case LANG_SPARK_LMS =>
+            runSpark(packageName, className, execArgs, execBatchSize)
+          case _ => error("Running " + lang + " programs is not supported", true)
+        }
+      )
+      runFn(tRun, out, err)
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    parseArgs(args, true)
+
     try {
       lang match {
-        case LANG_CALC => output(toast(lang)._2)
-        case LANG_M3 | LANG_DIST_M3 => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
-        case _ if in.forall(_.endsWith(M3_FILE_SUFFIX)) => compile(in.map(Utils.read(_)).mkString("\n"))
-        case LANG_SPARK_LMS => compile(toast(LANG_DIST_M3)._2)
-        case _ => compile(toast(LANG_M3)._2)
+        case LANG_CALC =>
+          output(toast(inputFile, lang), outputSrcFile)
+        case LANG_M3 | LANG_DIST_M3 =>
+          output(TypeCheck(M3Parser(toast(inputFile, lang))).toString, outputSrcFile)
+        case LANG_SPARK_LMS =>
+          compile(toast(inputFile, LANG_DIST_M3))
+        case _ =>
+          compile(toast(inputFile, LANG_M3))
       }
-    } catch { case t: Throwable => 
+    }
+    catch { case t: Throwable =>
       val sw = new StringWriter()
       val pw = new PrintWriter(sw)
       t.printStackTrace(pw)
-      error(sw.toString(), true) 
+      error(sw.toString(), true)
     }
   }
 }

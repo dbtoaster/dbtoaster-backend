@@ -1,26 +1,17 @@
 package ddbt.codegen
 
-import ddbt.ast.{ M3, Source, Type }
-import ddbt.ast.M3.{ EventBatchUpdate, EventInsert, EventDelete }
+import ddbt.ast.{ Type, M3 }
+import scala.collection.mutable.HashMap
 
 /**
   * An abstraction of the code generator.
   *
-  * Because we want to instrument generated code for testability, 
+  * Because we want to instrument generated code for testability,
   * we distinguish helper functions and core processing.
   *
   * @author TCK
   */
 trait CodeGen extends (M3.System => String) {
-  val cls = "Query"
-
-  val printProgress: Long = 0L
-
-  // Generate the system (everything but stream and views I/O)
-  def apply(s: M3.System): String
-
-  // Stream sources definition
-  def streams(sources: List[Source]): String
 
   // Context maintenance helpers
   case class Ctx[T](ctx0: Map[String, T] = Map[String, T]()) extends Function1[String, T] {
@@ -37,77 +28,47 @@ trait CodeGen extends (M3.System => String) {
   case class CtxSet(ctx0: Set[String] = Set()) extends Function1[String, Boolean] {
     private var ctx = scala.collection.mutable.HashSet[String]()
 
-    def add(c: Set[String]) = { ctx ++= c }
-    def add(s: String) = { ctx += s }
-    def load(c: Set[String] = Set()) = { ctx.clear; c.foreach { ctx += _ } }
+    def add(c: Set[String]) = ctx ++= c
+    def add(s: String) = ctx += s 
+    def load(c: Set[String] = Set()) = { ctx.clear; c foreach { ctx += _ } }
     def save = ctx.toSet
     def contains(name: String) = apply(name)
     def apply(name: String) = ctx.contains(name) || ctx0.contains(name)
   }
 
-  def consts: String
+  // Generate the system (everything but stream and views I/O)
+  def apply(s: M3.System): String
 
-  def constApply(a: M3.Apply): String
+  protected def cgOpts: CodeGenOptions
 
-  // Generate code for: (1) stream events handling
-  //                    (2) table loading
-  //                    (3) global constants declaration
-  def genInternals(s0: M3.System, nextSkip: String = "context.become(receive_skip)"): (String, String, String)
+  // Context: variable->(type,unique_name)
+  protected var ctx: Ctx[(Type, String)] = null 
 
-  def toMapFunction(q: M3.Query): String
+  /* Get unique name
+    
+    Used to rename variable to avoid putting individual statements in separated blocks
+        M[x] = Add( Mul(Lift(x,2),A[x]), Mul(Lift(x,3),B[x]) )
+        { x=A[2]; x } + { x=B[3]; x }
+    but we want
+        val x1=A[2]
+        val x2=B[3]
+        x1+x2
+  */  
+  protected def rn(n: String): String = ctx(n)._2 
 
-  def onEndStream: String
+  protected def genLMS(s0: M3.System): (String, String, String, String) = (null, null, null, null)
 
-  def genMap(m: M3.MapDef): String
+  protected def genPardis(s0: M3.System): (String, String, String) = (null, null, null)
 
-  def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String): String
+  // ---------- Regular expression methods
+  protected val ENABLE_REGEXP_PARTIAL_EVAL = true
 
-  def genLMS(s0: M3.System): (String, String, String, String) = (null, null, null, null)
+  // Regex string => Regex object name
+  protected val regexpCacheMap = HashMap[String, String]() 
 
-  def genPardis(s0:M3.System):(String, String, String) = (null, null, null)
+  // Function invocations involving only constants are hoisted as global constants
+  protected val hoistedConsts = HashMap[M3.Apply, String]()
 
-  def clearOut:Unit
-
-  def additionalImports(): String
-
-  def pkgWrapper(pkg: String, body: String): String
-
-  def hasOnlyBatchProcessingForAdd(s0: M3.System, event: EventBatchUpdate) = 
-    s0.triggers.forall { t => t.event match {
-      case EventInsert(s) if (event.schema.name == s.name) => false
-      case _ => true
-    }
-  }
-
-  def hasOnlyBatchProcessingForDel(s0: M3.System, event: EventBatchUpdate) = 
-    s0.triggers.forall{ t => t.event match {
-      case EventDelete(s) if (event.schema.name == s.name) => false
-      case _ => true
-    }
-  }
-
-  /*
-  case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {
-    private var ctr=0;
-   
-    def add(n: Int = 1) = { ctr = ctr + n }
-    def save = { val c = ctr; ctr = 0; c }
-    def load(c: Int = 0) { ctr = c }
-    def apply() = f(ctr)
-  }
-  */
-
-  /*
-  Need for an optimization phase:
-  ==> phase after TypeCheck: union/add is disambiguated with Add.agg
-  - simplifying aliases where possible
-  - propagating constants
-  - moving to enclosing class constant subexpressions
-  - providing correct zero for types
-  - mapref construction
-  - avoiding duplicate get (benefitial for akka)
-  - reducing aggregation of one element
-  - disambiguate add/union at optimization phase ?
-  - adding map slicing information
-  */
+  // Map mapName => MapDef
+  protected var mapDefs = Map[String, M3.MapDef]() 
 }

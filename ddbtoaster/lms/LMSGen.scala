@@ -8,12 +8,12 @@ import ddbt.ast._
   *
   * @author Mohammad Dashti, TCK
   */
-abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, override val watch: Boolean = false) extends IScalaGen {
+abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override val watch: Boolean = false) extends IScalaGen {
 
   import ddbt.ast.M3._
   import ddbt.lib.Utils._
   import ddbt.lib.store.{ Store, Entry }
-  import ddbt.lib.ManifestHelper.{man, zero, manEntry, manStore}
+  import ddbt.lib.ManifestHelper.{ zero, man, manEntry, manStore }
   import ddbt.lib.TypeHelper.Scala._
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
@@ -71,7 +71,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       }
       if (as.forall(_.isInstanceOf[Const])) 
         // hoist constants resulting from function application
-        co(impl.named(constApply(a), tp, false)) 
+        co(impl.named(hoistedConsts.getOrElseUpdate(a, fresh("c")), tp, false))
       else 
         app(as, Nil)
 
@@ -304,8 +304,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
     )
   }
 
-  def filterStatement(s: TriggerStmt) = true
-
   // Trigger code generation
   def genTriggerLMS(t: Trigger, s0: System) = {
     val (name, args) = t.event match {
@@ -346,7 +344,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         }
       ).toMap)
       // Execute each statement
-      t.stmts.filter(filterStatement).map {
+      t.stmts.map {
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val mm = m.tp match {
@@ -423,7 +421,8 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
   def genAllMaps(maps: Seq[MapDef]) = maps.map(genMap).mkString("\n")
 
-  def createVarDefinition(name: String, tp: Type) = "var " + name + ": " + typeToString(tp) + " = " + zeroOfType(tp)
+  def createVarDefinition(name: String, tp: Type) = 
+    "var " + name + ": " + typeToString(tp) + " = " + zeroOfType(tp)
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     val (a, keys, tp) = ctx0(map)
@@ -450,20 +449,25 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
-    val classLevelMaps = 
+
+   val classLevelMaps = 
     // s0.triggers.filter(_.event match {
     //   case EventBatchUpdate(s) => true
     //   case _ => false
     // }).map(_.event match { //delta relations
-    //   case EventBatchUpdate(sc) =>
-    //     val name = sc.name
-    //     val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-    //     val deltaRel = sc.deltaName
-    //     val tp = TypeLong
-    //     val keys = schema.fields
-    //     MapDef(deltaRel, tp, keys, null, LocalExp)
+    //   case EventBatchUpdate(schema) =>
+    //     MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp)
     //   case _ => null
     // }) ++
+    // s0.triggers.flatMap { t => //local maps
+    //   t.stmts.filter{
+    //     case m: MapDef => true
+    //     case _ => false
+    //   }.map{
+    //     case m: MapDef => m
+    //     case _ => null
+    //   }
+    // } ++
     mapDefs.map {
       case (_, m: MapDef) => m
     }.toList // XXX missing indexes
@@ -479,8 +483,9 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         val m = me(keys.map(_._2), tp)
         val s = impl.named(name, true)(manStore(m))
         impl.collectStore(s)(m)
-        if (watch && resultMapNames.contains(name))
+        if (watch && resultMapNames.contains(name)) {
           s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(ScalaGen.STORE_WATCHED, true)
+        }
         (name, (/*impl.newSStore()(m)*/s, keys, tp))
       }
     }.toMap // XXX missing indexes
@@ -553,7 +558,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   override def getEntryDefinitions: String = ""
 }
 
-class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(cls, ScalaExpGen, watch) {
+class LMSScalaGen(cgOpts: CodeGenOptions, watch: Boolean = false) extends LMSGen(cgOpts, ScalaExpGen, watch) {
   import ddbt.ast.M3._
   import ddbt.lib.Utils.ind
   import ddbt.lib.TypeHelper.Scala._
@@ -575,7 +580,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
 
   override protected def emitActorClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
     if (watch) {
-      "class " + cls + "Impl extends IQuery {\n" +
+      "class " + cgOpts.className + "Impl extends IQuery {\n" +
         ind(
           "import ddbt.lib.Messages._\n" +
           "import ddbt.lib.Functions._\n" +
@@ -598,9 +603,9 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
             "\n}\n" +
             gc + ld
         ) + "\n}\n" +
-        "class " + cls + " extends " + cls + "Impl with Actor {\n\n" +
+        "class " + cgOpts.className + " extends " + cgOpts.className + "Impl with Actor {\n\n" +
         ind(
-          "import ddbt.lib.Messages._\nimport " + cls + "._\n" +
+          "import ddbt.lib.Messages._\nimport " + cgOpts.className + "._\n" +
             "import ddbt.lib.Functions._\n\n" +
             "var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L\n" +
             "def receive_skip: Receive = { case EndOfStream | GetSnapshot(_) => " +
@@ -628,20 +633,20 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
   }
 }
 
-class LMSCppGen(cls: String = "Query") extends LMSGen(cls, CppExpGen) 
-                                       with ICppGen {
-  import ddbt.ast.M3._
+// class LMSCppGen(cgOpts: CodeGenOptions) extends LMSGen(cgOpts, CppExpGen) 
+//                                         with ICppGen {
+//   import ddbt.ast.M3._
 
-  override def toMapFunction(q: Query) = super[LMSGen].toMapFunction(q)
-  override def onEndStream = super[LMSGen].onEndStream
-  override def genMap(m: MapDef): String = super[LMSGen].genMap(m)
-  override def genInitializationFor(
-      map: String, 
-      keyNames: List[(String, Type)], 
-      keyNamesConcat: String) = 
-    super[LMSGen].genInitializationFor(map, keyNames, keyNamesConcat)
-  override def genLMS(s0: System):(String, String, String, String) = 
-    super[LMSGen].genLMS(s0)
-  override def clearOut = super[LMSGen].clearOut
-  override val additionalImports: String = ""
-}
+//   override def toMapFunction(q: Query) = super[LMSGen].toMapFunction(q)
+//   override def onEndStream = super[LMSGen].onEndStream
+//   override def genMap(m: MapDef): String = super[LMSGen].genMap(m)
+//   override def genInitializationFor(
+//       map: String, 
+//       keyNames: List[(String, Type)], 
+//       keyNamesConcat: String) = 
+//     super[LMSGen].genInitializationFor(map, keyNames, keyNamesConcat)
+//   override def genLMS(s0: System):(String, String, String, String) = 
+//     super[LMSGen].genLMS(s0)
+//   override def clearOut = super[LMSGen].clearOut
+//   override val additionalImports: String = ""
+// }

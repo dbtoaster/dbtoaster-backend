@@ -1,5 +1,11 @@
 package ddbt.frontend
 
+/**
+ * NOTE: This class is currently NOT USED!
+ * 
+ */
+
+
 import ddbt.ast._
 
 /**
@@ -135,7 +141,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     }
     val r1 = parts.map(_.freq).sum // selected constraints (approximation)
     // partitioning
-    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.isStream).map(s=>s.schema.name).toSet);
+    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.isStream).map(_.schema.name).toSet);
     // hashing function
     val its = s0.maps.zipWithIndex.map { 
         case (m, i) => (m.name, (i,m.keys.map(_._2))) 
