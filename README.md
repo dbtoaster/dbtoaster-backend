@@ -31,6 +31,8 @@ Currently the project matches original DBToaster code generation based on M3 and
 
    A sample configuration file named `conf/ddbt.properties.example` exists in the repository and you can create a copy of it, rename it to `conf/ddbt.properties` and modify it to have your desired parameters.
 
+   Please note that for running the unit-tests, you need the base data files for the relations. Currently, these data files are missing from the front-end repository. Please contact us if you want to get access to these base data files for running the tests.
+
 #### Instructions for running the distributed version
 
 TBA
