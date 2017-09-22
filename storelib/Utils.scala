@@ -84,13 +84,12 @@ object Utils {
   val scalacOpts = prop("scalac").split(" +").toList
 
   // Paths related to DBToaster
-  val pathRepo = {
-    val r = prop("base_repo", null)
-    if (r == null) null else r + "/dbtoaster/compiler/alpha5" 
+  val pathRepo = { 
+    prop("base_repo", null)
   }
 
-  val pathDBTBin  = (if (pathRepo != null) pathRepo + "/" else "") + 
-    prop("dbtoaster.frontend", "bin/dbtoaster_frontend")
+  val pathDBTBin  = (if (pathRepo != null) pathRepo + "/bin/dbtoaster"
+                     else prop("dbtoaster.frontend", "./bin/dbtoaster_frontend"))
 
   private lazy val pathJDK = { 
     var p = prop("jdk", null) 
