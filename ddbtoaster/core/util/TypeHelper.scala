@@ -65,7 +65,7 @@ object TypeHelper {
   def fromString(s: String, tp: Type) = tp match {
     case TypeLong => s.trim.replaceAll("L$", "").toLong
     case TypeDouble => s.trim.replaceAll("L$", "").toDouble
-    case TypeString => s.trim.replaceAll("^\"|\"$", "")
+    case TypeString => s.replaceAll("^\"|\"$", "")
     case TypeDate => s.trim.replaceAll("L$", "").toLong   // dateConv(v.toLong)
     case _ => scala.sys.error("Cannot convert " + s + " into " + tp)
   }

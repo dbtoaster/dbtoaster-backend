@@ -89,7 +89,6 @@ object UnitTest {
   private var zeusEnabled = false      // zeus mode
   private var zeusSeed = 0             // zeus seed  
 
-
   private var csv: PrintWriter = null
   private var csvFile: String = null
 
@@ -133,6 +132,7 @@ object UnitTest {
     val qinc = MSet[String]()
     val qexcl = MSet[String]()
     var qfail = false
+    var qverify = false
 
     var as = List[String]()
     var i = 0
@@ -147,6 +147,7 @@ object UnitTest {
         case "-q" => eat(s => qinc += s)
         case "-qx" => eat(s => qexcl += s)        
         case "-qfail" => qfail = true
+        case "-qverify" => qverify = true
         case "-x" => runBenchmark = true
         case "-v" => verifyOutput = true
         case "-r" => eat(s => numRuns = s.toInt)
@@ -171,6 +172,7 @@ object UnitTest {
           error("  -q <filter>   add an inclusion filter for queries")
           error("  -qx <filter>  add an exclusion filter for queries")
           error("  -qfail        also include queries that are known to fail")
+          error("  -qverify      verify only queries with test results")
           error("Benchmarking options:")
           error("  -x            enable benchmarks (compile and execute)")
           error("  -v            verification against reference result")
@@ -218,6 +220,11 @@ object UnitTest {
       queryFilter = (s: String) => !skipQueries.exists(s.endsWith) && q0(s) 
     }
     
+    if (qverify) {
+      val q0 = queryFilter
+      queryFilter = (s: String) => q0(s) && unitTestResults.contains(s)
+    }
+
     Compiler.parseArgs(as.reverse.toArray, true)
   }
 
@@ -248,17 +255,23 @@ object UnitTest {
     }
 
     val total = findQueries
-    val selected = total.filter(queryFilter).sorted
 
-    println("Queries total    : %4d".format(total.size))
-    println("Queries selected : %4d".format(selected.size))
-    
-    if (selected.isEmpty) { 
-      error("No queries selected, exiting...", true)
+    if (total.isEmpty) { 
+      error("No queries found, exiting...", true)
     }
+
+    println("Queries total    : %4d".format(total.size))    
 
     if (verifyOutput) {
       unitTestResults = loadUnitTests
+    }
+
+    var selected = total.filter(queryFilter).sorted
+
+    println("Queries selected : %4d".format(selected.size))
+    
+    if (selected.isEmpty) {
+      error("No queries selected, exiting...", true)
     }
 
     // directory cleanup (erase previous tests)
