@@ -1014,7 +1014,7 @@ class LMSSparkGen(cgOpts: CodeGenOptions) extends DistributedM3Gen(cgOpts, Spark
       else {
         lazy val batchTupleTimeoutCheck =
           s"""|// Timeout check
-              |if (endTime > 0 && (tuplesProcessed / $step) < ((tuplesProcessed + batchSize) / $step)) {
+              |if (endTime > 0) {
               |  val t = System.nanoTime
               |  if (t > endTime) { 
               |    endTime = t

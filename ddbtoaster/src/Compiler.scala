@@ -217,6 +217,7 @@ object Compiler {
 
   def parseArgs(args: Array[String], reset: Boolean = false): Unit = {
     if (reset) resetParameters()
+    execArgs = Nil
 
     var i = 0 
     def eat(f: String => Unit, lower: Boolean = false) = {
@@ -443,18 +444,22 @@ object Compiler {
   }
 
   def runScala(dir: File, runtimeLibs: List[String], useExternalJVM: Boolean,
-               packageName: String, className: String, args: List[String], batchSize: Int): (String, String) = {
+               packageName: String, className: String, args: List[String], batchSize: Int, dataset: String): (String, String) = {
     if (dir == null || !dir.exists) {
       error("Execution failed, directory with executables missing", true)
     }
-    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    val execArgs = ("-d" + dataset) :: args ++ 
+                   (if (batchSize > 0) List("-b" + batchSize) else Nil) ++ 
+                   (if (timeoutMilli > 0) List("-t" + timeoutMilli) else Nil)
     Utils.scalaExec(dir :: runtimeLibs.map(new File(_)), 
                     packageName + "." + className,
                     execArgs.toArray, useExternalJVM)
   }
 
-  def runSpark(packageName: String, className: String, args: List[String], batchSize: Int): (String, String) = {
-    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+  def runSpark(packageName: String, className: String, args: List[String], batchSize: Int, dataset: String): (String, String) = {
+    val execArgs = ("-d" + dataset) :: args ++ 
+                   (if (batchSize > 0) List("-b" + batchSize) else Nil) ++
+                   (if (timeoutMilli > 0) List("-t" + timeoutMilli) else Nil)
     Utils.sparkSubmit(packageName + "." + className, args.toArray)
 
     // useExternalJVM = true
@@ -499,7 +504,7 @@ object Compiler {
     }
   }
 
-  def run(runFn: (Long, String, String) => Unit = defaultRunFn): Unit = {
+  def run(dataset: String, runFn: (Long, String, String) => Unit = defaultRunFn): Unit = {
     if (execOutput && outputExeDir != null) {      
       // Run compiled files
       val (tRun, (out, err)) = Utils.ns(() =>
@@ -507,9 +512,9 @@ object Compiler {
           case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
             runCpp(outputExeFile, execArgs, execBatchSize)
           case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
-            runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize)
+            runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
           case LANG_SPARK_LMS =>
-            runSpark(packageName, className, execArgs, execBatchSize)
+            runSpark(packageName, className, execArgs, execBatchSize, dataset)
           case _ => error("Running " + lang + " programs is not supported", true)
         }
       )

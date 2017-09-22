@@ -506,7 +506,7 @@ trait IScalaGen extends CodeGen {
     val skip = 
       "if (t1 > 0 && (tN & " + (step - 1) + ") == 0) { " + 
       "val t = System.nanoTime; if (t > t1) { t1 = t; tS = 1L; " + nextSkip +
-      " } else tN += 1L } else tN += 1L; "
+      " } }; tN += 1L; "
     val pp = "" //if (cgOpts.printProgress > 0L) "printProgress(); " else ""
     
     val (systemEvent, others) = s0.triggers.partition(_.event match { 
@@ -551,7 +551,7 @@ trait IScalaGen extends CodeGen {
       """|case BatchUpdateEvent(streamData) =>
          |  val batchSize = streamData.map(_._2.length).sum
          |  // Timeout check
-         |  if (t1 > 0 && (tN / %d) < ((tN + batchSize) / %d)) {
+         |  if (t1 > 0) {
          |    val t = System.nanoTime
          |    if (t > t1) { t1 = t; tS = batchSize; %s }
          |  }
@@ -562,7 +562,7 @@ trait IScalaGen extends CodeGen {
          |    case (s, _) => sys.error("Unknown stream event name " + s)
          |  }
          |""".stripMargin
-      .format(step, step, nextSkip, ind(sBatchEvents, 2))
+      .format(nextSkip, ind(sBatchEvents, 2))
     }
     val tableInitialization = s0.sources.filterNot { _.isStream }.map {
       s => {
@@ -739,7 +739,9 @@ trait IScalaGen extends CodeGen {
             s.adaptor.options.getOrElse("delimiter", ",")
           ).replaceAll("\\\\","\\\\\\\\")
         "CSV(\"" + s.schema.name.toUpperCase + "\",\"" + 
-        s.schema.fields.map(_._2).mkString(",") + "\",\"" + sep + "\")"
+          s.schema.fields.map(_._2).mkString(",") + "\",\"" + sep + "\", " + 
+          (if (cgOpts.dataset.endsWith("_del")) "\"ins + del\"" else "\"insert\"") +
+        ")"
     }
     (in, "new Adaptor." + adaptor, split)
   }
@@ -769,16 +771,8 @@ trait IScalaGen extends CodeGen {
         val (in, ad, sp) = genStream(s)
         "(" + in + "," + ad + "," + sp + ")" 
       }.mkString(",\n")
-    "Seq(\n" + 
-    ind(ss
-      .replaceAll(
-        "Adaptor.CSV\\(([^)]+)\\)",
-        "Adaptor.CSV($1, " + 
-          "if (dataset.endsWith(\"_del\")) \"ins + del\" else \"insert\")")
-      .replaceAll(
-        "/standard/", 
-        "/\"+dataset+\"/")
-    ) + "\n)"
+    
+    "Seq(\n" + ind(ss) + "\n)"
   }
 
   def getEntryDefinitions: String = tuples.values.mkString("\n")

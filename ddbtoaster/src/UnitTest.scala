@@ -94,7 +94,7 @@ object UnitTest {
 
   private var tmpDir = makeTempDir() //(auto_delete=false)
 
-  private val samplePattern = "(?m)(SAMPLE = (.*), (.*), (.*), (.*)\n)?(?s)(.*)".r
+  private val samplePattern = "(?m)(SAMPLE = (.*), (.*), (.*), (.*))?(?s)(.*)".r
 
   private def tf(ns: Long) = "%7s".format(time(ns, false))
 
@@ -443,9 +443,11 @@ object UnitTest {
 
     val args =  List( "-l", lang, 
                       "-o", exeFile + "." + Compiler.backendFileExtensions(lang),
+                      "-d", dataset,
                       "-xa", "-p" + readMode) ++
+                (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (runBenchmark) List("-x", "-c", exeFile) else Nil)
-                
+
     Compiler.parseArgs(args.toArray)
 
     val sampleRecorder = SampleRecorder(queryName, dataset, langID, Compiler.batchSize)
@@ -459,8 +461,10 @@ object UnitTest {
       print(langID + " compile", tf(t))
       sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
     }
+
+    val sourceM3Dataset = sourceM3.replace("/standard/", "/" + dataset + "/")
     
-    Compiler.compile(sourceM3, codegenFn, compileFn)
+    Compiler.compile(sourceM3Dataset, codegenFn, compileFn)
 
     def runFn(t: Long, out: String, err: String) = {
       if (err.trim != "") {
@@ -473,45 +477,52 @@ object UnitTest {
           sampleRecorder.recordRunInfo(Math.round(timeMicro.toLong / 1000.0), count.toLong, skipped.toLong)
         }
 
-        import ddbt.codegen.CppGen
-
-        val m3 = Compiler.string2AST(sourceM3)
-
-        val queries = 
-          m3.queries.map { q =>
-            val schema = q.expr.ovars 
-            val (keys, value) = 
-              if (lang == LANG_CPP_PARDIS) 
-                (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
-                 ("_" + (schema.size + 1), q.expr.tp))
-              else
-                (schema, (CppGen.VALUE_NAME, q.expr.tp))
-            q.name -> (keys ++ List(value))
-          }.toMap 
-
-        try {
-          verifyResult(out, sqlFile, dataset, queries)
-          print(langID + " verification", "%7s".format("OK"))
+        if (skipped.toLong > 0L) {
+          warning("Verification failed, timeout expired")
         }
-        catch { case ex: Exception => 
-          print(langID + " verification", "%7s".format("FAILED"))
-          ex.printStackTrace()
+        else {
+          import ddbt.codegen.CppGen
+
+          val m3 = Compiler.string2AST(sourceM3)
+
+          val queries = 
+            m3.queries.map { q =>
+              val schema = q.expr.ovars 
+              val (keys, value) = 
+                if (lang == LANG_CPP_PARDIS) 
+                  (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
+                   ("_" + (schema.size + 1), q.expr.tp))
+                else
+                  (schema, (CppGen.VALUE_NAME, q.expr.tp))
+              q.name -> (keys ++ List(value))
+            }.toMap 
+
+          try {
+            verifyResult(out, sqlFile, dataset, queries)
+            print(langID + " verification", "%7s".format("OK"))
+          }
+          catch { case ex: Exception => 
+            print(langID + " verification", "%7s".format("FAILED"))
+            ex.printStackTrace()
+          }
         }
       }
     }
 
     (1 to numWarmups).foreach(x => 
-      Compiler.run((t, out, err) => ())
+      Compiler.run(dataset, (t, out, err) => ())
     )
 
     (1 to numRuns).foreach(x => 
-      Compiler.run(runFn)
+      Compiler.run(dataset, runFn)
     )
 
     print(langID + " run " + dataset, 
           "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
           "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
-          "%10s".format("(" + numRuns + " runs)"))
+          "%10s".format("(" + numRuns + " runs)") + 
+          "%20s".format("processed: " + sampleRecorder.maxProcessed) + 
+          "%20s".format("skipped: " + sampleRecorder.minSkipped))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
   }
@@ -533,9 +544,11 @@ object UnitTest {
                       "-o", outputSrcFile + "." + Compiler.backendFileExtensions(lang),
                       "-xd", pathClasses,
                       "-n", "ddbt.test.gen." + className,
+                      "-d", dataset,
                       "-xa", "-p" + readMode) ++
                 (if (runBenchmark) List("-x") else Nil) ++
                 (if (verifyOutput) List("-xa", "-m1") else Nil) ++
+                (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
                 
     Compiler.parseArgs(args.toArray)
@@ -552,7 +565,9 @@ object UnitTest {
       sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
     }
 
-    Compiler.compile(sourceM3, codegenFn, compileFn)
+    val sourceM3Dataset = sourceM3.replace("/standard/", "/" + dataset + "/")
+
+    Compiler.compile(sourceM3Dataset, codegenFn, compileFn)
     
     def runFn(t: Long, out: String, err: String) = {
       if (err.trim != "") {
@@ -565,40 +580,47 @@ object UnitTest {
           sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
         }
 
-        import ddbt.codegen.ScalaGen
-
-        val m3 = Compiler.string2AST(sourceM3)
-
-        val queries = 
-          m3.queries.map { q =>
-            val keys = q.expr.ovars 
-            val value = (ScalaGen.VALUE_NAME, q.expr.tp)
-            q.name -> (q.expr.ovars ++ List(value))
-          }.toMap 
-
-        try {
-          verifyResult(result, sqlFile, dataset, queries)
-          print(langID + " verification", "%7s".format("OK"))
+        if (skipped.toLong > 0L) {
+          warning("Verification failed, timeout expired")
         }
-        catch { case ex: Exception => 
-          print(langID + " verification", "%7s".format("FAILED"))
-          ex.printStackTrace()
+        else {
+          import ddbt.codegen.ScalaGen
+
+          val m3 = Compiler.string2AST(sourceM3)
+
+          val queries = 
+            m3.queries.map { q =>
+              val keys = q.expr.ovars 
+              val value = (ScalaGen.VALUE_NAME, q.expr.tp)
+              q.name -> (q.expr.ovars ++ List(value))
+            }.toMap 
+
+          try {
+            verifyResult(result, sqlFile, dataset, queries)
+            print(langID + " verification", "%7s".format("OK"))
+          }
+          catch { case ex: Exception => 
+            print(langID + " verification", "%7s".format("FAILED"))
+            ex.printStackTrace()
+          }
         }
       }
     }
 
     (1 to numWarmups).foreach(x => 
-      Compiler.run((t, out, err) => ())
+      Compiler.run(dataset, (t, out, err) => ())
     )
 
     (1 to numRuns).foreach(x => 
-      Compiler.run(runFn)
+      Compiler.run(dataset, runFn)
     )
 
     print(langID + " run " + dataset, 
           "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
           "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
-          "%10s".format("(" + numRuns + " runs)"))
+          "%10s".format("runs: " + numRuns) + 
+          "%20s".format("processed: " + sampleRecorder.maxProcessed) + 
+          "%20s".format("skipped: " + sampleRecorder.minSkipped))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
   }
@@ -621,6 +643,10 @@ object UnitTest {
     def avgTimeMilli = if (runInfo.isEmpty) 0L else Math.round(runInfo.map(_._1.toDouble).sum / runInfo.size)
 
     def avgRefreshRate = if (runInfo.isEmpty) 0.0 else runInfo.map(x => x._2.toDouble / x._1 * 1000).sum / runInfo.size
+
+    def maxProcessed = if (runInfo.isEmpty) 0 else runInfo.map(_._2).max
+
+    def minSkipped = if (runInfo.isEmpty) 0 else runInfo.map(_._3).min
 
     def toCSV =
       ( List(query, dataset, lang, batchSize.toString, 

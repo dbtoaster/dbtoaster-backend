@@ -291,28 +291,28 @@ trait ICppGen extends CodeGen {
       ctx = null
       body 
     }
-    
+  
     def emitBatchTrigger(s: Schema, body: String) = {
       val sTimeout = stringIf(cgOpts.timeoutMilli > 0, 
-        s"""|if (tS > 0) { ++tS; return; }
-            |if ((tN & 127) == 0) { 
-            |  gettimeofday(&t, NULL);
-            |  tT = (t.tv_sec - t0.tv_sec) * 1000000L + (t.tv_usec - t0.tv_usec);
-            |  if (tT > ${cgOpts.timeoutMilli}) { tS = 1; return; }
-            |}
+        s"""|if (tS > 0) { tS += batchSize; return; }
+            |gettimeofday(&t, NULL);
+            |tT = (t.tv_sec - t0.tv_sec) * 1000L;
+            |if (tT > ${cgOpts.timeoutMilli}) { tS = batchSize; return; }
             |""".stripMargin)
-      if (EXPERIMENTAL_RUNTIME_LIBRARY) {
+        if (EXPERIMENTAL_RUNTIME_LIBRARY) {
         s"""|void on_batch_update_${s.name}(const std::vector<${s.name}_entry>::iterator &begin, const std::vector<${s.name}_entry>::iterator &end) {
-            |  tN += std::distance(begin, end);
+            |  long batchSize = std::distance(begin, end);
             |${ind(sTimeout)}
+            |  tN += batchSize;
             |${ind(body)}
             |}
             |""".stripMargin
       }
       else {
         s"""|void on_batch_update_${s.name}(${delta(s.name)}_map &${delta(s.name)}) {
-            |  tN += ${delta(s.name)}.count(); 
+            |  long batchSize = ${delta(s.name)}.count();
             |${ind(sTimeout)}
+            |  tN += batchSize;
             |${ind(body)}
             |}
             |""".stripMargin
@@ -320,10 +320,19 @@ trait ICppGen extends CodeGen {
     }
 
     def emitSingleTupleTrigger(s: Schema, prefix: String, body: String) = {
+      val sTimeout = stringIf(cgOpts.timeoutMilli > 0, 
+        s"""|if (tS > 0) { ++tS; return; }
+            |if ((tN & 127) == 0) {
+            |  gettimeofday(&t, NULL);
+            |  tT = (t.tv_sec - t0.tv_sec) * 1000L;
+            |  if (tT > ${cgOpts.timeoutMilli}) { tS = 1; return; }
+            |}
+            |""".stripMargin)
       val sName = prefix + s.name
       val sParams = s.fields.map { case (n, t) => s"const ${refTypeToString(t)} ${n}" }.mkString(", ")
-      
+
       s"""|void ${sName}(${sParams}) {
+          |${ind(sTimeout)}
           |  ++tN;
           |${ind(body)}
           |}
@@ -887,10 +896,8 @@ trait ICppGen extends CodeGen {
         |${stringIf(!cgOpts.printTiminingInfo, "// ")}std::cout << "Trigger running time: " << t << " (ms)" << std::endl;
         |
         |tlq_t* d = new tlq_t((tlq_t&) data);
-        |${stringIf(cgOpts.isReleaseMode, "// ")}if (d->tS == 0) { 
-        |${stringIf(cgOpts.isReleaseMode, "// ")}  gettimeofday(&(d->t), NULL);
-        |${stringIf(cgOpts.isReleaseMode, "// ")}  d->tT = ((d->t).tv_sec - (d->t0).tv_sec) * 1000000L + ((d->t).tv_usec - (d->t0).tv_usec);
-        |${stringIf(cgOpts.isReleaseMode, "// ")}}
+        |${stringIf(cgOpts.isReleaseMode, "// ")}gettimeofday(&(d->t), NULL);
+        |${stringIf(cgOpts.isReleaseMode, "// ")}d->tT = ((d->t).tv_sec - (d->t0).tv_sec) * 1000000L + ((d->t).tv_usec - (d->t0).tv_usec);
         |${stringIf(cgOpts.isReleaseMode, "// ")}printf(\"SAMPLE = ${cgOpts.dataset}, %ld, %ld, %ld\\n\", d->tT, d->tN, d->tS);
         |""".stripMargin
 
