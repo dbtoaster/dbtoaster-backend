@@ -42,8 +42,8 @@ object Utils {
     prop("base_repo", null)
   }
 
-  val pathDBTBin  = (if (pathRepo != null) pathRepo + "/" else "") + 
-    prop("dbtoaster.frontend", "bin/dbtoaster_frontend")
+  val pathDBTBin  = (if (pathRepo != null) pathRepo + "/bin/dbtoaster"
+                     else prop("dbtoaster.frontend", "./bin/dbtoaster_frontend"))
 
   private lazy val pathJDK = { 
     var p = prop("jdk", null) 
