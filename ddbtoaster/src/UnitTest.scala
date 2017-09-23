@@ -473,8 +473,8 @@ object UnitTest {
       }
       else {
         samplePattern.findAllIn(out).foreach {
-          case samplePattern(_, timeMilli, count, skipped) =>
-            sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
+          case samplePattern(_, timeMicro, count, skipped) =>
+            sampleRecorder.recordRunInfo(timeMicro.toLong / 1000, count.toLong, skipped.toLong)
         }
 
         if (verifyOutput) {
