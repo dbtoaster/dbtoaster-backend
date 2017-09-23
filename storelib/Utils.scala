@@ -111,14 +111,17 @@ object Utils {
   private lazy val scalaEmbeddedClasspaths = 
     jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor).*")) ++
     jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
   private lazy val scalacExternalClasspaths =
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
   private lazy val javaRuntimeClasspaths = 
     jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor|com.typesafe/config/bundles/config).*")) ++  
     jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
   
   private lazy val jSparkBootclasspaths = List[String]()

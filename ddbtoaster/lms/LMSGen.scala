@@ -553,7 +553,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     impl.reset
   }
 
-  override val additionalImports: String = "import ddbt.lib.store._\n"
+  override val additionalImports: String = "import ddbt.lib.lms.store._\n"
 
   override def getEntryDefinitions: String = ""
 }

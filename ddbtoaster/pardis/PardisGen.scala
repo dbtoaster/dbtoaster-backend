@@ -609,6 +609,8 @@ class PardisScalaGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optim
     }
   }
 
+  override val additionalImports: String = "import ddbt.lib.store._\n"
+
   override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)  
 }
 

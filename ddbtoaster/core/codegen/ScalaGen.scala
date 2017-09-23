@@ -789,7 +789,6 @@ trait IScalaGen extends CodeGen {
     s"""|package ${cgOpts.packageName}
         |    
         |import ddbt.lib._
-        |import ddbt.lib.store._
         |import akka.actor.Actor
         |${additionalImports}
         |
