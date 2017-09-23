@@ -94,7 +94,8 @@ object UnitTest {
 
   private var tmpDir = makeTempDir() //(auto_delete=false)
 
-  private val samplePattern = "(?m)(SAMPLE = (.*), (.*), (.*), (.*))?(?s)(.*)".r
+  private val samplePattern = "SAMPLE = (.*), (.*), (.*), (.*)".r
+  private val resultPattern = "(?s)(<snap>.*</snap>)".r
 
   private def tf(ns: Long) = "%7s".format(time(ns, false))
 
@@ -289,7 +290,7 @@ object UnitTest {
 
     if (csv != null) {
       csv.println(
-        ( List("Query", "Dataset", "Language", "BatchSize", "SQLtoM3", "M3toCode", "AvgTime", "AvgRate") ++
+        ( List("Query", "Dataset", "Language", "BatchSize", "SQLtoM3", "M3toCode", "MedianTime", "MedianRate") ++
           (1 to numRuns).flatMap(i => List("Time" + i, "ProcTuples" + i, "SkipTuples" + i))).mkString(", "))
     }
 
@@ -470,40 +471,41 @@ object UnitTest {
       if (err.trim != "") {
         System.err.println(err)
       }
-      else if (verifyOutput) {
-        val samplePattern(sample, _, timeMicro, count, skipped, result) = out
-
-        if (sample != null) {
-          sampleRecorder.recordRunInfo(Math.round(timeMicro.toLong / 1000.0), count.toLong, skipped.toLong)
+      else {
+        samplePattern.findAllIn(out).foreach {
+          case samplePattern(_, timeMilli, count, skipped) =>
+            sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
         }
 
-        if (skipped.toLong > 0L) {
-          warning("Verification failed, timeout expired")
-        }
-        else {
-          import ddbt.codegen.CppGen
+        if (verifyOutput) {
+          resultPattern.findFirstIn(out) match {
+            case Some(result) => 
+              import ddbt.codegen.CppGen
 
-          val m3 = Compiler.string2AST(sourceM3)
+              val m3 = Compiler.string2AST(sourceM3)
 
-          val queries = 
-            m3.queries.map { q =>
-              val schema = q.expr.ovars 
-              val (keys, value) = 
-                if (lang == LANG_CPP_PARDIS) 
-                  (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
-                   ("_" + (schema.size + 1), q.expr.tp))
-                else
-                  (schema, (CppGen.VALUE_NAME, q.expr.tp))
-              q.name -> (keys ++ List(value))
-            }.toMap 
+              val queries = 
+                m3.queries.map { q =>
+                  val schema = q.expr.ovars 
+                  val (keys, value) = 
+                    if (lang == LANG_CPP_PARDIS) 
+                      (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
+                       ("_" + (schema.size + 1), q.expr.tp))
+                    else
+                      (schema, (CppGen.VALUE_NAME, q.expr.tp))
+                  q.name -> (keys ++ List(value))
+                }.toMap 
 
-          try {
-            verifyResult(out, sqlFile, dataset, queries)
-            print(langID + " verification", "%7s".format("OK"))
-          }
-          catch { case ex: Exception => 
-            print(langID + " verification", "%7s".format("FAILED"))
-            ex.printStackTrace()
+              try {
+                verifyResult(out, sqlFile, dataset, queries)
+                print(langID + " verification", "%7s".format("OK"))
+              }
+              catch { case ex: Exception => 
+                print(langID + " verification", "%7s".format("FAILED"))
+                ex.printStackTrace()
+              }
+            case None =>
+              warning("Verification failed, result missing")              
           }
         }
       }
@@ -517,12 +519,17 @@ object UnitTest {
       Compiler.run(dataset, runFn)
     )
 
-    print(langID + " run " + dataset, 
-          "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
-          "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
-          "%10s".format("(" + numRuns + " runs)") + 
-          "%20s".format("processed: " + sampleRecorder.maxProcessed) + 
-          "%20s".format("skipped: " + sampleRecorder.minSkipped))
+    print(
+      langID + " run " + dataset,
+      "%7.03f [%.03f, %.03f]".format(
+        sampleRecorder.medianTimeMilli / 1000.0,
+        sampleRecorder.bestRun._1 / 1000.0,
+        sampleRecorder.worstRun._1 / 1000.0) +
+      "%11.1f tup/s   (runs=%d, processed=%d, skipped=%d)".format(
+        sampleRecorder.bestRefreshRate,
+        numRuns + numWarmups, 
+        sampleRecorder.bestRun._2, 
+        sampleRecorder.bestRun._3))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
   }
@@ -545,6 +552,7 @@ object UnitTest {
                       "-xd", pathClasses,
                       "-n", "ddbt.test.gen." + className,
                       "-d", dataset,
+                      "-xa", "-n" + (numRuns + numWarmups),
                       "-xa", "-p" + readMode) ++
                 (if (runBenchmark) List("-x") else Nil) ++
                 (if (verifyOutput) List("-xa", "-m1") else Nil) ++
@@ -573,54 +581,54 @@ object UnitTest {
       if (err.trim != "") {
         System.err.println(err)
       }
-      else if (verifyOutput) {
-        val samplePattern(sample, _, timeMilli, count, skipped, result) = out
-
-        if (sample != null) {
-          sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
+      else {
+        samplePattern.findAllIn(out).foreach {
+          case samplePattern(_, timeMilli, count, skipped) =>
+            sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
         }
 
-        if (skipped.toLong > 0L) {
-          warning("Verification failed, timeout expired")
-        }
-        else {
-          import ddbt.codegen.ScalaGen
+        if (verifyOutput) {
+          resultPattern.findFirstIn(out) match {
+            case Some(result) => 
+              import ddbt.codegen.ScalaGen
 
-          val m3 = Compiler.string2AST(sourceM3)
+              val m3 = Compiler.string2AST(sourceM3)
 
-          val queries = 
-            m3.queries.map { q =>
-              val keys = q.expr.ovars 
-              val value = (ScalaGen.VALUE_NAME, q.expr.tp)
-              q.name -> (q.expr.ovars ++ List(value))
-            }.toMap 
+              val queries = 
+                m3.queries.map { q =>
+                  val keys = q.expr.ovars 
+                  val value = (ScalaGen.VALUE_NAME, q.expr.tp)
+                  q.name -> (q.expr.ovars ++ List(value))
+                }.toMap 
 
-          try {
-            verifyResult(result, sqlFile, dataset, queries)
-            print(langID + " verification", "%7s".format("OK"))
-          }
-          catch { case ex: Exception => 
-            print(langID + " verification", "%7s".format("FAILED"))
-            ex.printStackTrace()
+              try {
+                verifyResult(result, sqlFile, dataset, queries)
+                print(langID + " verification", "%7s".format("OK"))
+              }
+              catch { case ex: Exception => 
+                print(langID + " verification", "%7s".format("FAILED"))
+                ex.printStackTrace()
+              }
+            case None =>
+              warning("Verification failed, result missing")
           }
         }
       }
     }
 
-    (1 to numWarmups).foreach(x => 
-      Compiler.run(dataset, (t, out, err) => ())
-    )
+    Compiler.run(dataset, runFn)
 
-    (1 to numRuns).foreach(x => 
-      Compiler.run(dataset, runFn)
-    )
-
-    print(langID + " run " + dataset, 
-          "%7.03f".format(sampleRecorder.avgTimeMilli / 1000.0) +
-          "%11.1f tup/s".format(sampleRecorder.avgRefreshRate) + 
-          "%10s".format("runs: " + numRuns) + 
-          "%20s".format("processed: " + sampleRecorder.maxProcessed) + 
-          "%20s".format("skipped: " + sampleRecorder.minSkipped))
+    print(
+      langID + " run " + dataset,
+      "%7.03f [%.03f, %.03f]".format(
+        sampleRecorder.medianTimeMilli / 1000.0,
+        sampleRecorder.bestRun._1 / 1000.0,
+        sampleRecorder.worstRun._1 / 1000.0) +
+      "%11.1f tup/s   (runs=%d, processed=%d, skipped=%d)".format(
+        sampleRecorder.bestRefreshRate,
+        numRuns + numWarmups, 
+        sampleRecorder.bestRun._2, 
+        sampleRecorder.bestRun._3))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
   }
@@ -633,6 +641,17 @@ object UnitTest {
 
     private var compileTimeMilli = 0L
 
+    private def refreshRate(run: (Long, Long, Long)) =
+      if (run._2 == 0L) 0.0 else (run._2 * 1000.0) / run._1
+
+    private def median(seq: Seq[Long]) =
+      if (seq.size == 0) 0L
+      else {
+        val sorted = seq.sorted
+        val n = sorted.size
+        if (n % 2 == 1) sorted(n / 2) else (sorted(n / 2) + sorted(n / 2 - 1)) / 2
+      }
+
     def recordCodegenTime(timeMilli: Long) = codegenTimeMilli = timeMilli
 
     def recordCompileTime(timeMilli: Long) = compileTimeMilli = timeMilli
@@ -640,20 +659,24 @@ object UnitTest {
     def recordRunInfo(timeMilli: Long, numProcessedTuples: Long, numSkippedTuples: Long) =
       runInfo += ((timeMilli, numProcessedTuples, numSkippedTuples))
 
-    def avgTimeMilli = if (runInfo.isEmpty) 0L else Math.round(runInfo.map(_._1.toDouble).sum / runInfo.size)
+    def bestRun = if (runInfo.isEmpty) (0L, 0L, 0L) else runInfo.sortBy(_._1).head
 
-    def avgRefreshRate = if (runInfo.isEmpty) 0.0 else runInfo.map(x => x._2.toDouble / x._1 * 1000).sum / runInfo.size
+    def worstRun = if (runInfo.isEmpty) (0L, 0L, 0L) else runInfo.sortBy(-_._1).head
 
-    def maxProcessed = if (runInfo.isEmpty) 0 else runInfo.map(_._2).max
+    def bestRefreshRate = if (runInfo.isEmpty) 0.0 else runInfo.map(refreshRate).sortWith(_ > _).head
 
-    def minSkipped = if (runInfo.isEmpty) 0 else runInfo.map(_._3).min
+    def worstRefreshRate = if (runInfo.isEmpty) 0.0 else runInfo.map(refreshRate).sortWith(_ < _).head
+
+    def medianTimeMilli = median(runInfo.map(_._1))
+
+    def medianRefreshRate = median(runInfo.map(r => (refreshRate(r) * 1000).toLong)) / 1000.0
 
     def toCSV =
-      ( List(query, dataset, lang, batchSize.toString, 
-             "%1.3f".format(codegenTimeMilli / 1000.0), 
-             "%1.3f".format(compileTimeMilli / 1000.0), 
-             "%1.3f".format(avgTimeMilli / 1000.0), 
-             "%1.2f".format(avgRefreshRate)) ++
+      ( List(query, dataset, lang, batchSize.toString,
+             "%1.3f".format(codegenTimeMilli / 1000.0),
+             "%1.3f".format(compileTimeMilli / 1000.0),
+             "%1.3f".format(medianTimeMilli / 1000.0),
+             "%1.2f".format(medianRefreshRate)) ++
         runInfo.map { case (t, count, skip) => s"""${"%1.3f".format(t / 1000.0)}, $count, $skip""" }
       ).mkString(", ")
   }

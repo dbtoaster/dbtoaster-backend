@@ -52,6 +52,7 @@ object Helper {
       parallel = parallel,
       batchSize = batchSize)
     mux.init()
+    System.gc
     actor ! StreamInit(timeout)
     mux.read()
     askWait[(StreamStat, List[Any])](actor, EndOfStream, timeout)
