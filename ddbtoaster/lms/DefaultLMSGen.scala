@@ -3,24 +3,24 @@ package ddbt.codegen
 import ddbt.ast.M3
 
 /** Stub for conditional compilation, actual implementation in lms/ folder */
-abstract class LMSGen(override val cls: String = "Query") extends CodeGen {
+abstract class LMSGen(override val cgOpts: CodeGenOptions) extends CodeGen {
   override def apply(s0: M3.System): String = sys.error(
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )
 }
 
-class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) extends LMSGen(cls) with IScalaGen {
+class LMSScalaGen(cgOpts: CodeGenOptions, override val watch: Boolean = false) extends LMSGen(cgOpts) with IScalaGen {
   override def apply(s0: M3.System): String = sys.error(
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )
 }
 
-class LMSCppGen(cls: String = "Query") extends LMSGen(cls) with ICppGen {
+class LMSCppGen(cgOpts: CodeGenOptions) extends LMSGen(cgOpts) with ICppGen {
   override def apply(s0: M3.System): String = sys.error(
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )
 }
-class LMSSparkGen(cls: String = "Query") extends LMSGen(cls) with IScalaGen {
+class LMSSparkGen(cgOpts: CodeGenOptions) extends LMSGen(cgOpts) with IScalaGen {
   override def apply(s0: M3.System): String = sys.error(
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )

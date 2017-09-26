@@ -1,5 +1,11 @@
 package ddbt.frontend
 
+/**
+ * NOTE: This class is currently NOT USED!
+ * 
+ */
+
+
 import ddbt.ast._
 
 /**
@@ -25,8 +31,10 @@ case class Partitioning(cps:List[Partitioning.CoPart],score:Double,loc:Set[Strin
 }
 
 object Partitioning extends (M3.System => (Partitioning,String)) {
-  import ddbt.lib.Utils.{ ind, tup }
+  import ddbt.lib.Utils.{ ind, tup, delta }
   import M3._
+  import ddbt.lib.TypeHelper.Scala._
+
   // A co-partitioning is given by a mapping relation->partitioning keys and a frequency.
   case class CoPart(var freq:Int=0) extends scala.collection.mutable.HashMap[String,List[Int]] with Ordered[CoPart] {
     override def toString = "CoPart["+freq+"] "+map{ case (m,k)=>m+"("+k.mkString(",")+":"+ k.map(mapDefs(m).apply).mkString(",") + ")"}.mkString(", ")
@@ -70,29 +78,28 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     case Apply(fn,tp,as) => (ctx /: as)((c,a)=>expr(a,ctx))
     case Lift(n,e) => expr(e,ctx)
     case AggSum(ks,e) => expr(e,ctx)
-    case m@MapRef(n,tp,ks) if (!tableNames.contains(n) && !deltaNames.contains(n)) => // don't consider replicated tables and delta relations
+    case m@MapRef(n,tp,ks,isTemp) if (!tableNames.contains(n) && !deltaNames.contains(n)) => // don't consider replicated tables and delta relations
       (ctx:::cm0).foreach(x=>join(m,x)); if (!(ctx0.toSet & ks.map(_._1).toSet).isEmpty) cm0=m::cm0; m::ctx
     case _ => ctx
   }
 
   def apply(s0:System):(Partitioning,String) = {
     sys0=s0; parts=Nil
-    tableNames = s0.sources.filter(!_.stream).map(_.schema.name).toSet
-    deltaNames = s0.triggers.flatMap(_.evt match {
-      case EvtBatchUpdate(s) => List(s.deltaName) case _ => Nil
+    tableNames = s0.sources.filter(!_.isStream).map(_.schema.name).toSet
+    deltaNames = s0.triggers.flatMap(_.event match {
+      case EventBatchUpdate(s) => List(delta(s.name)) case _ => Nil
     }).toSet
     mapDefs = s0.maps.map { case m: MapDef => (m.name, m.keys.map(_._1))}.toMap
     s0.triggers.foreach { t => cm0=Nil
-      ctx0 = (t.evt match { 
-        case EvtReady => Nil 
-        case EvtAdd(s) => s.fields 
-        case EvtDel(s) => s.fields 
-        case EvtBatchUpdate(s) => s.fields }).map(_._1)
-      t.stmts.foreach { case StmtMap(m,e,_,oi) =>
+      ctx0 = (t.event match { 
+        case EventReady => Nil 
+        case EventInsert(s) => s.fields 
+        case EventDelete(s) => s.fields 
+        case EventBatchUpdate(s) => s.fields }).map(_._1)
+      t.stmts.foreach { case TriggerStmt(m,e,_,oi) =>
         cm0.foreach(x=>join(m,x))
         if (!(ctx0.toSet & m.keys.map(_._1).toSet).isEmpty) cm0=m::cm0
         expr(e,List(m)); oi match { case Some(ei) => expr(ei,List(m)) case _ => }
-        case m: MapDef =>
       }
     }
     // merge without and with key reduction
@@ -134,7 +141,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     }
     val r1 = parts.map(_.freq).sum // selected constraints (approximation)
     // partitioning
-    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
+    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.isStream).map(_.schema.name).toSet);
     // hashing function
     val its = s0.maps.zipWithIndex.map { 
         case (m, i) => (m.name, (i,m.keys.map(_._2))) 
@@ -142,7 +149,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     val imp = scala.collection.mutable.HashMap[String,List[Int]]() // body => maprefs
     parts.foreach(_.foreach{ case (n,is) => val (i,ts)=its(n)
       val ks=is.map(i=>(if (ts.size>1) "t._"+(i+1) else "t")+(ts(i) match { case TypeLong=>"" case TypeDate=>".getTime" case _=>".##" }))
-      val b="val t=k.asInstanceOf["+tup(ts.map(_.toScala))+"]; r="+ks.head+";"+ks.tail.map(k=>" r*=0xcc9e2d51; r^=(r>>>13)^("+k+");").mkString
+      val b="val t=k.asInstanceOf["+tup(ts.map(typeToString))+"]; r="+ks.head+";"+ks.tail.map(k=>" r*=0xcc9e2d51; r^=(r>>>13)^("+k+");").mkString
       imp.put(b,i::imp.getOrElse(b,Nil))
     })
     val hash = if (imp.size==0) "" else "override def hash(m:MapRef,k:Any) = {\n"+ind("var r=0L;\nm match {\n"+ind(

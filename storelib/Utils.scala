@@ -3,11 +3,57 @@ package ddbt.lib
 import java.io._
 
 /**
- * This class contains useful functions and variables that are shared across
- * different compiler parts.
- * @author TCK
+ * Useful functions and variables that are shared across different compiler parts.
  */
 object Utils {
+
+  // Fresh variables name provider
+  private val counter = scala.collection.mutable.HashMap[String, Int]()  
+  
+  def fresh(name: String = "x") = {
+    val c = counter.getOrElse(name, 0) + 1
+    counter.put(name, c)
+    name + c 
+  }
+
+  def freshClear() = counter.clear
+
+  // Indent text by n*2 spaces (and trim trailing space)
+  def ind(s: String, n: Int = 1) = {
+    val i = "  " * n
+    i + s.replaceAll("\n? *$", "").replaceAll("\n", "\n" + i) 
+  }
+
+  def tup(vs: List[String]) = 
+    if (vs.size > 1) "(" + vs.mkString(", ") + ")" else vs.mkString(", ")
+
+  def block(s: String) = 
+    if (s == null || s.trim() == "") s.trim() else "\n" + s + "\n"
+
+  def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
+
+  def delta(name: String) = "DELTA_" + name
+
+  // Time measurement
+  def ns[T](f: () => T) = { 
+    val t0 = System.nanoTime
+    var r = f()
+    val t1 = System.nanoTime
+    (t1 - t0, r) 
+  }
+
+  def time(ns: Long, p: Boolean = true) = if (p) { 
+      val us = ns/1000
+      ("%d.%06d").format(us / 1000000, us % 1000000) 
+    } else { 
+      val ms = math.round(ns / 1000000.0)
+      ("%d.%03d").format(ms / 1000, ms % 1000) 
+    }
+
+  def nonNegativeMod(x: Int, mod: Int): Int = {
+    val rawMod = x % mod
+    rawMod + (if (rawMod < 0) mod else 0)
+  }
 
   // Display a warning to the user
   def warning(msg: String) = {
@@ -65,14 +111,17 @@ object Utils {
   private lazy val scalaEmbeddedClasspaths = 
     jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor).*")) ++
     jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
   private lazy val scalacExternalClasspaths =
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
   private lazy val javaRuntimeClasspaths = 
     jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor|com.typesafe/config/bundles/config).*")) ++  
     jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
+    jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
   
   private lazy val jSparkBootclasspaths = List[String]()
@@ -149,8 +198,9 @@ object Utils {
     Utils.exec(as.toArray)
   }
 
-  // Executes a Scala program
-  def scalaExec(cp: List[File], className: String, args: Array[String] = Array(), external: Boolean = false) = {
+  // Execute Scala program
+  def scalaExec(cp: List[File], className: String, args: Array[String] = Array(), 
+                external: Boolean = false): (String, String) = {
     if (!external) runMain(cp, className, args)
     else {
       val env = ("JAVA_HOME=" + pathJDK :: 
@@ -169,8 +219,9 @@ object Utils {
     }
   }
 
-  // Executes a Scala program
-  def sparkExec(cp: List[File], className: String, args: Array[String] = Array(), external: Boolean = false) = {
+  // Execute Scala program
+  def sparkExec(cp: List[File], className: String, args: Array[String] = Array(), 
+                external: Boolean = false): (String, String) = {
     if (!external) runMain(cp, className, args)
     else {
       val env = ("JAVA_HOME=" + pathJDK :: 
@@ -189,7 +240,8 @@ object Utils {
     }
   }
 
-  def sparkSubmit(className: String, args: Array[String]) = {
+  // Execute Spark program
+  def sparkSubmit(className: String, args: Array[String]): (String, String) = {
     val prop = new java.util.Properties
     prop.load(new java.io.FileInputStream("ddbtoaster/spark/conf/spark.config"))
 
@@ -240,37 +292,43 @@ object Utils {
       env = env, fatal = true, prefix = "")
   }
 
+  // Execute cpp program
+  def cppExec(exeFile: String, args: List[String]): (String, String) = 
+    exec((exeFile :: args).toArray, null, null)
+
   // XXX: use scala.sys.process.Process and scala.sys.process.ProcessLogger instead
   // Gobbles an input stream (lines not matching prefix are sent to out, null matches all, "" matches none)
   private def gobble(in: InputStream, out: PrintStream = null, prefix: String = null) = new Thread {
     private var buf = new StringBuilder
+
     override def toString = { join; buf.toString.trim }
+    
     override def run {
-      val r = new BufferedReader(new InputStreamReader(in))
-      var l = r.readLine
-      val n = if (prefix == null || out == null) -1 else prefix.length
-      while(l != null) {
-        if (n== -1) buf.append(l+"\n")
-        else if (n > 0 && l.startsWith(prefix)) buf.append(l.substring(n) + "\n")
-        else if (out != null) out.println(l)
-        l = r.readLine
+      val reader = new BufferedReader(new InputStreamReader(in))
+      var line = reader.readLine
+      val n = if (prefix == null || prefix == "" || out == null) -1 else prefix.length
+      while (line != null) {
+        if (n == -1) buf.append(line + "\n")
+        else if (n > 0 && line.startsWith(prefix)) buf.append(line.substring(n) + "\n")
+        else if (out != null) out.println(line)
+        line = reader.readLine
       }
-      r.close
+      reader.close
     }
     start
   }
 
-  // Execute arbitrary command, return (out,err)
+  // Execute arbitrary command, return (out, err)
   def exec(cmd: String, fatal: Boolean): (String, String) = 
     exec(cmd.split(" +"), null, null, fatal)
 
   def exec(cmd: Array[String], dir: File = null, env: Array[String] = null, 
-      fatal: Boolean = true, prefix: String = null): (String, String) = {
-    //System.err.println(cmd.mkString(" "))
-    val p = Runtime.getRuntime.exec(cmd, env, dir)
-    val out = gobble(p.getInputStream, scala.Console.out, prefix)
-    val err = gobble(p.getErrorStream, scala.Console.err, prefix)
-    val exitVal = p.waitFor
+           fatal: Boolean = true, prefix: String = null): (String, String) = {
+    // System.err.println(cmd.mkString(" "))
+    val process = Runtime.getRuntime.exec(cmd, env, dir)
+    val out = gobble(process.getInputStream, scala.Console.out, prefix)
+    val err = gobble(process.getErrorStream, scala.Console.err, prefix)
+    val exitVal = process.waitFor
     val o = out.toString
     val e = err.toString
     if (fatal && (e.trim != "" || exitVal != 0)) {
@@ -278,7 +336,8 @@ object Utils {
         println("Execution error in: " + cmd.mkString(" "))
         scala.Console.out.print(o)
         scala.Console.err.print(e)
-      } else {
+      } 
+      else {
         scala.Console.err.print("Error: exit value is " + exitVal)
       }
       System.exit(if (exitVal != 0) exitVal else 1)
@@ -287,56 +346,47 @@ object Utils {
   }
 
   // Capture console/default output and error streams in two strings
-  def captureOut[R](f: () => R, prefix: String = null) : (R, String, String) = { 
-    import scala.Console
-
-    val po = new PipedOutputStream
-    val out = Console.withOut(new PrintStream(po)) {
-      System.setOut(new PrintStream(po))
-      gobble(new PipedInputStream(po), Console.out, prefix)
-    }
-    val pe = new PipedOutputStream
-    val err = Console.withErr(new PrintStream(pe)) {
-      System.setErr(new PrintStream(pe))  
-      gobble(new PipedInputStream(pe), Console.err, prefix)
-    }
-
-    val r = 
-      try { f() }
+  def captureOut[R](f: () => R) : (R, String, String) = { 
+    val out = new java.io.ByteArrayOutputStream
+    val err = new java.io.ByteArrayOutputStream
+    val r =
+      try {
+        scala.Console.withOut(out) {
+          scala.Console.withErr(err) {
+            f()
+          }
+        }
+      }
       finally { 
-        Console.withOut(Console.out) {
-          System.setOut(System.out)  
-          po.close()
-        }
-        Console.withErr(Console.err) {
-          System.setErr(System.err)
-          pe.close()
-        }
+        out.close()
+        err.close()
       }
     (r, out.toString, err.toString)
   }
 
   // Class loader to run a class with main(args:Array[String]) within the same VM
-  def runMain(cp: List[File], cls: String, args: Array[String] = Array()) = {
-    try { 
-      val l = new CPLoader(cp)
-      val c = l.loadClass(cls)
-      val m = c.getMethod("main", args.getClass)
-      m.invoke(null, args) 
-    }
-    catch { case t: Throwable => 
-      val c = t.getCause
-      (if (c != null) c else t).printStackTrace(scala.Console.err) 
-    } 
-    finally { System.gc; Thread.sleep(50); System.gc }
+  def runMain(cp: List[File], cls: String, args: Array[String] = Array()): (String, String) = {
+    val (_, out, err) = captureOut(() => {
+      try { 
+        val lclass = new CPLoader(cp).loadClass(cls)
+        val main = lclass.getMethod("main", args.getClass)
+        main.invoke(null, args)
+      }
+      catch { case t: Throwable => 
+        val c = t.getCause
+        (if (c != null) c else t).printStackTrace(scala.Console.err) 
+      } 
+      finally { System.gc; Thread.sleep(50); System.gc }
+    })
+    (out, err)
   }
 
-  import java.net.{URL,URLClassLoader}
+  import java.net.{ URL, URLClassLoader }
   private class CPLoader(cp: List[File]) extends URLClassLoader(cp.map(_.toURI.toURL).toArray, null) {
     override def loadClass(name: String, resolve: Boolean): Class[_] = {
       try { return super.loadClass(name, resolve) }
       catch { case e: ClassNotFoundException => 
-        Class.forName(name, resolve, Utils.getClass.getClassLoader) 
+        Class.forName(name, resolve, Utils.getClass.getClassLoader)
       }
     }
   }
@@ -370,33 +420,6 @@ object Utils {
     finally { if (writer != null) writer.close() }
   }
 
-  // String manipulation
-  def ind(s: String, n: Int = 1) = { 
-    val i = "  " * n
-    i + s.replaceAll("\n? *$", "").replaceAll("\n", "\n" + i) 
-  }
-
-  def block(s: String) = 
-    if (s == null || s.trim() == "") s.trim() else "\n" + s + "\n"
-
-  def tup(vs: List[String]) = { 
-    val v = vs.mkString(", ")
-    if (vs.size > 1) "(" + v + ")" else v 
-  }
-
-
-  // Fresh variables name provider
-  private val counter = scala.collection.mutable.HashMap[String, Int]()  
-  
-  def fresh(name: String = "x") = { 
-    val c = counter.getOrElse(name, 0) + 1
-    counter.put(name, c) 
-    name + c 
-  }
-
-  def freshClear() = counter.clear
-
-
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path: String = null, auto_delete: Boolean = false): File = {
     val tmp = if (path != null) new File(path) else new File("ddbtoaster/target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
@@ -409,23 +432,6 @@ object Utils {
     if (auto_delete) Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) })
     tmp
   }
-
-  // Time measurement
-  def ns[T](f: () => T) = { 
-    val t0 = System.nanoTime
-    var r = f()
-    val t1 = System.nanoTime
-    (t1 - t0, r) 
-  }
-
-  def time(ns: Long, p: Boolean = true) = if (p) { 
-      val us = ns/1000
-      ("%d.%06d").format(us / 1000000, us % 1000000) 
-    } else { 
-      val ms = math.round(ns / 1000000.0)
-      ("%d.%03d").format(ms / 1000, ms % 1000) 
-    }
-
 
   def generateNewFileName(qName: String, pathTemplate: String) = {
     var queryName = qName
@@ -474,11 +480,4 @@ object Utils {
     }
     queryName
   }
-
-  def nonNegativeMod(x: Int, mod: Int): Int = {
-    val rawMod = x % mod
-    rawMod + (if (rawMod < 0) mod else 0)
-  }
-
-  def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
 }

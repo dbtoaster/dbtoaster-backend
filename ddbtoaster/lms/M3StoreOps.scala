@@ -1,6 +1,7 @@
 package ddbt.codegen
 
 import ddbt.ast._
+import ddbt.ast.M3.{ StoreType, IndexedStore, ArrayStore, LogStore, PartitionStore }
 import ddbt.lms.oltp.opt.lifters._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
@@ -52,7 +53,9 @@ trait M3StoreOpsExp extends BaseExp
 
   def named[T](name: String, mutable: Boolean)(implicit mT: Manifest[T]) = { 
     val n = Named(name)(mT)
-    if (mutable) reflectMutable(n) else n 
+    var rep: Exp[T] = if (mutable) reflectMutable(n) else n
+    rep.asInstanceOf[Sym[_]].attributes.update(NAME_ATTRIBUTE, name)
+    rep
   }
 
   override def namedVar(name: String, tp: Type): Rep[_] = {

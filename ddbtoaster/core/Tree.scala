@@ -1,115 +1,70 @@
 package ddbt.ast
 
+import ddbt.lib.Utils.ind
+
 /**
- * This defines the generic nodes that we manipulate during transformations
- * and optimization phases between SQL/M3 and target code. To obtain the exact
- * syntax, refer to ddbt.frontend.Parsers (to avoid outdated documentation).
- * @author TCK
- */
-sealed abstract class Tree // Generic AST node
+  * Defines basic types AST nodes for M3 and SQL 
+  */
+sealed abstract class Tree    // Generic AST node
 
-// ---------- Data types
-sealed abstract class Type extends Tree { 
-  def zero: String
-  def zeroScala: String = zero
-  def zeroCpp: String = zero
-  def toScala: String = toString.capitalize
-  def toCpp: String = toString
-  def toCppRefType: String = toCpp
-  def simpleName: String = toString.substring(0, 1).toUpperCase 
-  def castScala: String = "to" + toScala
+// ------ Data types 
+sealed abstract class Type extends Tree
+case object TypeLong extends Type {  override def toString = "long" }
+case object TypeDouble extends Type { override def toString = "double" }
+case object TypeDate extends Type { override def toString = "date" }
+case object TypeString extends Type { override def toString = "string" }
+
+// ------ Comparison operators
+sealed abstract class OpCmp extends Tree
+case object OpEq extends OpCmp { override def toString = "=" }
+case object OpNe extends OpCmp { override def toString = "!=" }
+case object OpGt extends OpCmp { override def toString = ">" }
+case object OpGe extends OpCmp { override def toString = ">=" }
+
+// ---------- Schema, adaptor, and source definitions
+case class Source(isStream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
+  override def toString = 
+    "CREATE " + (if (isStream) "STREAM" else "TABLE") + " " + schema + 
+    "\n  FROM " + in + " " + split + " " + adaptor + 
+    (locality match {
+      case LocalExp => ""
+      case DistRandomExp => "\n  PARTITIONED RANDOMLY"
+      case DistByKeyExp(pk) => "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
+    }) + ";"
 }
 
-// case object TypeChar extends Type /*  8 bit */ { 
-//   val zero = "0"
-//   override def toString = "char" 
-// }
-
-// case object TypeShort extends Type /*16 bit */ { 
-//   val zero = "0"
-//   override def toString = "short" 
-// }
-
-// case object TypeInt  extends Type /* 32 bit */ { 
-//   val zero = "0"
-//   override def toString = "int" 
-// }
-
-case object TypeLong extends Type /* 64 bit */ { 
-  val zero = "0L"
-  override def toString = "long"
+case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
+  override def toString = 
+    name + " (" + fields.map { case (n, t) => n + " " + t }.mkString(", ") + ")"
 }
 
-// case object TypeFloat extends Type /*32 bit */ { 
-//  val zero = "0.0F"
-//  override def toString = "float" 
-// }
-
-case object TypeDouble extends Type /* 64 bit */ { 
-  val zero = "0.0"
-  override def toString = "double"
-  override def toCpp = "DOUBLE_TYPE"
+sealed abstract class SourceIn extends Tree
+case class SourceFile(path: String) extends SourceIn { 
+  override def toString = "FILE '" + path + "'" 
 }
 
-case object TypeDate extends Type {
-  val zero = "0L"
-  override def toString = "date"
-  override def toScala = "Long"
-  // override def toCpp = "long"
-  override def zeroScala = "0"
-  override def zeroCpp = "00000000"
-  override def simpleName = "A" 
+sealed abstract class Split extends Tree
+case object SplitLine extends Split {
+  override def toString = "LINE DELIMITED" 
+}
+case class SplitSize(bytes: Int) extends Split {
+  override def toString = "FIXEDWIDTH " + bytes 
+}
+case class SplitSep(delim: String) extends Split { 
+  override def toString = "'" + delim + "' DELIMITED" 
+}
+case class SplitPrefix(bytes: Int) extends Split {
+  override def toString = "PREFIXED " + bytes 
+} // records are prefixed with their length in bytes
+
+case class Adaptor(name: String, options: Map[String, String]) extends Tree {
+  override def toString = 
+    name + ( if (options.isEmpty) ""
+             else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")" )
 }
 
-//case object TypeTime extends Type { 
-//  override def toString = "timestamp" 
-//}
-
-case object TypeString extends Type { 
-  val zero="\"\""
-  override def toString = "string"
-  override def toCpp = "STRING_TYPE"
-  override def toCppRefType = toCpp + "&"
-}
-
-//case class TypeBinary(maxBytes:Int) extends Type { 
-//  override def toString = "binary(" + max + ")" 
-//} 
-// prefix with number of bytes such that prefix minimize number of bytes used
-
-case class TypeTuple(ts: List[Type]) extends Type { 
-  val zero = "<" + ts.map(_.zero).mkString(", ") + ">"
-  override val zeroScala = "<" + ts.map(_.zeroScala).mkString(", ") + ">" 
-  override def toString = "<" + ts.mkString(", ") + ">"  
-  override def simpleName = ts.map(_.simpleName).mkString
-}
-
-// ---------- Comparison operators
-sealed abstract class OpCmp extends Tree { 
-  def toM3 = toString
-  def toSQL = toString 
-} // toString is C/Scala notation
-
-case object OpEq extends OpCmp { 
-  override def toString = "=="
-  override def toM3 = "="
-  override def toSQL = "=" 
-}
-
-case object OpNe extends OpCmp { 
-  override def toString = "!="
-  override def toSQL = "<>" 
-}
-
-// OpLt by reversing arguments
-case object OpGt extends OpCmp { override def toString = ">" } 
-
-// OpGe by reversing arguments
-case object OpGe extends OpCmp { override def toString = ">=" } 
-
-
-// ---------- Expression locality types
-abstract sealed class LocalityType
+// ------ Expression locality types
+abstract sealed class LocalityType extends Tree
 case object LocalExp extends LocalityType {
   override def toString = "<Local>"
 }
@@ -120,127 +75,28 @@ case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
   override def toString = "<DistByKey(" + pkeys.map(_._1).mkString(", ") + ")>"
 }
 
-// ---------- Source definitions, see ddbt.frontend.ExtParser
-case class Source(stream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
-  override def toString = 
-    "CREATE " + (if (stream) "STREAM" else "TABLE") + " " + schema + 
-    "\n  FROM " + in + " " + split + " " + adaptor + 
-    (locality match { 
-      case LocalExp => "" 
-      case DistRandomExp => "\n  PARTITIONED RANDOMLY"
-      case DistByKeyExp(pk) => 
-        "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
-    }) + ";" 
-}
 
-case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
-  val deltaName = "DELTA_" + name 
-  override def toString = 
-    name + " (" + fields.map(x => x._1 + " " + x._2).mkString(", ") + ")"
-}
-
-case class Adaptor(name: String, options: Map[String, String]) extends Tree { 
-  override def toString =     
-    name + (if (options.isEmpty) "" 
-            else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")")
-}
-
-sealed abstract class SourceIn extends Tree
-
-case class SourceFile(path: String) extends SourceIn { 
-  override def toString = "FILE '" + path + "'" 
-}
-
-//case class SourcePort(port: Int) // TCP server
-//case class SourceRemote(host: String, port: Int, proto: Protocol)
-// proto=bootstrap/authentication protocol (TCP client)
-
-sealed abstract class Split extends Tree
-
-case object SplitLine extends Split { 
-  override def toString = "LINE DELIMITED" 
-} // deal with \r, \n and \r\n ?
-
-case class SplitSize(bytes: Int) extends Split { 
-  override def toString = "FIXEDWIDTH " + bytes 
-}
-
-case class SplitSep(delim: String) extends Split { 
-  override def toString = "'" + delim + "' DELIMITED" 
-}
-
-case class SplitPrefix(bytes: Int) extends Split { 
-  override def toString = "PREFIXED " + bytes 
-} // records are prefixed with their length in bytes
-
-
-// ---------- Map update operators
-sealed abstract class OpMap extends Tree
-case object OpSet extends OpMap { override def toString = " := " }
-case object OpAdd extends OpMap { override def toString = " += " }
-
-//---------- Map types
-sealed abstract class StoreType 
-case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
-case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
-case object LogStore     extends StoreType       // Columnar store (only append and foreach)
-case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores 
-
-
-// ---------- Trigger events
-sealed abstract class EvtTrigger extends Tree { 
-  def evtName: String
-  def schema: Schema 
-  def args = List[(String, Type)]()
-}
-
-case object EvtReady extends EvtTrigger { 
-  override val evtName = "system_ready"
-  override val schema = null 
-  override def toString = "SYSTEM READY"
-}
-
-case class EvtAdd(schema: Schema) extends EvtTrigger { 
-  override val evtName = "insert_" + schema.name 
-  override def args = schema.fields 
-  override def toString = 
-    "+ " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
-}
-
-case class EvtDel(schema: Schema) extends EvtTrigger { 
-  override val evtName = "delete_" + schema.name 
-  override def args = schema.fields
-  override def toString = 
-    "- " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
-}
-
-case class EvtBatchUpdate(schema: Schema) extends EvtTrigger { 
-  override val evtName = "batch_" + schema.name 
-  override def args = Nil
-  override def toString = "BATCH UPDATE OF " + schema.name
-}
-
-
-// Cleanup/Failure/Shutdown/Checkpoint
 // -----------------------------------------------------------------------------
 // M3 language
 
-sealed abstract class M3 // see ddbt.frontend.M3Parser
+sealed abstract class M3 extends Tree   // see ddbt.frontend.Parsers
 
 object M3 {
 
-  import ddbt.lib.Utils.ind
+  // ---------- Map update operators
+  sealed abstract class OpMap extends M3
+  case object OpSet extends OpMap { override def toString = " := " }
+  case object OpAdd extends OpMap { override def toString = " += " }
 
+  //---------- Map types
+  sealed abstract class StoreType extends M3
+  case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
+  case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
+  case object LogStore     extends StoreType       // Columnar store (only append and foreach)
+  case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores
+
+  // -------- M3 system
   case class System(sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
-    lazy val mapType =              // String => (List[Type], Type)
-      ( maps.map { m => 
-          (m.name, (m.keys.map {_._2}, m.tp)) 
-        } ++
-        sources.map { s => 
-          (s.schema.deltaName, (s.schema.fields.map {_._2}, TypeLong)) 
-        } 
-      ).toMap
-
     override def toString =
       "-------------------- SOURCES --------------------\n" + 
       sources.mkString("\n\n") + "\n\n" + 
@@ -252,55 +108,73 @@ object M3 {
       triggers.mkString("\n\n")
   }
 
-  case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends Stmt {    
-    override def toString = 
-      "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
-      keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" + 
-      ind(expr.toString) + 
-      (locality match { 
-        case LocalExp => "" 
+  // ---------- Map definition statement
+  case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends M3 {
+    override def toString =
+      "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" +
+      keys.map { case (n, t) => n + ": " + t }.mkString(", ") + "] :=\n" +
+      ind(expr.toString) +
+      (locality match {
+        case LocalExp => ""
         case DistRandomExp => "\n  PARTITIONED RANDOMLY"
-        case DistByKeyExp(pk) => 
+        case DistByKeyExp(pk) =>
           "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
       }) + ";"
-
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
-
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
-  case class Query(name: String, map: Expr) extends M3 {
-    var keys: List[(String, Type)] = null
-    var tp: Type = null
-
-    override def toString = "DECLARE QUERY " + name + " := " + map + ";"
-    
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
-    
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
+  // -------- Query definition
+  case class Query(name: String, expr: Expr) extends M3 {
+    override def toString = "DECLARE QUERY " + name + " := " + expr + ";"
   }
 
-  case class Trigger(evt: EvtTrigger, stmts: List[Stmt]) extends M3 { 
-    override def toString = "ON " + evt + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
+  // -------- Trigger definition
+  case class Trigger(event: EventTrigger, stmts: List[TriggerStmt]) extends M3 {
+    override def toString = "ON " + event + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
 
-  object FMap {
-    val empty: Option[Map[(String, Type), (String, Type)]] = Some(Map())
-    def create(a: (String, Type), b: (String, Type)): Option[Map[(String, Type), (String, Type)]] = Some(Map(a -> b))
-    def create(m: Map[(String, Type), (String, Type)]) = Some(m)
-    def merge(a: Option[Map[(String, Type), (String, Type)]], 
-              b: => Option[Map[(String, Type), (String, Type)]]) = 
-      if (a == None) None else (a, b) match {
-        case (Some(a), Some(b)) =>
-          val common = a.keySet.intersect(b.keySet)
-          if (common.exists(k => a(k) != b(k))) None else Some(a ++ b)
-        case _ => None
-      }
+  sealed abstract class EventTrigger extends M3 { 
+    def name: String
+    def schema: Schema 
+    def params: List[(String, Type)]
+  }
+
+  case object EventReady extends EventTrigger { 
+    override val name = "system_ready"
+    override val schema = Schema("", Nil) 
+    override val params = Nil
+    override def toString = "SYSTEM READY"
+  }
+
+  case class EventInsert(schema: Schema) extends EventTrigger { 
+    override val name = "insert_" + schema.name 
+    override val params = schema.fields
+    override def toString = 
+      "+ " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
+  }
+
+  case class EventDelete(schema: Schema) extends EventTrigger { 
+    override val name = "delete_" + schema.name 
+    override val params = schema.fields
+    override def toString = 
+      "- " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
+  }
+
+  case class EventBatchUpdate(schema: Schema) extends EventTrigger { 
+    override val name = "batch_" + schema.name 
+    override val params = Nil
+    override def toString = "BATCH UPDATE OF " + schema.name
+  }
+
+  // ---------- Update or assign statement
+  case class TriggerStmt(target: MapRef, expr: Expr, op: OpMap, initExpr: Option[Expr]) extends M3 { 
+    override def toString =
+      target + initExpr.map(":(" + _ + ")").getOrElse("") + " " + op + " " + expr + ";"
   }
 
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
     def tp: Type                          // expression type
+
     def locality: Option[LocalityType]    // expression locality type
    
     def collect[T](f: PartialFunction[Expr, List[T]]): List[T] = 
@@ -351,9 +225,8 @@ object M3 {
         val newEx = Ref(r(n))
         newEx.tp = tp
         newEx
-      case m @ MapRef(n, tp, ks) => 
-        val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)))
-        newEx.isTemp = m.isTemp
+      case m @ MapRef(n, tp, ks, isTemp) =>
+        val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp)
         newEx.locality = m.locality match { 
           case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
           case Some(DistRandomExp) => Some(DistRandomExp)
@@ -386,10 +259,11 @@ object M3 {
       def union(l1: List[(String, Type)],l2: List[(String, Type)])  = (l1 ++ l2).distinct
       def diff(l1: List[(String, Type)], l2: List[(String, Type)])  = l1.filterNot(l2.contains)
       def inter(l1: List[(String, Type)], l2: List[(String, Type)]) = l1.filter(l2.contains)
+
       this match {
         case Const(tp, v) => (List(), List())
         case Ref(n) => (List((n, this.tp)), List())
-        case MapRef(n, tp, ks) => (List(), ks)
+        case MapRef(n, tp, ks, tmp) => (List(), ks)
         case MapRefConst(n, ks) => (List(), ks)
         case DeltaMapRefConst(n, ks) => (List(), ks)        
         case Cmp(l, r, op) => (union(l.schema._1, r.schema._1), List())
@@ -419,43 +293,58 @@ object M3 {
       }
     }
 
-    def cmp(that: Expr): Option[Map[(String, Type), (String, Type)]] = 
+    def ivars: List[(String, Type)] = schema._1
+
+    def ovars: List[(String, Type)] = schema._2
+
+    def cmp(that: Expr): Option[Map[(String, Type), (String, Type)]] = {
+      val empty: Option[Map[(String, Type), (String, Type)]] = Some(Map())
+      def merge(a: Option[Map[(String, Type), (String, Type)]],
+                b: => Option[Map[(String, Type), (String, Type)]]) =
+        if (a == None) None
+        else (a, b) match {
+          case (Some(a), Some(b)) =>
+            if (a.keySet.intersect(b.keySet).exists(k => a(k) != b(k))) None
+            else Some(a ++ b)
+          case _ => None
+        }
+
       if (this.tp != that.tp) None else (this, that) match {
         case (Const(_, v1), Const(_, v2)) => 
-          if (v1 == v2) FMap.empty else None        
+          if (v1 == v2) empty else None
         case (a @ Ref(n1), b @ Ref(n2)) => 
-          FMap.create((n1, a.tp), (n2, b.tp))        
+          Some(Map((n1, a.tp) -> (n2, b.tp)))
         case (Apply(fn1, tp1, as1), Apply(fn2, tp2, as2)) =>
           if (fn1 != fn2 || as1.length != as2.length) None 
-          else as1.zip(as2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, a.cmp(b)) }
-        case (MapRef(n1, tp1, ks1), MapRef(n2, tp2, ks2)) => 
-          if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
-        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) => 
-          if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
-        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>          
-          if (n1 != n2 || ks1.length != ks2.length) None 
-          else ks1.zip(ks2).foldLeft (FMap.empty) { 
-            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+          else as1.zip(as2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, a.cmp(b)) }
+        case (MapRef(n1, tp1, ks1, tmp1), MapRef(n2, tp2, ks2, tmp2)) =>
+          if (n1 != n2 || ks1.length != ks2.length || tmp1 != tmp2) None
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
+        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) =>
+          if (n1 != n2 || ks1.length != ks2.length) None
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
+        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>
+          if (n1 != n2 || ks1.length != ks2.length) None
+          else ks1.zip(ks2).foldLeft (empty) {
+            case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
-          if (op1 != op2) None else FMap.merge(l1.cmp(l2), r1.cmp(r2))
-        case (Mul(l1, r1), Mul(l2, r2)) => 
-          FMap.merge(l1.cmp(l2), r1.cmp(r2))
-        case (Add(l1, r1), Add(l2, r2)) => 
-          FMap.merge(l1.cmp(l2), r1.cmp(r2))          
+          if (op1 != op2) None else merge(l1.cmp(l2), r1.cmp(r2))
+        case (Mul(l1, r1), Mul(l2, r2)) =>
+          merge(l1.cmp(l2), r1.cmp(r2))
+        case (Add(l1, r1), Add(l2, r2)) =>
+          merge(l1.cmp(l2), r1.cmp(r2))
         case (Lift(v1, e1), Lift(v2, e2)) =>
-          FMap.merge(e1.cmp(e2), FMap.create((v1, e1.tp), (v2, e2.tp)))
+          merge(e1.cmp(e2), Some(Map((v1, e1.tp) -> (v2, e2.tp))))
         case (Exists(e1), Exists(e2)) => e1.cmp(e2)
         case (AggSum(ks1, e1), AggSum(ks2, e2)) =>
           if (ks1.length != ks2.length) None else e1.cmp(e2) match {
             case Some(mapping) if ks1.map(mapping.apply).toSet == ks2.toSet =>
               val rvars = (e1.schema._1 ++ ks1).toSet
               val rmapping = rvars.map(v => (v, mapping.apply(v))).toMap
-              FMap.create(rmapping)              
+              Some(rmapping)
             case _ => None
           }
         case (Repartition(ks1, e1), Repartition(ks2, e2)) =>
@@ -466,6 +355,7 @@ object M3 {
         case (Gather(e1), Gather(e2)) => e1.cmp(e2)
         case _ => None
       }
+    }
   }
 
   // Constants
@@ -481,51 +371,50 @@ object M3 {
     override def toString = name
   }
 
-  case class MapRef(name: String, var tp: Type /*M3 bug*/, var keys: List[(String, Type)]) extends Expr { 
-    var isTemp:  Boolean = false
+  // Map reference
+  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], val isTemp: Boolean = false) extends Expr {
     var locality: Option[LocalityType] = Some(LocalExp)
-    
+
     override def toString = 
       name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
       keys.map(_._1).mkString(", ") + "]" + locality.getOrElse("")
-
-    def toCppType = if (keys.size == 0) tp.toCpp else name + "_map"
-
-    def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
+  // Lifting operator ('Let name=e in ...' semantics)
   case class Lift(name: String, e: Expr) extends Expr { 
     val tp = TypeLong
     def locality = e.locality
     override def toString = "(" + name + " ^= " + e + ")"
-  } // 'Let name=e in ...' semantics (combined with Mul)
+  }
 
+  // Map reference of a table
   case class MapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
     val tp = TypeLong 
     var locality: Option[LocalityType] = None
     override def toString = name + "(" + keys.map(_._1).mkString(", ") + ")"
-  } // appear in Map definition and constant table lookups
+  }
 
+  // Map reference of a delta update
   case class DeltaMapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
     val tp = TypeLong
     var locality: Option[LocalityType] = None
     override def toString = "(DELTA " + name + ")(" + keys.map(_._1).mkString(", ") + ")"
-    def deltaName = Schema(name, null).deltaName 
-  } //used for delta relations used while batching is used
-  
-  // Operations
-  case class AggSum(var ks: List[(String, Type)], e: Expr) extends Expr { 
+  }
+
+  // Sum aggregate
+  case class AggSum(var keys: List[(String, Type)], e: Expr) extends Expr {
     def tp = e.tp
     def locality = e.locality match {
       case l @ Some(DistByKeyExp(pk)) =>
-        val expVars = (e.schema._1 ++ ks).toSet
+        val expVars = (e.schema._1 ++ keys).toSet
         if (pk.forall(expVars.contains)) l else Some(DistRandomExp)
       case l => l
     }
     override def toString =
-      "AggSum([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
-  } // (grouping_keys)->sum relation
+      "AggSum([" + keys.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
+  }
 
+  // Multiplication operator
   case class Mul(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null 
     def locality = (l.locality, r.locality) match {
@@ -544,8 +433,9 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Mul: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " * " + r + ")"
-  } // cross-product semantics
+  }
 
+  // Union operator
   case class Add(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null
     def locality = (l.locality, r.locality) match {
@@ -559,30 +449,34 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Add: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " + " + r + ")"
-  } // set union semantics
+  }
 
+  // Exists operator - returns 0 or 1 (checks if there is at least one tuple)
   case class Exists(e: Expr) extends Expr { 
     val tp = TypeLong 
     def locality = e.locality
     override def toString = "EXISTS(" + e + ")"
-  } // returns 0 or 1 (check that there is at least one tuple)
+  }
 
-  case class Apply(fun: String, var tp: Type /*=>typeCheck*/, args: List[Expr]) extends Expr {
+  // Function application
+  case class Apply(fun: String, var tp: Type, args: List[Expr]) extends Expr {
     val locality: Option[LocalityType] = None
-    override def toString = "[" + fun + ": " + tp + "](" + args.mkString(", ") + ")" 
-  } // function application
+    override def toString = "[" + fun + ": " + tp + "](" + args.mkString(", ") + ")"
+  }
 
+  // Comparison, returns 0 or 1
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Expr { 
     val tp = TypeLong    
     val locality: Option[LocalityType] = None
-    override def toString = "{" + l + " " + op.toM3 + " " + r + "}"
-  } // comparison, returns 0 or 1
+    override def toString = "{" + l + " " + op + " " + r + "}"
+  }
 
+  // OR comparison with a given expr list, returns 0 or 1
   case class CmpOrList(l: Expr, r: List[Expr]) extends Expr {
     val tp = TypeLong
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " IN [" + r.mkString(", ") + "]}"
-  } // comparison, returns 0 or 1
+  }
 
   // Tupling
   case class Tuple(es: List[Expr]) extends Expr { 
@@ -591,13 +485,14 @@ object M3 {
     override def toString = "<" + es.mkString(", ") + ">"
   }
 
+  // Lifting operator with tuples
   case class TupleLift(ns: List[String], e: Expr) extends Expr { 
     val tp = TypeLong
     val locality: Option[LocalityType] = None
     override def toString = "(<" + ns.mkString(", ") + "> ^= " + e + ")"
   }
 
-  // Distributed operations
+  // Distributed operation - repartion by key
   case class Repartition(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp    
     def locality = Some(DistByKeyExp(ks))
@@ -605,30 +500,20 @@ object M3 {
       "Repartition([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"  
   } 
 
+  // Distributed operation - gather on master
   case class Gather(e: Expr) extends Expr { 
     def tp = e.tp    
     val locality = Some(LocalExp)    
     override def toString = "Gather(" + e + ")"  
   } 
-
-  // ---------- Statements (no return)
-  sealed abstract class Stmt extends M3 { var stmtId: Int = (-1) }
-
-  case class StmtMap(m: MapRef, e: Expr, op: OpMap, init: Option[Expr]) extends Stmt { 
-    override def toString = 
-      m + (init match { case Some(i) => ":(" + i + ")" case None => "" }) + 
-      " " + op + " " + e + ";" 
-  } // case class StmtCall(external function) extend Stmt
 }
 
 // -----------------------------------------------------------------------------
 // SQL (http://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt)
 
-sealed abstract class SQL // see ddbt.frontend.SQLParser
+sealed abstract class SQL // see ddbt.frontend.Parsers
 
 object SQL {
-
-  import ddbt.lib.Utils.ind
 
   sealed abstract class OpAgg extends SQL
   case object OpSum extends OpAgg
@@ -667,19 +552,19 @@ object SQL {
   }
 
   case class Select(distinct: Boolean, cs: List[Expr], ts: List[Table], 
-                    wh: Cond = null, gb: GroupBy = null, ob: OrderBy = null)  extends Query {
+                    wh: Option[Cond], gb: Option[GroupBy], ob: Option[OrderBy])  extends Query {
     override def toString = 
       "SELECT " + (if (distinct) "DISTINCT " else "") + cs.mkString(", ") + 
-      "\nFROM " + ts.mkString(", ")+
-      (if (wh != null) "\nWHERE " + wh else "") + 
-      (if (gb != null) "\n" + gb else "") + 
-      (if (ob != null) "\n" + ob else "")
+      "\nFROM " + ts.mkString(", ") +
+      wh.map("\nWHERE " + _).getOrElse("") +
+      gb.map("\n" + _).getOrElse("") + 
+      ob.map("\n" + _).getOrElse("")
   }
 
-  case class GroupBy(fs: List[Field], cond: Cond = null) extends SQL { 
+  case class GroupBy(fs: List[Field], cond: Option[Cond]) extends SQL { 
     override def toString = 
       "GROUP BY " + fs.mkString(", ") +
-      (if (cond != null) " HAVING " + cond else "") 
+      cond.map(" HAVING " + _).getOrElse("")
   }
   
   case class OrderBy(cs: List[(Field, Boolean)]) extends SQL { 
@@ -704,14 +589,14 @@ object SQL {
     override def toString = t + " " + n 
   }
 
-  case class TableJoin(t1: Table, t2: Table, j: Join, c: Cond) extends Table {
+  case class TableJoin(t1: Table, t2: Table, j: Join, c: Option[Cond]) extends Table {
     // empty condition = natural join
     override def toString = t1 + "\n  " + (j match {
-      case JoinInner => (if (c == null) "NATURAL " else "") + "JOIN"
-      case JoinLeft  => "LEFT JOIN"
-      case JoinRight => "RIGHT JOIN"
-      case JoinFull  => "FULL JOIN"
-    }) + " " + t2 + (if (c != null) " ON " + c else "")
+        case JoinInner => if (c == None) "NATURAL JOIN" else "JOIN"
+        case JoinLeft  => "LEFT JOIN"
+        case JoinRight => "RIGHT JOIN"
+        case JoinFull  => "FULL JOIN"
+      }) + " " + t2 + c.map(" ON " + _).getOrElse("")
   }
 
   // ---------- Expressions
@@ -721,8 +606,8 @@ object SQL {
     override def toString = e + " AS " + n 
   }
 
-  case class Field(n: String, t: String) extends Expr { 
-    override def toString = if (t == null) n else t + "." + n 
+  case class Field(n: String, t: Option[String]) extends Expr { 
+    override def toString = t.map(_ + "." + n).getOrElse(n)
   }
 
   case class Const(v: String, tp: Type) extends Expr { 
@@ -741,7 +626,8 @@ object SQL {
     override def toString = 
       "CASE" + ind(
         ce.map { case (c, t) => "\nWHEN " + c + " THEN " + t }.mkString + 
-        "\nELSE " + d) + "\nEND"
+        "\nELSE " + d) + 
+      "\nEND"
   }
 
   // ---------- Arithmetic
@@ -768,9 +654,9 @@ object SQL {
   // ---------- Aggregation
   case class Agg(e: Expr, op: OpAgg) extends Expr { 
     override def toString = (op match { 
-      case OpCountDistinct => "COUNT(DISTINCT " 
-      case _ => op.toString.substring(2).toUpperCase + "(" 
-    }) + e + ")" 
+        case OpCountDistinct => "COUNT(DISTINCT " 
+        case _ => op.toString.substring(2).toUpperCase + "(" 
+      }) + e + ")" 
   }
 
   case class All(q: Query) extends Expr { 
@@ -809,6 +695,6 @@ object SQL {
   }
 
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Cond { 
-    override def toString = l + " " + op.toSQL + " " + r 
+    override def toString = l + " " + op + " " + r 
   }
 }

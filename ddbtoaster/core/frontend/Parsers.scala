@@ -2,18 +2,16 @@ package ddbt.frontend
 
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.combinator.lexical.StdLexical
-import scala.util.parsing.combinator.token.StdTokens
 import ddbt.ast._
 
 /**
-  * These classes define the parsers for SQL and M3 languages 
-  * into corresponding AST.
+  * Define parsers for SQL and M3 languages 
   *
   * @author TCK
   */
 
 class ExtParser extends StandardTokenParsers {
-  
+
   class CaseInsensitiveLexical extends StdLexical {
 
     override protected def processIdent(name: String) = {
@@ -32,7 +30,7 @@ class ExtParser extends StandardTokenParsers {
   }
 
   // Add case insensitivity to keywords
-  override val lexical:StdLexical = new CaseInsensitiveLexical
+  override val lexical: StdLexical = new CaseInsensitiveLexical
 
   // Allow matching non-reserved keywords
   import scala.language.implicitConversions
@@ -47,9 +45,6 @@ class ExtParser extends StandardTokenParsers {
   import lexical._
   //lexical.reserved ++= List("")
   lexical.delimiters ++= List("(", ")", ",", ".", ";", "+", "-", ":=", "<", ">")
-
-  // Verifies that the parse result matches a predicate
-  // def check[T](p:Parser[T],pred:T=>Boolean,msg:String) = new Parser[T] { def apply(i:Input) = p(i) match { case Success(res,next) => if (pred(res)) Success(res,next) else new Failure(msg,i) case f=>f } }
 
   // ------------ Literals
   lazy val longLit = 
@@ -71,14 +66,10 @@ class ExtParser extends StandardTokenParsers {
   // ------------ Types
   lazy val tpe: Parser[Type] = (
     ("string" | ("char" | "varchar") ~> "(" ~> numericLit <~ ")") ^^^ TypeString
-    // | "char" ^^^ TypeChar 
-    // | "short" ^^^ TypeShort 
-    // | "int" ^^^ TypeInt 
     | ("char" | "short" | "int" | "long") ^^^ TypeLong
-    // | ("float" | "decimal") ^^^ TypeFloat
     | ("float" | "decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
-    | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
+    // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
     | failure("Bad type")
   )
 
@@ -130,7 +121,8 @@ class ExtParser extends StandardTokenParsers {
 
 object M3Parser extends ExtParser with (String => M3.System) {
 
-  import ddbt.ast.M3._
+  import M3._
+
   lexical.delimiters ++= 
     List("{", "}", ":", ":=", "+", "-", "*", "/", "=", "!=", "<", "<=", ">=", ">", "[", "]", "^=", "+=")
 
@@ -167,7 +159,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
     | ("(" ~> "DELTA" ~> ident <~ ")") ~ 
       ("(" ~> repsep(ident, ",") <~ ")") ^^ { 
         case n ~ f => DeltaMapRefConst(n, f.map((_, null))) 
-      } // only for delta relation in batching
+      }
     | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ 
       ("(" ~> expr <~ ")") ^^ { 
         case t ~ e => Apply("/", t, List(e)) 
@@ -199,9 +191,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
         case v ~ consts => CmpOrList(v, consts)
       }
     | ident ^^ { Ref(_) }
-    // | floatLit ^^ { Const(TypeFloat, _) }
     | doubleLit ^^ { Const(TypeDouble, _) }
-    // | intLit ^^ { Const(TypeInt, _) }
     | longLit ^^ { Const(TypeLong, _) }
     | stringLit ^^ { Const(TypeString, _) }
     // Tupling
@@ -216,18 +206,14 @@ object M3Parser extends ExtParser with (String => M3.System) {
     ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe), ",") <~ "]") ~ 
     opt(":=" ~> expr) ~ opt(partitioning) <~ ";" ^^ { 
       case n ~ t ~ ks ~ e ~ p => 
-        MapDef(
-          n, 
-          t.getOrElse(null), 
-          ks.map { case n ~ t => (n, t) }, 
-          e.getOrElse(null),
-          p.getOrElse(LocalExp)
-        ) 
+        MapDef(n, t.getOrElse(null), ks.map { case n ~ t => (n, t) }, 
+               e.getOrElse(null), p.getOrElse(LocalExp))
     }
 
   lazy val query = 
-    ( ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ 
-        { case n ~ m => Query(n, m) }
+    ( ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ { 
+        case n ~ e => Query(n, e) 
+      }
     | failure("Bad M3 query")
     )
 
@@ -236,36 +222,25 @@ object M3Parser extends ExtParser with (String => M3.System) {
       ("{" ~> rep(stmt) <~ "}") ^^ { 
         case op ~ n ~ f ~ ss => 
           val s = Schema(n, f.map{ (_,null) })
-          Trigger(if (op == "+") EvtAdd(s) else EvtDel(s), ss) 
+          Trigger(if (op == "+") EventInsert(s) else EventDelete(s), ss) 
       }
     | "ON" ~> "BATCH" ~> "UPDATE" ~> "OF" ~> ident ~ 
       ("{" ~> rep(stmt) <~ "}") ^^ { 
         case n ~ ss => 
           val s = Schema(n, Nil)
-          Trigger(EvtBatchUpdate(s), ss) 
+          Trigger(EventBatchUpdate(s), ss) 
       }      
     | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { 
-        Trigger(EvtReady, _) 
+        Trigger(EventReady, _) 
       } 
     | failure("Bad M3 trigger")
     )
 
   lazy val stmt = 
-    (
-      mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ 
-      ("+=" | ":=") ~ expr <~ ";" ^^ { 
-        case m ~ oi ~ op ~ e =>
-          StmtMap(
-            m, 
-            e, 
-            op match { 
-              case "+=" => OpAdd 
-              case ":=" => OpSet 
-            },
-            oi) 
-       }
-    | map
-    )
+    mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+=" | ":=") ~ expr <~ ";" ^^ { 
+      case m ~ oi ~ op ~ e =>
+        TriggerStmt(m, e, op match { case "+=" => OpAdd case ":=" => OpSet }, oi)
+    }
 
   lazy val system = 
     rep(source) ~ rep(map) ~ rep(query) ~ 
@@ -281,12 +256,14 @@ object M3Parser extends ExtParser with (String => M3.System) {
   }
 }
 
+
 // -----------------------------------------------------------------------------
 // SQL parser
 
 object SQLParser extends ExtParser with (String => SQL.System) {
 
-  import ddbt.ast.SQL._
+  import SQL._
+
   lexical.reserved ++= 
     List("SELECT", "FROM", "WHERE", "GROUP", "LEFT", "RIGHT", 
          "JOIN", "NATURAL", "ON") // reduce this list by conditional accepts
@@ -296,7 +273,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   lazy val field = 
     opt(ident <~ ".") ~ (ident | "*") ^^ { 
-      case t ~ n => Field(n, t.getOrElse(null)) 
+      case t ~ n => Field(n, t)
     } // if '*' compute the expansion
 
   // ------------ Expressions
@@ -367,9 +344,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
     | field
     | "(" ~> expr <~ ")"
     | "(" ~> query <~ ")" ^^ Nested
-    // | floatLit ^^ { Const(_, TypeFloat) }
     | doubleLit ^^ { Const(_, TypeDouble) }
-    // | intLit ^^ { Const(_, TypeInt) }
     | longLit ^^ { Const(_, TypeLong) }
     | stringLit ^^ { Const(_, TypeString) }
     | failure("SQL expression")
@@ -442,18 +417,18 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val join: Parser[Table] = 
     tab ~ 
     rep( // joins should be left-associative
-      ("NATURAL" ~ "JOIN") ~> tab ^^ { (_, JoinInner, null) }
+      ("NATURAL" ~ "JOIN") ~> tab ^^ { (_, JoinInner, None) }
     | ( opt(
         "LEFT" ^^^ JoinLeft
       | "RIGHT" ^^^ JoinRight
       | "FULL" ^^^ JoinFull
       ) <~ 
       opt("OUTER") <~ "JOIN") ~ tab ~ ("ON" ~> cond) ^^ { 
-        case j ~ t ~ c => (t, j.getOrElse(JoinInner), c) 
+        case j ~ t ~ c => (t, j.getOrElse(JoinInner), Some(c))
       }
     ) ^^ { 
       case t ~ js => (t /: js) { 
-        case (t1, (t2, j, c)) => TableJoin(t1,t2,j,c) 
+        case (t1, (t2, j, c)) => TableJoin(t1, t2, j, c)
       }
     }
 
@@ -467,7 +442,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   lazy val groupBy = 
     "GROUP" ~> "BY" ~> rep1sep(field, ",") ~ opt("HAVING" ~> disj) ^^ { 
-      case fs ~ ho => GroupBy(fs, ho.getOrElse(null)) 
+      case fs ~ ho => GroupBy(fs, ho) 
     }
 
   lazy val orderBy = 
@@ -490,14 +465,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
     opt(groupBy) ~ 
     opt(orderBy) ^^ {
       case d ~ cs ~ ts ~ wh ~ gb ~ ob => 
-        Select(
-          d.isDefined, 
-          cs, 
-          ts.getOrElse(Nil), 
-          wh.getOrElse(null),
-          gb.getOrElse(null),
-          ob.getOrElse(null)
-        ) 
+        Select(d.isDefined, cs, ts.getOrElse(Nil), wh, gb, ob)
     }
 
   // ------------ System definition

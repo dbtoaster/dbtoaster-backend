@@ -1,6 +1,11 @@
 package ddbt.codegen
 
-import ddbt.ast._
+/**
+ * NOTE: This class is currently NOT USED!
+ * 
+ */
+
+
 
 /**
  * AkkaGen is responsible to transform a typed AST into distributed Akka code.
@@ -69,11 +74,14 @@ Issues to solve (big XXX list):
 - make both parts of an Add work in parallel
 */
 
-class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
-  import M3._
+class AkkaGen(cgOpts: CodeGenOptions) extends ScalaGen(cgOpts) {
+
+  import ddbt.ast._
+  import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, tup, fresh, freshClear }
   import scala.collection.mutable.HashMap
   import ddbt.frontend.Partitioning
+  import ddbt.lib.TypeHelper.Scala._
 
   // Context additional informations
   private val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
@@ -141,7 +149,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
   def fmap(e:Expr,c2:Set[String]=Set()):MapRef = e match {
-    case m@MapRef(n,tp,ks) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
+    case m@MapRef(n,tp,ks,_) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => List(n) }) else lm
@@ -156,7 +164,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val p0=part; part=p0.setLocal(m); /*val u0=inuse.save;*/ val c=ctx.save++ctx.ctx0; val body=close(f);
     val u=inuse.save; part=p0; //inuse.load(u0)
     val rc = (c.map(_._1).toSet & u).toList // remote context
-    ("case (`"+fn+"`,List("+rc.map(v=>rn(v)+":"+c(v)._1.toScala).mkString(",")+")) =>\n"+ind(body),rc map rn)
+    ("case (`"+fn+"`,List("+rc.map(v=>rn(v)+":"+typeToString(c(v)._1)).mkString(",")+")) =>\n"+ind(body),rc map rn)
   }
 
   // Remote aggregation
@@ -164,13 +172,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     // remote handler
     val fn0 = fresh("fa");
     val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
-      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-      else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(x=>rn(x._1)))+","+v+");\n")+"co("+a0+")" }
+      if (key.size==0) "var "+a0+":"+typeToString(e.tp)+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+      else { "val "+a0+" = M3Map.temp["+tup(key.map(x => typeToString(x._2)))+","+typeToString(e.tp)+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(x=>rn(x._1)))+","+v+");\n")+"co("+a0+")" }
     })
     val (fn,body) = rfun(true,fn0,body0,rc)
     // local handler
-    val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
-    val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
+    val rt = if (key.size==0) typeToString(e.tp) else "M3Map["+tup(key.map(x => typeToString(x._2)))+","+typeToString(e.tp)+"]"
+    val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(x => typeToString(x._2)))+","+typeToString(e.tp)+"]()"
     cl_add(1); "aggr("+ref(m.name)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
   }
 
@@ -178,7 +186,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
                       else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
+    case m@MapRef(n,tp,ks,_) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
       if (part.local(m) || !ref.contains(n)) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) { inuse.add(ks.map(_._1).toSet); co(n+(if (ks.size>0) ".get("+tup(ks map { case (n, _) => rn(n) })+")" else "")) } // all keys are bound
@@ -197,7 +205,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         }
       } else if (ki.size==0) {
         val v=fresh("v"); cl_add(1); inuse.add(ks.map(_._1).toSet); ctx.add(v,(ex.tp,v)); inuse.add(Set(v));
-        "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map (x => rn(x._1))) else "null")+"){("+v+":"+ex.tp.toScala+")=>\n"+co(v)
+        "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map (x => rn(x._1))) else "null")+"){("+v+":"+typeToString(ex.tp)+")=>\n"+co(v)
       } else if (lacc!=null) {
         // XXX: introduce a projection for only the relevant variables (?)
         val n0=fresh("m"); val v=fresh("v")
@@ -217,7 +225,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       } else {
         val a0=fresh("agg"); val l0=lacc; lacc=(a0,e.tp,aks); val r =remote_agg(a0,m,aks,e); lacc=l0
-        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(mapRef(a0,e.tp,aks),co) })
+        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(MapRef(a0,e.tp,aks,true),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
       val agg = a.schema._2.filter { case(n,t)=> !ctx.contains(n) }
@@ -229,35 +237,34 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
             val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,agg); val r=remote_agg(a0,m,agg,e,true); lacc=l0; r }
                     else cpsExpr(e,(v:String)=>a0+".add("+tup(agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,agg),co) }
+          "val "+a0+" = M3Map.temp["+tup(agg.map(x => typeToString(x._2)))+","+typeToString(ex.tp)+"]()\n"+add(el)+add(er)+{ cpsExpr(MapRef(a0,ex.tp,agg,true),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }
 
-  override def genStmt(s:Stmt) = s match {
-    case StmtMap(m,e,op,oi) => val r=ref(m.name);
-      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks)=>List(ref(n)) }).map(x=>","+x).mkString
+  override def genStmt(s:TriggerStmt) = s match {
+    case TriggerStmt(m,e,op,oi) => val r=ref(m.name);
+      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks,_)=>List(ref(n)) }).map(x=>","+x).mkString
       def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
                                 ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
       def mo(o:OpMap,v:String) = (if (o==OpSet) "set" else "add")+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map (x => rn(x._1))))+","+v+");\n"
       val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.map(_._1).toSet);
-        val co=(v:String)=> { val v0=fresh("v"); val o=mo(OpSet,v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map (x => rn(x._1))))+"){("+v0+":"+m.tp.toScala+")=> if ("+v0+"==0) "+o.substring(0,o.length-1)+" }\n" }
+        val co=(v:String)=> { val v0=fresh("v"); val o=mo(OpSet,v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map (x => rn(x._1))))+"){("+v0+":"+typeToString(m.tp)+")=> if ("+v0+"==0) "+o.substring(0,o.length-1)+" }\n" }
         cl_add(1); "pre("+r+",false"+rd(ie,true)+"){\n"+cpsExpr(ie,co)
       }
       ctx.load(); inuse.load(m.keys.map(_._1).toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mo(op,v))
-    case _ => sys.error("Unimplemented")
   }
 
   override def genTrigger(t:Trigger, s0:System):String = { // add pre and deq/ready calls in master's triggers
-    val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready\n") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq\n") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq\n") case EvtBatchUpdate(_) => sys.error("Batch updates not supported") }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(close(()=>t.stmts.map(genStmt).mkString+deq))+"\n}"; ctx=null; res
+    val (n,as,deq) = t.event match { case EventReady=>("SystemReady",Nil,"ready\n") case EventInsert(Schema(n,cs))=>("Add"+n,cs,"deq\n") case EventDelete(Schema(n,cs))=>("Del"+n,cs,"deq\n") case EventBatchUpdate(_) => sys.error("Batch updates not supported") }
+    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+typeToString(a._2)} .mkString(", ")+") {\n"+ind(close(()=>t.stmts.map(genStmt).mkString+deq))+"\n}"; ctx=null; res
   }
 
   override def apply(s:System) = ???
   private def helper(s0:System) =
     "import ddbt.lib._\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int,no_output:Boolean)=>runLocal["+cls+"Master,"+cls+"Worker](args)("+streams(s0.sources)+",p,t),f)\n"+
+    "object " + cgOpts.className + " {\n"+ind("import Helper._\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int,no_output:Boolean)=>runLocal["+ cgOpts.className +"Master,"+ cgOpts.className +"Worker](args)("+streams(s0.sources)+",p,t),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n"
