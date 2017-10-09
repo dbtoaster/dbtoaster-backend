@@ -16,7 +16,7 @@ trait MicroBenchPardisGen {
   def header: String
 
 
-  val infoFile = new File(s"../runtime/stats/${if (Optimizer.infoFileName == "") "default" else Optimizer.infoFileName}.json")
+  val infoFile = new File(s"runtime/stats/${if (Optimizer.infoFileName == "") "default" else Optimizer.infoFileName}.json")
   val infoFilePath = infoFile.getAbsolutePath
   var StoreArrayLengths = Map[String, String]()
   var idxSymNames: List[String] = null
@@ -30,7 +30,7 @@ trait MicroBenchPardisGen {
   }
 
   val codeGen: StoreCodeGenerator
-  val genDir = "../runtime/microbench/"
+  val genDir = "runtime/microbench/"
 
 
   def generate[T](optTP: TransactionProgram[T])
