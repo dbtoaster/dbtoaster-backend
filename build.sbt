@@ -34,10 +34,10 @@ Seq(
   scalaSource in Compile <<= baseDirectory / "ddbtoaster/src",
   javaSource in Compile <<= baseDirectory / "ddbtoaster/src",
   sourceDirectory in Compile <<= baseDirectory / "ddbtoaster/src",
-  scalaSource in Test <<= baseDirectory / "ddbtoaster/test",
-  javaSource in Test <<= baseDirectory / "ddbtoaster/test",
-  sourceDirectory in Test <<= baseDirectory / "ddbtoaster/test",
   resourceDirectory in Compile <<= baseDirectory / "ddbtoaster/conf",
+  // scalaSource in Test <<= baseDirectory / "ddbtoaster/test",
+  // javaSource in Test <<= baseDirectory / "ddbtoaster/test",
+  // sourceDirectory in Test <<= baseDirectory / "ddbtoaster/test",
 
   // --------- Execution options
   fork := true, // required to enable javaOptions
@@ -160,13 +160,18 @@ commands += Command.command("release")((state: State) => {
   IO.delete(releaseDir/"lib")
 
   println("compiling sources")
-  val compilerFilePath = (baseDir/"src/Compiler.scala").getAbsolutePath
+  val compilerFilePath = (baseDir/"src"/"Compiler.scala").getAbsolutePath
   val compilerClassContent = read(compilerFilePath)
   write(compilerFilePath, compilerClassContent.replace("= DEPLOYMENT_STATUS_DEVELOPMENT", "= DEPLOYMENT_STATUS_RELEASE"))
   Project.runTask(compile, state)
 
+
+  val propertiesFilePath = (baseDir/"conf"/"ddbt.properties").getAbsolutePath
+  val propertiesFileContent = read(propertiesFilePath)
+  write(propertiesFilePath, "# Release properties file is empty")
   println("execute pack task")
   Project.runTask(pack, state)
+  write(propertiesFilePath, propertiesFileContent)
 
   println("copy all the Scala dependency libraries")
   val sourceDir = baseDirectory.value/"target"/"pack"/"lib";
@@ -194,23 +199,24 @@ commands += Command.command("release")((state: State) => {
   }
 
   println("copy dbtoaster_release")
-  val frontendRepo = file(prop.getProperty("ddbt.base_repo",""))
+  val frontendRepo = file(prop.getProperty("ddbt.base_repo", ""))
   if (frontendRepo != "") {
-    val currentBranchPath = frontendRepo/"/dbtoaster"/"compiler"/"alpha5"
     
     println("make dbt_release")
-    ("make -C " + currentBranchPath.getAbsolutePath)!;
+    ("make -C " + frontendRepo.getAbsolutePath)!;
     
     println("copy dbt_release")
-    val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend", "bin/dbtoaster_release")
+    val dbtBinPath = frontendRepo/"bin"/"dbtoaster_release"
     copyFile(dbtBinPath, releaseDir/"bin")
     ("mv " + (releaseDir/"bin"/dbtBinPath.getName).getAbsolutePath + " " + (releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
     ("chmod +x " + (releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
     
+    val websitePath = frontendRepo/".."/".."/"website"
+
     println("copy README, LICENSE and CHANGELOG")
-    copyFile(currentBranchPath/"doc"/"README", releaseDir)
-    copyFile(currentBranchPath/"doc"/"LICENSE", releaseDir)
-    copyFile(currentBranchPath/"doc"/"CHANGELOG", releaseDir)
+    copyFile(websitePath/"README", releaseDir)
+    copyFile(websitePath/"CHANGELOG", releaseDir)
+    copyFile(frontendRepo/"LICENSE", releaseDir)
     
     println("copy docs to doc dir")
     val releaseDocDir = releaseDir/"doc"
@@ -218,11 +224,11 @@ commands += Command.command("release")((state: State) => {
     copyFiles(
       List("9.jpg", "bakeoff.png", "bluetab.gif", "bluetabactive.gif", "dbtoaster-logo.gif",
            "favicon.ico", "internal_arch.png", "perf.png", "schematic.png")
-        .map(f => currentBranchPath/"doc"/"site_html"/f),
+        .map(f => websitePath/"site_html"/f),
       releaseDocDir)
-    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(f => f.getName.endsWith(".html") && !f.getName.startsWith("samples_")), releaseDocDir)
-    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
-    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
+    copyFiles(IO.listFiles(websitePath/"site_html").filter(f => f.getName.endsWith(".html") && !f.getName.startsWith("samples_")), releaseDocDir)
+    copyFiles(IO.listFiles(websitePath/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
+    copyFiles(IO.listFiles(websitePath/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
 
     println("make c++ libs")
     val cppLibDir = baseDir/"srccpp"/"lib"    
@@ -240,25 +246,27 @@ commands += Command.command("release")((state: State) => {
     copyFiles(IO.listFiles(cppLibDir/"smhasher").filter { f => f.getName.startsWith("MurmurHash2") }, releaseCppLibDir/"smhasher")
 
     println("copy main.cpp")
-    copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp", releaseDir/"examples"/"code")
+    copyFile(frontendRepo/"lib"/"dbt_c++"/"main.cpp", releaseDir/"examples"/"code")
 
     // println("make scala libs")
-    // val scalaLibDir = currentBranchPath/"lib"/"dbt_scala"
+    // val scalaLibDir = frontendRepo/"lib"/"dbt_scala"
     // ("make -C "+scalaLibDir.getAbsolutePath)!;
-    // copyFile(currentBranchPath/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
-    // copyFile(currentBranchPath/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
+    // copyFile(frontendRepo/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
+    // copyFile(frontendRepo/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
+
+    val dataPath = frontendRepo/".."/".."/"experiments"/"data"
 
     println("copy data files to data")
-    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
-    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
-    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
-    copyFile(frontendRepo/"dbtoaster"/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
+    copyFiles(IO.listFiles(dataPath/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
+    copyFiles(IO.listFiles(dataPath/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
+    copyFiles(IO.listFiles(dataPath/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
+    copyFile(frontendRepo/".."/".."/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
     
     println("copy query files to queries")
-    fixSqlFiles((currentBranchPath/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
-    fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"tpch").filter(f => !"""((query[0-9]+a?)|(schemas)).sql""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"tpch")
-    fixSqlFiles(((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get).filter(_.getName != "chrissedtrades.sql"), releaseDir/"examples"/"queries"/"finance")
-    fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
+    fixSqlFiles((frontendRepo/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
+    fixSqlFiles(IO.listFiles(frontendRepo/"test"/"queries"/"tpch").filter(f => !"""((query[0-9]+a?)|(schemas)).sql""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"tpch")
+    fixSqlFiles(((frontendRepo/"test"/"queries"/"finance") * "*.sql" get).filter(_.getName != "chrissedtrades.sql"), releaseDir/"examples"/"queries"/"finance")
+    fixSqlFiles(IO.listFiles(frontendRepo/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
     
     val distDir = baseDir/"dist";
     if (!distDir.exists) distDir.mkdirs;

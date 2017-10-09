@@ -11,7 +11,8 @@ import ddbt.codegen.Optimizer
 /**
  * This class is the main compiler executable. It coordinates compilation phases
  * with respect to used-defined options passed as arguments in the command line.
- * @author TCK
+ *
+ * @author TCK, Milos Nikolic
  */
 object Compiler {
 

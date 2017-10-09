@@ -12,7 +12,7 @@ import Compiler._
  *
  * Usage: sbt 'run-main ddbt.UnitTest -help'
  *
- * @author TCK
+ * @author TCK, Milos Nikolic
  */
 object UnitTest {
 
