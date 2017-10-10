@@ -615,9 +615,10 @@ trait ICppGen extends CodeGen {
 
     val sStringInit = 
       keys.zipWithIndex.map { case ((n, tp), i) => tp match {
-          case TypeLong | TypeDate => n + " = std::stol(f[" + i + "]);"
+          case TypeLong => n + " = std::stol(f[" + i + "]);"
           case TypeDouble => n + " = std::stod(f[" + i + "]);"
           case TypeString => n + " = f[" + i + "];"
+          case TypeDate => n + " = Udate(f[" + i + "]);"
           case _ => sys.error("Unsupported type in fromString")
         }
       }.mkString(" ") + s" ${VALUE_NAME} = v; nxt = nullptr; prv = nullptr;" 
