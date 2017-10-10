@@ -61,6 +61,9 @@ object Compiler {
       LANG_SPARK_LMS -> "scala",
       LANG_AKKA -> "scala"
     )
+
+  val M3_FILE_SUFFIX = ("""\.(""" + frontendFileExtensions(LANG_M3) + "|" + 
+                                    frontendFileExtensions(LANG_DIST_M3) + ")").r
   
   val DEFAULT_LANG_CPP = LANG_CPP_PARDIS
   val DEFAULT_LANG_SCALA = LANG_SCALA_PARDIS
@@ -532,6 +535,8 @@ object Compiler {
           output(toast(inputFile, lang), outputSrcFile)
         case LANG_M3 | LANG_DIST_M3 =>
           output(TypeCheck(M3Parser(toast(inputFile, lang))).toString, outputSrcFile)
+        case _ if M3_FILE_SUFFIX.findFirstIn(inputFile) != None =>
+          compile(Utils.read(inputFile))
         case LANG_SPARK_LMS =>
           compile(toast(inputFile, LANG_DIST_M3))
         case _ =>

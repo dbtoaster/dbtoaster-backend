@@ -117,7 +117,7 @@ trait ICppGen extends CodeGen {
                                .map { case (_, i) => "hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")
 
       s"""|struct ${name} {
-          |  ${sKeyDefs} ${sValueDef}; ${name}* nxt; ${name}* prv;
+          |  ${sKeyDefs} ${sValueDef} ${name}* nxt; ${name}* prv;
           |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
           |  FORCE_INLINE ${name}& modify(${sModFnParams}) { ${sModFnBody} return *this; }
           |  static bool equals(const ${name} &x, const ${name} &y) {
@@ -300,7 +300,7 @@ trait ICppGen extends CodeGen {
             |if (tT > ${cgOpts.timeoutMilli}) { tS = batchSize; return; }
             |""".stripMargin)
         if (EXPERIMENTAL_RUNTIME_LIBRARY) {
-        s"""|void on_batch_update_${s.name}(const std::vector<${s.name}_entry>::iterator &begin, const std::vector<${s.name}_entry>::iterator &end) {
+        s"""|void on_batch_update_${s.name}(const std::vector<${delta(s.name)}_entry>::iterator &begin, const std::vector<${delta(s.name)}_entry>::iterator &end) {
             |  long batchSize = std::distance(begin, end);
             |${ind(sTimeout)}
             |  tN += batchSize;
@@ -337,7 +337,7 @@ trait ICppGen extends CodeGen {
           |${ind(body)}
           |}
           |""".stripMargin +
-      // // TODO: Perhaps this could be kept together with struct definitions for each relation
+      // TODO: Perhaps this could be kept together with struct definitions for each relation
       stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, {
         val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
         s"""|void ${sName}(${s.name}_entry &e) {
@@ -379,7 +379,7 @@ trait ICppGen extends CodeGen {
           |  ${emitInsertToMapFunc(name, "e")}
           |}
           |""".stripMargin +
-      // 
+      //
       // TODO: perhaps enable in all cases
       (if (EXPERIMENTAL_RUNTIME_LIBRARY) {
          s"""|void on_insert_${name}(${name}_entry &e) {
@@ -635,11 +635,10 @@ trait ICppGen extends CodeGen {
           |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
           |  explicit ${name}(${sConstructorParams}) { ${sConstructorBody} }
           |  ${name}(const ${name}& other) : ${sInitializers} { }
-          |  // TODO: enable constructor
-          |  //${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
-          |  //    /* if (f.size() < ${keys.size}) return; */
-          |  //    ${sStringInit} 
-          |  //}
+          |  ${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
+          |      /* if (f.size() < ${keys.size}) return; */
+          |      ${sStringInit}
+          |  }
           |${ind(s)}
           |  template<class Archive>
           |  void serialize(Archive& ar, const unsigned int version) const {
