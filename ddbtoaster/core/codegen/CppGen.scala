@@ -629,6 +629,13 @@ trait ICppGen extends CodeGen {
             |""".stripMargin
       }.mkString
 
+    val sConstructorFromStrings = 
+      stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, 
+        s"""|${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
+            |    /* if (f.size() < ${keys.size}) return; */
+            |    ${sStringInit}
+            |}""".stripMargin)
+
     (s => 
       s"""|struct ${name} {
           |  ${sFieldDefinitions}
@@ -636,10 +643,7 @@ trait ICppGen extends CodeGen {
           |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
           |  explicit ${name}(${sConstructorParams}) { ${sConstructorBody} }
           |  ${name}(const ${name}& other) : ${sInitializers} { }
-          |  ${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
-          |      /* if (f.size() < ${keys.size}) return; */
-          |      ${sStringInit}
-          |  }
+          |${ind(sConstructorFromStrings)}
           |${ind(s)}
           |  template<class Archive>
           |  void serialize(Archive& ar, const unsigned int version) const {
@@ -1381,7 +1385,7 @@ trait ICppGen extends CodeGen {
 
     val sRelationTypeDirectives = 
       s0.sources.map { s => 
-        if (s.isStream) 
+        if (s.isStream)
           s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
         else 
           s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
