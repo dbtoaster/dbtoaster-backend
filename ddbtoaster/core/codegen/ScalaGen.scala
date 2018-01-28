@@ -391,7 +391,7 @@ trait IScalaGen extends CodeGen {
     case _ => sys.error("Don't know how to generate " + ex)
   }
 
-  def genStmt(s: TriggerStmt): String = s match {
+  def genStmt(s: Statement): String = s match {
     case TriggerStmt(m, e, op, oi) =>
       val (fop, sop, clear) = op match { 
         case OpAdd => ("add", " += ", "") 
@@ -433,6 +433,21 @@ trait IScalaGen extends CodeGen {
         ),
         /*if (op==OpAdd)*/ Some(m.keys)/* else None*/
       ) // XXXX commented out the if expression
+    case IfStmt(cond, thenBlk, elseBlk) =>
+      ctx.load()
+      cpsExpr(cond, (v: String) =>
+        extractBooleanExp(v) match {
+          case Some((c, t)) =>
+            "if (" + c + ") {\n" + 
+              ind(thenBlk.map(genStmt).mkString("\n")) +
+            "\n}\n" + 
+            stringIf(elseBlk.nonEmpty, 
+              "else {\n" +
+                ind(elseBlk.map(genStmt).mkString("\n")) +
+              "\n}\n"
+            )
+          case None => sys.error("No if condition")
+        }, None)
   }
 
   def genTrigger(t: Trigger, s0: System): String = {

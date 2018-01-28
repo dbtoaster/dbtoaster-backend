@@ -544,7 +544,7 @@ class DistributedM3Gen(cgOpts: CodeGenOptions, impl: LMSExpGen)
   // CLASS DEFINITIONS FOR DISTRIBUTED EXECUTION (END)
 
 
-  def prepareStatement(stmt: TriggerStmt): List[Statement] = stmt match {
+  def prepareStatement(stmt: M3.Statement): List[Statement] = stmt match {
     case TriggerStmt(map, expr, op, ivc) => 
       val mapInf = mapInfo(map.name)
       map.locality = mapInf.locality match {
@@ -593,6 +593,8 @@ class DistributedM3Gen(cgOpts: CodeGenOptions, impl: LMSExpGen)
         case _ => sys.error ("Map without locality information") 
       }
       ( aStmts ++ bStmts ++ List(Statement(map, aTransformer, bTransformer, op, execMode)))
+    
+    case IfStmt(c, t, e) => sys.error("If statements not supported")      
   }
 
   def prepareExpression(expr: Expr): (List[Statement], Expr) = expr match {

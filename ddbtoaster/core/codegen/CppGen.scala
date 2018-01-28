@@ -226,7 +226,8 @@ trait ICppGen extends CodeGen {
   } 
 
   // ------- Trigger generation (Start)
-  private def emitTriggerStmt(s: TriggerStmt): String = {
+  private def emitStmt(s0: Statement): String = s0 match {
+    case s: TriggerStmt =>
       val localVar = fresh("se")
 
       if (s.target.keys.size > 0) {
@@ -256,7 +257,7 @@ trait ICppGen extends CodeGen {
           case OpSet => (s.target.name + ".addOrDelOnZero", "=") 
         }
 
-        ctx.load()        
+        ctx.load()
         cpsExpr(s.expr, (v: String) => {
             if (s.target.keys.size == 0) {
               extractBooleanExp(v) match {
@@ -281,13 +282,30 @@ trait ICppGen extends CodeGen {
       }
 
       sResetTargetMap + sInitExpr + sStatement
+
+    case s: IfStmt =>
+      ctx.load()
+      cpsExpr(s.cond, (v: String) =>
+        extractBooleanExp(v) match {
+          case Some((c, t)) =>
+            "if (" + c + ") {\n" +
+              ind(s.thenBlk.map(emitStmt).mkString("\n")) +
+            "\n}\n" + 
+            stringIf(s.elseBlk.nonEmpty, 
+              "else {\n" +
+                ind(s.elseBlk.map(emitStmt).mkString("\n")) +
+              "\n}\n"
+            )
+          case None => sys.error("No if condition")
+        }        
+      )
   }
 
   private def emitTrigger(t: Trigger): String = {
     // Generate trigger statements    
     val sTriggerBody = {
       ctx = Ctx(t.event.params.map { case (n, t) => (n, (t, n)) }.toMap)
-      val body = t.stmts.map(emitTriggerStmt).mkString("\n")
+      val body = t.stmts.map(emitStmt).mkString("\n")
       ctx = null
       body 
     }

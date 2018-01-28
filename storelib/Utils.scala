@@ -112,6 +112,7 @@ object Utils {
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
   private lazy val scalacExternalClasspaths =
+    jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor).*")) ++
     jClasspaths.filter(_.matches(".*(lms/target).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
 

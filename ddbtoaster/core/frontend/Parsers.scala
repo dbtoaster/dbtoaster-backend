@@ -145,6 +145,18 @@ object M3Parser extends ExtParser with (String => M3.System) {
       case None => l 
     }}
 
+  lazy val cond =
+    expr ~ ("=" | "!=" | ">" | "<" | ">=" | "<=") ~ expr ^^ {
+      case l ~ op ~ r => op match {
+        case "="  => Cmp(l, r, OpEq)
+        case "!=" => Cmp(l, r, OpNe)
+        case ">"  => Cmp(l, r, OpGt)
+        case ">=" => Cmp(l, r, OpGe)
+        case "<"  => Cmp(r, l, OpGt)
+        case "<=" => Cmp(r, l, OpGe)
+      }
+    }
+
   lazy val atom = (
       ("AggSum" ~> "(" ~> "[" ~> repsep(ident, ",") <~  "]" <~ ",") ~ 
         expr <~ ")"  ^^ { case ks ~ e => AggSum(ks.map((_, null)), e) }
@@ -174,18 +186,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
     | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { 
         case n ~ v => Lift(n,v) 
       }
-    |  "(" ~> expr <~ ")"
-    | "{" ~> expr ~ 
-      opt(("=" | "!=" | ">" | "<" | ">=" | "<=") ~ expr) <~ "}" ^^ {
-        case l ~ Some(op ~ r) => op match { 
-          case "="  => Cmp(l, r, OpEq) 
-          case "!=" => Cmp(l, r, OpNe) 
-          case ">"  => Cmp(l, r, OpGt) 
-          case ">=" => Cmp(l, r, OpGe) 
-          case "<"  => Cmp(r, l, OpGt) 
-          case "<=" => Cmp(r, l, OpGe) 
-        }
-        case l ~ None => l
+    | "(" ~> expr <~ ")"
+    | "{" ~> (cond | expr) <~ "}" ^^ {
+        case c => c
       }
     | "{" ~> expr ~ ("IN" ~> "[" ~> repsep(expr, ",") <~ "]") <~ "}" ^^ {
         case v ~ consts => CmpOrList(v, consts)
@@ -236,11 +239,17 @@ object M3Parser extends ExtParser with (String => M3.System) {
     | failure("Bad M3 trigger")
     )
 
-  lazy val stmt = 
-    mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+=" | ":=") ~ expr <~ ";" ^^ { 
-      case m ~ oi ~ op ~ e =>
-        TriggerStmt(m, e, op match { case "+=" => OpAdd case ":=" => OpSet }, oi)
-    }
+  lazy val stmt: Parser[Statement] = 
+    (
+      mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+=" | ":=") ~ expr <~ ";" ^^ { 
+        case m ~ oi ~ op ~ e =>
+          TriggerStmt(m, e, op match { case "+=" => OpAdd case ":=" => OpSet }, oi)
+      }
+    | "if" ~> ("(" ~> cond <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ~ opt("else" ~> "{" ~> rep(stmt) <~ "}") ^^ {
+        case c ~ tss ~ ess => 
+          IfStmt(c, tss, ess.getOrElse(Nil))
+      }
+    )
 
   lazy val system = 
     rep(source) ~ rep(map) ~ rep(query) ~ 

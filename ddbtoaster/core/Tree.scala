@@ -128,7 +128,7 @@ object M3 {
   }
 
   // -------- Trigger definition
-  case class Trigger(event: EventTrigger, stmts: List[TriggerStmt]) extends M3 {
+  case class Trigger(event: EventTrigger, stmts: List[Statement]) extends M3 {
     override def toString = "ON " + event + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
 
@@ -166,9 +166,20 @@ object M3 {
   }
 
   // ---------- Update or assign statement
-  case class TriggerStmt(target: MapRef, expr: Expr, op: OpMap, initExpr: Option[Expr]) extends M3 { 
+  abstract class Statement extends M3
+
+  case class TriggerStmt(target: MapRef, expr: Expr, op: OpMap, initExpr: Option[Expr]) extends Statement { 
     override def toString =
       target + initExpr.map(":(" + _ + ")").getOrElse("") + " " + op + " " + expr + ";"
+  }
+
+  case class IfStmt(cond: Cmp, thenBlk: List[Statement], elseBlk: List[Statement]) extends Statement {
+    override def toString = 
+      "if (" + cond + ") {" +
+        ind(thenBlk.mkString("\n")) +
+      "} else {" +
+        ind(elseBlk.mkString("\n")) +
+      "}"
   }
 
   // ---------- Expressions (values)

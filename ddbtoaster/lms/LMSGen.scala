@@ -385,6 +385,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
             /*if (op==OpAdd)*/ Some(m.keys) /*else None*/) 
             // XXXX commented out the if expression
           }
+        case IfStmt(c, t, e) => sys.error("If statements not supported")
       }
       impl.unit(())
     }

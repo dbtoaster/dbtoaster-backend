@@ -529,6 +529,11 @@ object Compiler {
   def main(args: Array[String]): Unit = {
     parseArgs(args, true)
 
+    if (inputFile == null) {
+      showHelp()
+      return
+    }
+    
     try {
       lang match {
         case LANG_CALC =>

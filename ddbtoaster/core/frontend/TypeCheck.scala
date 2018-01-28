@@ -17,6 +17,11 @@ object TypeCheck extends (M3.System => M3.System) {
 
   case class TypeMismatchException(msg: String) extends Exception(msg) 
 
+  def getTargetMaps(s0: Statement): List[MapRef] = s0 match {
+    case s: TriggerStmt => List(s.target)
+    case s: IfStmt => s.thenBlk.flatMap(getTargetMaps) ++ s.elseBlk.flatMap(getTargetMaps)
+  }
+
   // 1. Add used tables and batch updates as maps
   def addMissingMaps(s0: System) = {
     val accessedMaps = scala.collection.mutable.Set[String]()
@@ -31,8 +36,13 @@ object TypeCheck extends (M3.System => M3.System) {
         MapRef(delta(n), TypeLong, ks)
     }
     
-    def replaceStmt(s: TriggerStmt) = 
-      TriggerStmt(s.target, replaceExpr(s.expr), s.op, s.initExpr.map(replaceExpr))
+    def replaceStmt(s0: Statement): Statement = s0 match {
+      case s: TriggerStmt => 
+        TriggerStmt(s.target, replaceExpr(s.expr), s.op, s.initExpr.map(replaceExpr))
+      case s: IfStmt =>
+        IfStmt(Cmp(replaceExpr(s.cond.l), replaceExpr(s.cond.r), s.cond.op),
+          s.thenBlk.map(replaceStmt), s.elseBlk.map(replaceStmt))
+    }
 
     def toLowerCase(fields: List[(String, Type)]) = 
       fields.map { case (n, t) => (n.toLowerCase, t) }
@@ -87,13 +97,21 @@ object TypeCheck extends (M3.System => M3.System) {
         Apply(fn(f), tp, args.map(renameExpr))
     }
 
-    def renameStmt(s: TriggerStmt) = 
-      TriggerStmt(
-        renameExpr(s.target).asInstanceOf[MapRef],
-        renameExpr(s.expr),
-        s.op,
-        s.initExpr.map(renameExpr)
-      )
+    def renameStmt(s0: Statement): Statement = s0 match {
+      case s: TriggerStmt =>
+        TriggerStmt(
+          renameExpr(s.target).asInstanceOf[MapRef],
+          renameExpr(s.expr),
+          s.op,
+          s.initExpr.map(renameExpr)
+        )
+      case s: IfStmt =>
+        IfStmt(
+          Cmp(renameExpr(s.cond.l), renameExpr(s.cond.r), s.cond.op),
+          s.thenBlk.map(renameStmt),
+          s.elseBlk.map(renameStmt)
+        )
+    }
 
     val sources = s0.sources.map { case Source(st, sch, in, sp, ad, loc) => 
       Source(st, renameSchema(sch), in, sp, ad, loc)
@@ -101,10 +119,9 @@ object TypeCheck extends (M3.System => M3.System) {
 
     val triggers = s0.triggers.map { t =>
       localMapRenaming = 
-        t.stmts.map { _.target.name }.filterNot(globalMaps.contains)
+        t.stmts.flatMap(getTargetMaps).map(_.name).filterNot(globalMaps.contains)
                .map { n => (n -> (n + "_" + fresh("local"))) }
                .toMap
-
       Trigger(
         t.event match {
           case EventInsert(s) => EventInsert(renameSchema(s))
@@ -145,9 +162,10 @@ object TypeCheck extends (M3.System => M3.System) {
       }, t.stmts)
     }
 
-    val mapTypes = 
-      triggers.flatMap(_.stmts map { s => (s.target.name, s.target.tp) }).toMap
-    
+    val mapTypes = triggers.flatMap { t =>
+      t.stmts.flatMap(getTargetMaps).map(m => (m.name, m.tp))
+    }.toMap
+   
     val maps = s0.maps.map { m => 
       val t0 = mapTypes.getOrElse(m.name, null)
       val t1 = m.tp
@@ -183,10 +201,21 @@ object TypeCheck extends (M3.System => M3.System) {
         AggSum(ks, sub.rename(mapping))
     }
     
-    def renameStmt(s: TriggerStmt, locked: Set[String] = Set()) = s match { 
+    def renameStmt(s0: Statement, locked: Set[String] = Set()): Statement = s0 match { 
       case TriggerStmt(target, expr, op, initExpr) =>
         val lck = locked ++ target.keys.map(_._1).toSet
-        TriggerStmt(target, renameExpr(expr, lck), op, initExpr.map(e => renameExpr(e, lck)))
+        TriggerStmt(
+          target, 
+          renameExpr(expr, lck), 
+          op, 
+          initExpr.map(e => renameExpr(e, lck))
+        )
+      case IfStmt(cond, thenBlk, elseBlk) =>
+        IfStmt(
+          Cmp(renameExpr(cond.l, locked), renameExpr(cond.r, locked), cond.op),
+          thenBlk.map(s => renameStmt(s, locked)),
+          elseBlk.map(s => renameStmt(s, locked))
+        )
     }
     
     val triggers = s0.triggers.map { t =>
@@ -292,13 +321,19 @@ object TypeCheck extends (M3.System => M3.System) {
       ctxRet      
     }
     
-    def typeStmt(s: TriggerStmt, ctx: Map[String, Type] = Map(), t: Option[Trigger]) = s match {
+    def typeStmt(s0: Statement, ctx: Map[String, Type] = Map(), t: Option[Trigger]): Statement = s0 match {
       case TriggerStmt(target, expr, op, initExpr) =>
         // TODO: avoid state mutation
         typeExpr(expr, ctx, t)
         initExpr.map(e => typeExpr(e, ctx, t))
         typeExpr(target, ctx, t)
         TriggerStmt(target, expr, op, initExpr)
+      case IfStmt(cond, thenBlk, elseBlk) =>
+        // TODO: avoid state mutation
+        typeExpr(cond, ctx, t)
+        thenBlk.map(s => typeStmt(s, ctx, t))
+        elseBlk.map(s => typeStmt(s, ctx, t))
+        IfStmt(cond, thenBlk, elseBlk)
     }
     
     val triggers = s0.triggers.map { t =>

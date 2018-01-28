@@ -346,7 +346,10 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
     IR.BooleanExtra.conditional(condition(l, op, r, tp), IR.unit(1L), IR.unit(0L))
   }
 
-  def filterStatement(s: TriggerStmt) = !s.target.name.endsWith("_DELTA")
+  def filterStatement(s: M3.Statement) = s match {
+    case s: TriggerStmt => !s.target.name.endsWith("_DELTA")
+    case s: IfStmt => true
+  } 
 
   var cx: Ctx[Rep[_]] = null
 
@@ -408,6 +411,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
               }
             }, /*if (op==OpAdd)*/ Some(m.keys) /*else None*/) // XXXX commented out the if expression
           }
+        case IfStmt(c, t, e) => sys.error("If statement not supported")
       }
       IR.unit(())
     }
