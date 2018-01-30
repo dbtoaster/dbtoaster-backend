@@ -161,33 +161,32 @@ object Compiler {
     error("", true)     // exit here
   }
 
-  // TODO: FIX THIS
-  private def opts(o: String) = o match{
-      case "entry" => Optimizer.analyzeEntry = true
-      case "index" => Optimizer.secondaryIndex = true
-      case "fixedrange" => Optimizer.fixedRange = true
-      case "online" => Optimizer.onlineOpts = true
-      case "m3cmpmult" => Optimizer.m3CompareMultiply = true
-      case "tmpvar" => Optimizer.tmpVarHoist = true
-      case "tmpmap" => Optimizer.tmpMapHoist = true
-      case "idxinline" => Optimizer.indexInline = true
-      case "sliceinline" => Optimizer.sliceInline = true
-      case "lookupfusion" => Optimizer.indexLookupFusion = true
-      case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
-      case "deadidx" => Optimizer.deadIndexUpdate = true
-      case "codemotion" =>Optimizer.codeMotion = true
-      case "refcounter" => Optimizer.refCounter = true
-      case "regex" => Optimizer.regexHoister = true
-      case "multires" => Optimizer.multiResSplitter = true
-      case "initsize" => Optimizer.initialStoreSize = true
-      case "slicenoupd" => Optimizer.sliceNoUpd = true
-      case "spl" => Optimizer.splSecondaryIdx = true
-      case "minmax" => Optimizer.minMaxIdx = true
-      case "med" => Optimizer.medIdx = true
-      case "coldmotion" => Optimizer.coldMotion = true
-      case "profilestore" => Optimizer.profileStoreOperations = true
-      case "parpromo" => Optimizer.parameterPromotion = true
-      case _ => throw new IllegalArgumentException(s"Unknown option $o")
+  private def opts(o: String) = o match {
+    case "entry" => Optimizer.analyzeEntry = true
+    case "index" => Optimizer.secondaryIndex = true
+    case "fixedrange" => Optimizer.fixedRange = true
+    case "online" => Optimizer.onlineOpts = true
+    case "m3cmpmult" => Optimizer.m3CompareMultiply = true
+    case "tmpvar" => Optimizer.tmpVarHoist = true
+    case "tmpmap" => Optimizer.tmpMapHoist = true
+    case "idxinline" => Optimizer.indexInline = true
+    case "sliceinline" => Optimizer.sliceInline = true
+    case "lookupfusion" => Optimizer.indexLookupFusion = true
+    case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
+    case "deadidx" => Optimizer.deadIndexUpdate = true
+    case "codemotion" =>Optimizer.codeMotion = true
+    case "refcounter" => Optimizer.refCounter = true
+    case "regex" => Optimizer.regexHoister = true
+    case "multires" => Optimizer.multiResSplitter = true
+    case "initsize" => Optimizer.initialStoreSize = true
+    case "slicenoupd" => Optimizer.sliceNoUpd = true
+    case "spl" => Optimizer.splSecondaryIdx = true
+    case "minmax" => Optimizer.minMaxIdx = true
+    case "med" => Optimizer.medIdx = true
+    case "coldmotion" => Optimizer.coldMotion = true
+    case "profilestore" => Optimizer.profileStoreOperations = true
+    case "parpromo" => Optimizer.parameterPromotion = true
+    case _ => throw new IllegalArgumentException(s"Unknown option $o")
   }
 
   private def resetParameters() = {
@@ -373,6 +372,31 @@ object Compiler {
       // case LANG_CPP_LMS => 
       //   new LMSCppGen(codegenOpts)
       case LANG_CPP_PARDIS => 
+        // Set Pardis optimizer options
+        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
+        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
+        Optimizer.fixedRange = (frontendOptLevel == "-O3")
+        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
+        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
+        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
+        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
+        Optimizer.indexInline = (frontendOptLevel == "-O3")
+        Optimizer.sliceInline = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
+        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
+        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        Optimizer.refCounter = true
+        Optimizer.regexHoister = (frontendOptLevel == "-O3")
+        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
+        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
+        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
+        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
+        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
+        Optimizer.medIdx = (frontendOptLevel == "-O3")
+        Optimizer.coldMotion = (frontendOptLevel == "-O3")
+        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.parameterPromotion = true
         Optimizer.cTransformer = true 
         new PardisCppGen(codegenOpts)
       case LANG_SCALA_VANILLA => 
@@ -380,6 +404,31 @@ object Compiler {
       case LANG_SCALA_LMS => new 
         LMSScalaGen(codegenOpts /*, watch */)
       case LANG_SCALA_PARDIS => 
+        // Set Pardis optimizer options
+        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
+        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
+        Optimizer.fixedRange = (frontendOptLevel == "-O3")
+        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
+        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
+        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
+        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
+        Optimizer.indexInline = (frontendOptLevel == "-O3")
+        Optimizer.sliceInline = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
+        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
+        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        Optimizer.refCounter = true
+        Optimizer.regexHoister = (frontendOptLevel == "-O3")
+        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
+        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
+        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
+        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
+        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
+        Optimizer.medIdx = (frontendOptLevel == "-O3")
+        Optimizer.coldMotion = (frontendOptLevel == "-O3")
+        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.parameterPromotion = true
         new PardisScalaGen(codegenOpts) //DSL
       case LANG_SPARK_LMS => 
         new LMSSparkGen(codegenOpts)
