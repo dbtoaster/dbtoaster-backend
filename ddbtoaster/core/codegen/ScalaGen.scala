@@ -458,7 +458,11 @@ trait IScalaGen extends CodeGen {
       case EventInsert(Schema(n, cs)) => ("Add" + n, cs)
       case EventDelete(Schema(n, cs)) => ("Del" + n, cs)
     }
-    ctx = Ctx(as.map(x => (x._1, (x._2, x._1))).toMap)
+    ctx = Ctx((t.event match {
+                case EventInsert(_) | EventDelete(_) => as.map(x => (x._1, (x._2, x._1)))
+                case _ => Nil
+              }).toMap)
+
     val body = t.stmts.map(genStmt).mkString
     ctx = null
     val params = t.event match {
