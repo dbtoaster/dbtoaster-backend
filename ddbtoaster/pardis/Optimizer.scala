@@ -47,9 +47,9 @@ object Optimizer {
   var cTransformer = false
   var initialStoreSize = false
   var infoFileName = ""
-  var optCombination: String = ""
+  var optCombination = ""
 
-  var currentBlock:String =""
+  var currentBlock = ""
 }
 
 class Optimizer(val IR: StoreDSL) {

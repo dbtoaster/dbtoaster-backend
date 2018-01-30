@@ -62,11 +62,11 @@ FORCE_INLINE size_t HASH(const Any& a) {
     switch (a.type) {
         case INT: return a.data.i;
             break;
-        case STRING: return HASH(a.data.s);
+        case LONG: return HASH(a.data.l);
             break;
         case DOUBLE: return HASH(a.data.d);
             break;
-        case DATE: return HASH(a.data.t);
+        case STRING: return HASH(a.data.s);
             break;
         default: throw std::logic_error("Hash not defined for AnyType " + std::to_string(a.type));
     }

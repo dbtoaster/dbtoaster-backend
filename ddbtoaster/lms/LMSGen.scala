@@ -37,8 +37,9 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
 
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
+      case TypeChar | TypeShort | TypeInt => co(impl.unit(v.toInt))
       case TypeLong  => co(impl.unit(v.toLong))
-      case TypeDouble => co(impl.unit(v.toDouble))
+      case TypeFloat | TypeDouble => co(impl.unit(v.toDouble))
       case TypeString => co(impl.unit(v))
       case TypeDate   => sys.error("No date constant conversion") 
                          // co(impl.unit(new java.util.Date()))
@@ -46,7 +47,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     }
     case Exists(e) => 
       expr(e, (ve: Rep[_]) => co(impl.__ifThenElse(
-        impl.notequals(ve, impl.unit(0L)), impl.unit(1L), impl.unit(0L))))
+        impl.notequals(ve, impl.unit(0)), impl.unit(1), impl.unit(0))))
     case Cmp(l, r, op) => 
       // formally, we should take the derived type from left and right, 
       // but this makes no difference to LMS
@@ -56,7 +57,11 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
       assert(r.forall(_.isInstanceOf[Const]))
       expr(l, (vl: Rep[_]) => {
         val vr = r.map {
+          case Const(TypeChar, v) => impl.unit(v.toInt)
+          case Const(TypeShort, v) => impl.unit(v.toInt)
+          case Const(TypeInt, v) => impl.unit(v.toInt)
           case Const(TypeLong, v) => impl.unit(v.toLong)
+          case Const(TypeFloat, v) => impl.unit(v.toDouble)
           case Const(TypeDouble, v) => impl.unit(v.toDouble)
           case Const(TypeString, v) => impl.unit(v)
           case Const(TypeDate, v) => sys.error("No date constant conversion")
@@ -107,11 +112,11 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     case Lift(n, e) =>
       if (cx.contains(n)) {
         expr(e, (ve: Rep[_]) => co(impl.__ifThenElse(
-          impl.equals(ve, cx(n)), impl.unit(1L), impl.unit(0L))), am)
+          impl.equals(ve, cx(n)), impl.unit(1), impl.unit(0))), am)
       }
       else e match {
-        case Ref(n2) => cx.add(n, cx(n2)); co(impl.unit(1L))
-        case _ => expr(e, (ve: Rep[_]) => { cx.add(n, ve); co(impl.unit(1L)) })
+        case Ref(n2) => cx.add(n, cx(n2)); co(impl.unit(1))
+        case _ => expr(e, (ve: Rep[_]) => { cx.add(n, ve); co(impl.unit(1)) })
       }
 
     case Mul(l, r) => 
@@ -138,7 +143,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
           cx.load(cur)
           impl.unit(())
         case _ =>
-          implicit val mE = me(agg.map(_._2), a.tp)          
+          implicit val mE = me(agg.map(_._2), a.tp)
           val acc = impl.m3temp()(mE)
           val inCo = (v: Rep[_]) => 
             impl.m3add(acc, 
@@ -159,6 +164,19 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
         // we ignore ctx
         val cur = cx.save;
         val acc: impl.Var[_] = ex.tp match {
+          case TypeChar | TypeShort | TypeInt =>
+            val agg: impl.Var[Int] = impl.var_new[Int](impl.unit(0))
+            expr(e,
+              (v: Rep[_]) => 
+                impl.var_assign[Int](
+                  agg.asInstanceOf[impl.Var[Int]], 
+                  impl.numeric_plus[Int](
+                    impl.readVar[Int](agg.asInstanceOf[impl.Var[Int]]),
+                    v.asInstanceOf[Rep[Int]]
+                  )
+                )
+            )
+            agg
           case TypeLong =>
             val agg: impl.Var[Long] = impl.var_new[Long](impl.unit(0L))
             expr(e,
@@ -172,7 +190,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
                 )
             )
             agg
-          case TypeDouble =>
+          case TypeFloat | TypeDouble =>
             val agg: impl.Var[Double] = impl.var_new[Double](impl.unit(0.0))
             expr(e,
               (v: Rep[_]) => 
@@ -244,7 +262,8 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
   }
 
   def mul(l: Rep[_], r: Rep[_], tp: Type) = tp match {
-    case TypeLong | TypeDouble => impl.m3apply("mul", List(l, r), tp)
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
+      impl.m3apply("mul", List(l, r), tp)
     case _ => sys.error("Mul(l,r) only allowed on numeric types")
   }
 
@@ -252,13 +271,14 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     def plus[T: Numeric: Manifest](l: Rep[_], r: Rep[_]) = 
       impl.numeric_plus[T](l.asInstanceOf[Rep[T]], r.asInstanceOf[Rep[T]])
     tp match {
+      case TypeChar | TypeShort | TypeInt => plus[Int](l, r)
       case TypeLong => plus[Long](l, r)
-      case TypeDouble => plus[Double](l, r)
+      case TypeFloat | TypeDouble => plus[Double](l, r)
       case _ => sys.error("Add(l,r) only allowed on numeric types")
     }
   }
 
-  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Long] = {
+  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Int] = {
     def cmp2[T: Ordering: Manifest] (vl: Rep[_], vr: Rep[_]): Rep[Boolean] = {
       val (ll, rr) = (vl.asInstanceOf[Rep[T]], vr.asInstanceOf[Rep[T]])
       op match {
@@ -269,20 +289,21 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
       }
     }
     impl.__ifThenElse(tp match {
+        case TypeChar | TypeShort | TypeInt => cmp2[Int](l, r)
         case TypeLong => cmp2[Long](l, r)
-        case TypeDouble => cmp2[Double](l, r)
+        case TypeFloat | TypeDouble => cmp2[Double](l, r)
         case TypeString => cmp2[String](l, r)
-        case TypeDate => cmp2[Long](l, r)
+        case TypeDate => cmp2[Int](l, r)
           // cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]),
           //            impl.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
         case _ => sys.error("Unsupported type")
       }, 
-      impl.unit(1L), 
-      impl.unit(0L)
+      impl.unit(1), 
+      impl.unit(0)
     )
   }
 
-  def cmpOrList(l: Rep[_], r: List[Rep[_]], tp: Type): Rep[Long] = {
+  def cmpOrList(l: Rep[_], r: List[Rep[_]], tp: Type): Rep[Int] = {
     def cmp2[T: Ordering: Manifest](vl: Rep[_], vr: List[Rep[_]]): Rep[Boolean] = vr match {
       case Nil => impl.unit(false)
       case hd :: Nil =>
@@ -293,14 +314,15 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
           cmp2(vl, tl))
     }
     impl.__ifThenElse(tp match {
+        case TypeChar | TypeShort | TypeInt => cmp2[Int](l, r)
         case TypeLong => cmp2[Long](l, r)
-        case TypeDouble => cmp2[Double](l, r)
+        case TypeFloat | TypeDouble => cmp2[Double](l, r)
         case TypeString => cmp2[String](l, r)
-        case TypeDate => cmp2[Long](l, r)
+        case TypeDate => cmp2[Int](l, r)
         case _ => sys.error("Unsupported type")
       },
-      impl.unit(1L),
-      impl.unit(0L)
+      impl.unit(1),
+      impl.unit(0)
     )
   }
 
@@ -329,7 +351,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
             case EventBatchUpdate(Schema(n, _)) =>
               // val rel = s0.sources.filter(_.schema.name == n)(0).schema
               // val ks = rel.fields.map(_._2)
-              // val tp = TypeLong
+              // val tp = TypeInt
               // val name = rel.deltaName
 
               // val m = me(ks,tp)
@@ -348,9 +370,14 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val mm = m.tp match {
-              case TypeLong => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
-              case TypeDouble => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Double]]])
-              case TypeString => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[String]]])
+              case TypeChar | TypeShort | TypeInt => 
+                impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Int]]])
+              case TypeLong => 
+                impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
+              case TypeFloat | TypeDouble => 
+                impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Double]]])
+              case TypeString => 
+                impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[String]]])
               //case TypeDate => 
               //  impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[java.util.Date]]])
               case _ => sys.error("Unsupported type " + m.tp)
@@ -457,7 +484,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     //   case _ => false
     // }).map(_.event match { //delta relations
     //   case EventBatchUpdate(schema) =>
-    //     MapDef(delta(schema.name), TypeLong, schema.fields, null, LocalExp)
+    //     MapDef(delta(schema.name), TypeInt, schema.fields, null, LocalExp)
     //   case _ => null
     // }) ++
     // s0.triggers.flatMap { t => //local maps

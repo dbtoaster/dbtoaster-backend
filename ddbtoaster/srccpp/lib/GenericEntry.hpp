@@ -42,13 +42,13 @@ void processFullEntry(GE* e, int col, const T& arg, const Args&... args) {
 }
 
 enum AnyType : char {
-    UNDEFINED, INT, DOUBLE, DATE, STRING
+    UNDEFINED, INT, LONG, DOUBLE, STRING
 };
 
 union AnyUnion {
     int i;
+    long l;
     double d;
-    date t;
     PString s;
 
     AnyUnion() {
@@ -77,9 +77,9 @@ struct Any {
         switch (obj.type) {
             case INT: os << obj.data.i;
                 break;
-            case DOUBLE: os << obj.data.d;
+            case LONG: os << obj.data.l;
                 break;
-            case DATE: os << obj.data.t;
+            case DOUBLE: os << obj.data.d;
                 break;
             case STRING: os << obj.data.s;
                 break;
@@ -102,9 +102,9 @@ struct Any {
         switch (type) {
             case INT: return data.i == that.data.i;
                 break;
-            case DOUBLE: return fabs(data.d - that.data.d) < 0.01;
+            case LONG: return data.l == that.data.l;
                 break;
-            case DATE: return data.t == that.data.t;
+            case DOUBLE: return fabs(data.d - that.data.d) < 0.01;
                 break;
             case STRING: return data.s == that.data.s;
                 break;
@@ -118,9 +118,9 @@ struct Any {
         switch (type) {
             case INT: return data.i != that.data.i;
                 break;
-            case DOUBLE: return data.d != that.data.d;
+            case LONG: return data.l != that.data.l;
                 break;
-            case DATE: return data.t != that.data.t;
+            case DOUBLE: return data.d != that.data.d;
                 break;
             case STRING: return !(data.s == that.data.s);
                 break;
@@ -134,9 +134,9 @@ struct Any {
         switch (type) {
             case INT: return data.i < that.data.i;
                 break;
-            case DOUBLE: return data.d < that.data.d;
+            case LONG: return data.l < that.data.l;
                 break;
-            case DATE: return data.t < that.data.t;
+            case DOUBLE: return data.d < that.data.d;
                 break;
             case STRING: return data.s < that.data.s;
                 break;
@@ -180,11 +180,11 @@ public:
             switch (a.type) {
                 case INT: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.i);
                     break;
-                case DATE: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.t);
-                    break;
-                case STRING: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.s);
+                case LONG: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.l);
                     break;
                 case DOUBLE: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.d);
+                    break;
+                case STRING: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.s);
                     break;
                 default: throw std::logic_error("Cannot serialize AnyType");
             }
@@ -228,14 +228,14 @@ public:
         map[i].data.i = v;
     }
 
+    FORCE_INLINE void update(int i, long v) {
+        map[i].type = LONG;
+        map[i].data.l = v;
+    }
+
     FORCE_INLINE void update(int i, double v) {
         map[i].type = DOUBLE;
         map[i].data.d = v;
-    }
-
-    FORCE_INLINE void update(int i, date v) {
-        map[i].type = DATE;
-        map[i].data.t = v;
     }
 
     FORCE_INLINE void update(int i, const PString& v) {
@@ -247,24 +247,24 @@ public:
         map[i].data.i += v;
     }
 
-    FORCE_INLINE void increase(int i, double v) {
-        map[i].data.d += v;
+    FORCE_INLINE void increase(int i, long v) {
+        map[i].data.l += v;
     }
 
-    FORCE_INLINE void increase(int i, date v) {
-        map[i].data.t += v;
+    FORCE_INLINE void increase(int i, double v) {
+        map[i].data.d += v;
     }
 
     FORCE_INLINE void decrease(int i, int v) {
         map[i].data.i -= v;
     }
 
+    FORCE_INLINE void decrease(int i, long v) {
+        map[i].data.l -= v;
+    }    
+
     FORCE_INLINE void decrease(int i, double v) {
         map[i].data.d -= v;
-    }
-
-    FORCE_INLINE void decrease(int i, date v) {
-        map[i].data.t -= v;
     }
 
     FORCE_INLINE const Any& get(int i) const {
@@ -275,14 +275,14 @@ public:
         return map.at(i).data.i;
     }
 
-    FORCE_INLINE date getDate(int i) const {
-        return map.at(i).data.t;
-    }
+    // FORCE_INLINE date getDate(int i) const {
+    //     return map.at(i).data.l;
+    // }
 
     //Assuming long is same as date type
 
     FORCE_INLINE long getLong(int i) const {
-        return map.at(i).data.t;
+        return map.at(i).data.l;
     }
 
     FORCE_INLINE double getDouble(int i) const {

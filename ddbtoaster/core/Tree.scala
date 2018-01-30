@@ -8,11 +8,72 @@ import ddbt.lib.Utils.ind
 sealed abstract class Tree    // Generic AST node
 
 // ------ Data types 
-sealed abstract class Type extends Tree
-case object TypeLong extends Type {  override def toString = "long" }
-case object TypeDouble extends Type { override def toString = "double" }
-case object TypeDate extends Type { override def toString = "date" }
-case object TypeString extends Type { override def toString = "string" }
+sealed abstract class Type extends Tree {
+  def resolve(b: Type): Type
+}
+case object TypeChar extends Type {
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => b
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "char"
+}
+case object TypeShort extends Type {
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort => this
+    case TypeInt | TypeLong | TypeFloat | TypeDouble => b
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "short" 
+}
+case object TypeInt extends Type {
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeDate => this
+    case TypeLong | TypeFloat | TypeDouble => b
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "int" 
+}
+case object TypeLong extends Type {
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeDate => this
+    case TypeFloat | TypeDouble => b
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "long" 
+}
+case object TypeFloat extends Type { 
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat => this
+    case TypeDouble => b
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "float" 
+}
+case object TypeDouble extends Type { 
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = "double" 
+}
+case object TypeDate extends Type {
+  def resolve(b: Type) = b match {
+    case TypeDate => this
+    case TypeInt | TypeLong => b    // no other integer types allowed
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }  
+  override def toString = "date" 
+}
+case object TypeString extends Type { 
+  def resolve(b: Type) = b match {
+    case TypeString => this
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }    
+  override def toString = "string" 
+}
+
+case class TypeMismatchException(msg: String) extends Exception(msg) 
 
 // ------ Comparison operators
 sealed abstract class OpCmp extends Tree
@@ -367,12 +428,15 @@ object M3 {
         case _ => None
       }
     }
+
+    def toDecoratedString: String
   }
 
   // Constants
   case class Const(tp: Type, v: String) extends Expr { 
     val locality: Option[LocalityType] = None
     override def toString = if (tp == TypeString) "'" + v + "'" else v 
+    def toDecoratedString = toString + ": " + tp
   }
 
   // Variables
@@ -380,6 +444,7 @@ object M3 {
     var tp: Type = null 
     val locality: Option[LocalityType] = None
     override def toString = name
+    def toDecoratedString = name + ": " + tp
   }
 
   // Map reference
@@ -389,27 +454,34 @@ object M3 {
     override def toString = 
       name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
       keys.map(_._1).mkString(", ") + "]" + locality.getOrElse("")
+
+    def toDecoratedString = 
+      name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
+      keys.map(k => k._1 + ": " + k._2).mkString(", ") + "]" + locality.getOrElse("")
   }
 
   // Lifting operator ('Let name=e in ...' semantics)
   case class Lift(name: String, e: Expr) extends Expr { 
-    val tp = TypeLong
+    val tp = TypeChar
     def locality = e.locality
     override def toString = "(" + name + " ^= " + e + ")"
+    def toDecoratedString = "(" + name + " ^= " + e.toDecoratedString + ")" + ": " + tp
   }
 
   // Map reference of a table
   case class MapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
-    val tp = TypeLong 
+    val tp = TypeInt 
     var locality: Option[LocalityType] = None
     override def toString = name + "(" + keys.map(_._1).mkString(", ") + ")"
+    def toDecoratedString = name + "(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
   }
 
   // Map reference of a delta update
   case class DeltaMapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
-    val tp = TypeLong
+    val tp = TypeInt
     var locality: Option[LocalityType] = None
     override def toString = "(DELTA " + name + ")(" + keys.map(_._1).mkString(", ") + ")"
+    def toDecoratedString = "(DELTA " + name + ")(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
   }
 
   // Sum aggregate
@@ -423,6 +495,8 @@ object M3 {
     }
     override def toString =
       "AggSum([" + keys.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
+    def toDecoratedString =
+      "AggSum([" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "],\n" + ind(e.toDecoratedString) + "\n): " + tp
   }
 
   // Multiplication operator
@@ -444,6 +518,7 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Mul: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " * " + r + ")"
+    def toDecoratedString = "(" + l.toDecoratedString + " * " + r.toDecoratedString + ")"
   }
 
   // Union operator
@@ -460,33 +535,38 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Add: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " + " + r + ")"
+    def toDecoratedString = "(" + l.toDecoratedString + " + " + r.toDecoratedString + ")"
   }
 
   // Exists operator - returns 0 or 1 (checks if there is at least one tuple)
   case class Exists(e: Expr) extends Expr { 
-    val tp = TypeLong 
+    val tp = TypeChar 
     def locality = e.locality
     override def toString = "EXISTS(" + e + ")"
+    def toDecoratedString = "EXISTS(" + e.toDecoratedString + "): " + tp
   }
 
   // Function application
   case class Apply(fun: String, var tp: Type, args: List[Expr]) extends Expr {
     val locality: Option[LocalityType] = None
     override def toString = "[" + fun + ": " + tp + "](" + args.mkString(", ") + ")"
+    def toDecoratedString = "[" + fun + ": " + tp + "](" + args.map(_.toDecoratedString).mkString(", ") + ")"
   }
 
   // Comparison, returns 0 or 1
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Expr { 
-    val tp = TypeLong    
+    val tp = TypeChar    
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " " + op + " " + r + "}"
+    def toDecoratedString = "{" + l.toDecoratedString + " " + op + " " + r.toDecoratedString + "}: " + tp
   }
 
   // OR comparison with a given expr list, returns 0 or 1
   case class CmpOrList(l: Expr, r: List[Expr]) extends Expr {
-    val tp = TypeLong
+    val tp = TypeChar
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " IN [" + r.mkString(", ") + "]}"
+    def toDecoratedString = "{" + l.toDecoratedString + " IN [" + r.map(_.toDecoratedString).mkString(", ") + "]}: " + tp
   }
 
   // Tupling
@@ -494,13 +574,16 @@ object M3 {
     var tp: Type = null 
     val locality: Option[LocalityType] = None
     override def toString = "<" + es.mkString(", ") + ">"
+    def toDecoratedString = "<" + es.map(_.toDecoratedString).mkString(", ") + ">: " + tp
   }
 
   // Lifting operator with tuples
   case class TupleLift(ns: List[String], e: Expr) extends Expr { 
-    val tp = TypeLong
+    val tp = TypeChar
     val locality: Option[LocalityType] = None
     override def toString = "(<" + ns.mkString(", ") + "> ^= " + e + ")"
+    def toDecoratedString = 
+      "(<" + ns.mkString(", ") + "> ^= " + e.toDecoratedString + "): " + tp
   }
 
   // Distributed operation - repartion by key
@@ -508,14 +591,17 @@ object M3 {
     def tp = e.tp    
     def locality = Some(DistByKeyExp(ks))
     override def toString = 
-      "Repartition([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"  
+      "Repartition([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
+    def toDecoratedString = 
+      "Repartition([" + ks.map(k => k._1 + ": " + k._2).mkString(", ") + "],\n" + ind(e.toDecoratedString) + "\n): " + tp
   } 
 
   // Distributed operation - gather on master
   case class Gather(e: Expr) extends Expr { 
     def tp = e.tp    
     val locality = Some(LocalExp)    
-    override def toString = "Gather(" + e + ")"  
+    override def toString = "Gather(" + e + ")"
+    def toDecoratedString = "Gather(" + e.toDecoratedString + "): " + tp
   } 
 }
 

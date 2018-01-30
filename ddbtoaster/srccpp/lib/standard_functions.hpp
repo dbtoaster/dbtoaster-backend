@@ -15,9 +15,9 @@ namespace dbtoaster {
   // Date extraction functions
   // ImperativeCompiler synthesizes calls to the following from calls to 
   // date_part
-  long Udate_year(date d);
-  long Udate_month(date d);
-  long Udate_day(date d);
+  int Udate_year(date d);
+  int Udate_month(date d);
+  int Udate_day(date d);
   
   // String functions
   STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len);
@@ -46,13 +46,19 @@ namespace dbtoaster {
   DOUBLE_TYPE pow(int a, int b);
  */
   long UmulLng(long x, long y);
-  long Ulistmax(long v1,  long v2);
 
   DOUBLE_TYPE Udiv(DOUBLE_TYPE x);
   DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y);
-  DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2);
-  DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2);
-  DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2);
+
+  long Ulistmax(int v1, int v2);
+  long Ulistmax(int v1, long v2);
+  DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2);
+
+  // long Ulistmax(long v1, int v2);
+  // long Ulistmax(long v1, long v2);
+  // DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2);
+  // DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2);
+  // DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };

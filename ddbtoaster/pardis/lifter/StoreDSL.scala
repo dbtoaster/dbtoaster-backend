@@ -8,7 +8,7 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.{NullType, PardisType, PardisVariableType}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeAny, typeUnit}
-import ddbt.ast.{Type, TypeDouble, TypeLong}
+import ddbt.ast.{Type, TypeChar, TypeShort, TypeInt, TypeFloat, TypeDouble, TypeLong}
 import ddbt.lib.store._
 import ddbt.transformer.{SEntry, SEntryFlag}
 import lifter.{OnlineOptimizations, SCLMSInterop, TypeToTypeRep}
@@ -227,13 +227,34 @@ trait StoreDSL extends
     fn match {
       case "div" => div(args(0).asInstanceOf[Rep[Double]])
       case "mul" => tp match {
-        case TypeLong => mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
-        case TypeDouble => mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+        case TypeChar | TypeShort | TypeInt => 
+          mulInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
+        case TypeLong => 
+          mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+        case TypeFloat | TypeDouble => 
+          mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => m3_apply(fn, args)(man(tp))
       }
-      case "listmax" => max(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
-      case "listmin" => min(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
-      case "substring" => substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Long]], args(2).asInstanceOf[Rep[Long]])
+      case "listmax" => tp match {
+        case TypeChar | TypeShort | TypeInt =>
+          maxInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
+        case TypeLong =>
+          maxLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+        case TypeFloat | TypeDouble =>
+          maxDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+        case _ => sys.error("Wrong type (" + tp + ") of listmax")        
+      }
+      case "listmin" => tp match {
+        case TypeChar | TypeShort | TypeInt =>
+          minInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
+        case TypeLong =>
+          minLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+        case TypeFloat | TypeDouble =>
+          minDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+        case _ => sys.error("Wrong type (" + tp + ") of listmin")
+      }
+      case "substring" => 
+        substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Int]], args(2).asInstanceOf[Rep[Int]])
       case "date" => args(0) match {
         case Constant(strDate) => Constant(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
         case _ => m3_apply(fn, args)(man(tp))
@@ -366,7 +387,6 @@ trait StoreDSL extends
 
   def stDelete[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E]): Rep[Unit] = x.deleteCopy(e) //StDelete[E](x, e)
 
-
   def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], idx: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit] = {
     x.sliceCopy(unit(idx), key, f)
 
@@ -382,13 +402,37 @@ trait StoreDSL extends
   // helper functions
   def div(x: Rep[Double]): Rep[Double] = __ifThenElse(unit(0) __== x, unit(0.0), unit(1.0) / x)
 
-  def mulLong(l: Rep[Long], r: Rep[Long]): Rep[Long] = {
+  def mulInt(l: Rep[Int], r: Rep[Int]): Rep[Int] = {
     val ll = (l match {
-      case Constant(v) if l.tp.toString == "Double" => Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
+      case Constant(v) if l.tp.toString == "Double" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toInt)
+      case Constant(v) if l.tp.toString == "Long" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toInt)
       case _ => l
     })
     val rr = (r match {
-      case Constant(v) if r.tp.toString == "Double" => Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
+      case Constant(v) if r.tp.toString == "Double" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toInt)
+      case Constant(v) if r.tp.toString == "Long" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toInt)
+      case _ => r
+    })
+    numeric_times[Int](ll, rr)
+  }
+
+  def mulLong(l: Rep[Long], r: Rep[Long]): Rep[Long] = {
+    val ll = (l match {
+      case Constant(v) if l.tp.toString == "Int" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToInt(v).toLong)
+      case Constant(v) if l.tp.toString == "Double" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)      
+      case _ => l
+    })
+    val rr = (r match {
+      case Constant(v) if r.tp.toString == "Int" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToInt(v).toLong)
+      case Constant(v) if r.tp.toString == "Double" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
       case _ => r
     })
     numeric_times[Long](ll, rr)
@@ -396,21 +440,31 @@ trait StoreDSL extends
 
   def mulDouble(l: Rep[Double], r: Rep[Double]): Rep[Double] = {
     val ll = (l match {
-      case Constant(v) if l.tp.toString == "Long" => Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
+      case Constant(v) if l.tp.toString == "Int" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToInt(v).toDouble)
+      case Constant(v) if l.tp.toString == "Long" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => l
     })
     val rr = (r match {
-      case Constant(v) if r.tp.toString == "Long" => Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
+      case Constant(v) if r.tp.toString == "Int" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToInt(v).toDouble)
+      case Constant(v) if r.tp.toString == "Long" => 
+        Constant(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => r
     })
     numeric_times[Double](ll, rr)
   }
 
-  def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 > v2, v1, v2)
+  def maxInt(v1: Rep[Int], v2: Rep[Int]): Rep[Int] = __ifThenElse(v1 > v2, v1, v2)
+  def maxLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = __ifThenElse(v1 > v2, v1, v2)
+  def maxDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 > v2, v1, v2)
 
-  def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 < v2, v1, v2)
+  def minInt(v1: Rep[Int], v2: Rep[Int]): Rep[Int] = __ifThenElse(v1 < v2, v1, v2)
+  def minLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = __ifThenElse(v1 < v2, v1, v2)
+  def minDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 < v2, v1, v2)
 
-  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = (str, start, length) match {
+  def substring(str: Rep[String], start: Rep[Int], length: Rep[Int]): Rep[String] = (str, start, length) match {
     case (Constant(s), Constant(t), Constant(l)) => Constant(s.substring(t.toInt, l.toInt))
     case (s, Constant(t), Constant(l)) => str.substring(unit(t.toInt), unit(l.toInt))
     case _ => str.substring(start.toInt, length.toInt)

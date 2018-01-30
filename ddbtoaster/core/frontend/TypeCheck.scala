@@ -15,8 +15,6 @@ object TypeCheck extends (M3.System => M3.System) {
 
   def err(msg: String) = sys.error("Type checking error: " + msg)
 
-  case class TypeMismatchException(msg: String) extends Exception(msg) 
-
   def getTargetMaps(s0: Statement): List[MapRef] = s0 match {
     case s: TriggerStmt => List(s.target)
     case s: IfStmt => s.thenBlk.flatMap(getTargetMaps) ++ s.elseBlk.flatMap(getTargetMaps)
@@ -30,10 +28,10 @@ object TypeCheck extends (M3.System => M3.System) {
     def replaceExpr(e: Expr): Expr = e.replace {
       case MapRefConst(n, ks) =>
         accessedMaps += n
-        MapRef(n, TypeLong, ks)
+        MapRef(n, TypeInt, ks)
       case DeltaMapRefConst(n, ks) =>
         accessedMaps += delta(n)
-        MapRef(delta(n), TypeLong, ks)
+        MapRef(delta(n), TypeInt, ks)
     }
     
     def replaceStmt(s0: Statement): Statement = s0 match {
@@ -54,13 +52,13 @@ object TypeCheck extends (M3.System => M3.System) {
     val usedTableDefs = s0.sources.filter { s => 
         !s.isStream && accessedMaps.contains(s.schema.name)
       }.map { s => 
-        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0L"), LocalExp)
+        MapDef(s.schema.name, TypeInt, toLowerCase(s.schema.fields), Const(TypeInt, "0"), LocalExp)
       } 
     val usedDeltaDefs = 
       s0.sources.filter { s =>
         s.isStream && accessedMaps.contains(delta(s.schema.name))
       }.map { s =>
-        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0L"), LocalExp)
+        MapDef(delta(s.schema.name), TypeInt, toLowerCase(s.schema.fields), Const(TypeInt, "0"), LocalExp)
       }
 
     System(s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
@@ -86,7 +84,7 @@ object TypeCheck extends (M3.System => M3.System) {
       case MapRef(n, tp, ks, tmp) => 
         MapRef(localMapRenaming.getOrElse(n, n), tp, renameKeys(ks), tmp)
       case DeltaMapRefConst(n, ks) => 
-        MapRef(delta(n), TypeLong, renameKeys(ks))
+        MapRef(delta(n), TypeInt, renameKeys(ks))
       case Lift(n, e) => 
         Lift(vn(n), renameExpr(e))
       case AggSum(ks, e) => 
@@ -193,7 +191,7 @@ object TypeCheck extends (M3.System => M3.System) {
       case AggSum(ks, sub0) => 
         val ivars = sub0.schema._1
         val lck = locked ++ (ivars ++ ks).map(_._1).toSet
-       val sub = renameExpr(sub0, lck)
+        val sub = renameExpr(sub0, lck)
         val ovars = sub.schema._2.map(_._1).toSet
         val lifts = sub.collect { case Lift(v, _) => List(v) }
         val mapping = lifts.filter(l => ovars.contains(l) && !lck.contains(l))
@@ -236,12 +234,7 @@ object TypeCheck extends (M3.System => M3.System) {
     val mapTypes: Map[String, (List[Type], Type)] =
       s0.maps.map { m => (m.name, (m.keys.map(_._2), m.tp)) }.toMap
 
-    def resolveType(tp1: Type, tp2: Type): Type = (tp1, tp2) match {
-      case (t1, t2) if t1 == t2 => t1 
-      case (TypeLong, TypeDate) | (TypeDate, TypeLong) => TypeLong
-      case (TypeDouble, TypeLong) | (TypeLong, TypeDouble) => TypeDouble
-      case _ => throw new TypeMismatchException("Type mismatch (" + tp1 + ", " + tp2 + ")")
-    }
+    def resolveType(tp1: Type, tp2: Type) = tp1.resolve(tp2)
 
     // give a type to all untyped nodes
     def typeExpr(expr: Expr, ctx0: Map[String, Type], t: Option[Trigger]): Map[String, Type] = {
@@ -296,7 +289,7 @@ object TypeCheck extends (M3.System => M3.System) {
                 }
                 m.keys = (ks zip mktps).map { case ((n, _), t) =>
                   if (ctx0.contains(n) && !Library.cast(ctx0(n), t)) {
-                    err("Key type (" + n + ") mismatch in " + expr)
+                    err("Key type (" + n + ") mismatch in " + expr + ", tp1: " + ctx0(n) + "  tp2: " + t)
                   }
                   (n, t)
                 }
@@ -327,7 +320,20 @@ object TypeCheck extends (M3.System => M3.System) {
         typeExpr(expr, ctx, t)
         initExpr.map(e => typeExpr(e, ctx, t))
         typeExpr(target, ctx, t)
+        
+        // Check if target and init expr are of same type
+        initExpr.foreach(ie =>
+          if (!Library.cast(ie.tp, target.tp))
+            err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
+                " and init expression " + ie.toDecoratedString + " of type " + ie.tp))
+        
+        // Check if target and expr are of same type
+        if (!Library.cast(expr.tp, target.tp))
+          err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
+              " and RHS expression " + expr.toDecoratedString + " of type " + expr.tp)
+        
         TriggerStmt(target, expr, op, initExpr)
+
       case IfStmt(cond, thenBlk, elseBlk) =>
         // TODO: avoid state mutation
         typeExpr(cond, ctx, t)
@@ -381,10 +387,14 @@ object Library {
   private val minArgs = new collection.mutable.HashMap[String, Int]()
 
   private def typeOf[T](c: Class[T]) = c.toString match {
-    case /*"char" | "short" | "int" |*/ "long" => TypeLong
-    case /*"float" |*/ "double" => TypeDouble
+    case "char"   => TypeChar
+    case "short"  => TypeShort
+    case "int"    => TypeInt
+    case "long"   => TypeLong
+    case "float"  => TypeFloat
+    case "double" => TypeDouble
     case "class java.lang.String" => TypeString
-    // case "class java.util.Date" => TypeDate
+    case "class java.util.Date" => TypeDate
     case _ => null
   }
 
@@ -468,11 +478,10 @@ object Library {
     }
   }
 
-  // Implicit castings allowed by second-stage compiler
+  // Implicit castings allowed by second-stage compiler ('a' can be promoted to 'b'?)
   def cast(a: Type, b: Type) = 
-    (a == b) || 
-    (a == TypeDate && b == TypeLong) ||
-    (a == TypeLong && b == TypeDouble)
+    try { b == a.resolve(b) } 
+    catch { case TypeMismatchException(msg) => false }
 
   inspect(ddbt.lib.Functions, "U")
 }

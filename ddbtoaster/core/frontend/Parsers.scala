@@ -47,14 +47,16 @@ class ExtParser extends StandardTokenParsers {
   lexical.delimiters ++= List("(", ")", ",", ".", ";", "+", "-", ":=", "<", ">")
 
   // ------------ Literals
-  lazy val longLit = 
+  lazy val intLit = 
     opt("+" | "-") ~ numericLit ^^ { 
       case s ~ n => s.getOrElse("") + n 
     }
 
+  lazy val longLit = intLit <~ ("L"|"l") ^^ { case n => n }
+
   lazy val doubleLit = 
-    (longLit <~ ".") ~ opt(numericLit) ~ 
-    opt(("E" | "e") ~> longLit) ^^ { 
+    (intLit <~ ".") ~ opt(numericLit) ~ 
+    opt(("E" | "e") ~> intLit) ^^ { 
       case i ~ d ~ e => 
         val f = i + "." + d.getOrElse("") + (e match { 
                                                case Some(j) => "E" + j 
@@ -66,7 +68,11 @@ class ExtParser extends StandardTokenParsers {
   // ------------ Types
   lazy val tpe: Parser[Type] = (
     ("string" | ("char" | "varchar") ~> "(" ~> numericLit <~ ")") ^^^ TypeString
-    | ("char" | "short" | "int" | "long") ^^^ TypeLong
+    | "char" ^^^ TypeChar
+    | "short" ^^^ TypeShort
+    | "int" ^^^ TypeInt
+    | "long" ^^^ TypeLong
+    // | "float" ^^^ TypeFloat
     | ("float" | "decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
     // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
@@ -195,6 +201,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
       }
     | ident ^^ { Ref(_) }
     | doubleLit ^^ { Const(TypeDouble, _) }
+    | intLit ^^ { Const(TypeInt, _) }
     | longLit ^^ { Const(TypeLong, _) }
     | stringLit ^^ { Const(TypeString, _) }
     // Tupling

@@ -49,13 +49,15 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   public M3MapBase(V zero, boolean skipZero, Function1<K,?>[] projections) {
     threshold = (int)(INITIAL_CAPACITY * LOAD_FACTOR);
     data = new Entry[INITIAL_CAPACITY];
-    this.zero=zero; this.skipZero = skipZero;
-    if (projections==null) indices=null;
+    this.zero = zero; this.skipZero = skipZero;
+    if (projections == null) indices = null;
     else {
       indices = (Index<?>[])java.lang.reflect.Array.newInstance(Index.class, projections.length);
       for(int i=0;i<projections.length;++i) indices[i] = new Index(projections[i]);
     }
-    if (zero instanceof Long) plus = (Plus<V>) new Plus<Long>() { Long apply(Long a, Long b) { return a+b; } };
+    if (zero instanceof Integer) plus = (Plus<V>) new Plus<Integer>() { Integer apply(Integer a, Integer b) { return a+b; } };  
+    else if (zero instanceof Long) plus = (Plus<V>) new Plus<Long>() { Long apply(Long a, Long b) { return a+b; } };
+    else if (zero instanceof Float) plus = (Plus<V>) new Plus<Float>() { Float apply(Float a, Float b) { return a+b; } };
     else if (zero instanceof Double) plus = (Plus<V>) new Plus<Double>() { Double apply(Double a, Double b) { return a+b; } };
     else if (zero instanceof String) plus = (Plus<V>) new Plus<String>() { String apply(String a, String b) { return a+b; } };
     else if (zero instanceof Date) plus = (Plus<V>) new Plus<Date>() { Date apply(Date a, Date b) { return new Date(a.getTime()+b.getTime()); } };

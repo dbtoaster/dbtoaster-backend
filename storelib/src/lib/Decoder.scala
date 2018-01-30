@@ -170,7 +170,8 @@ object Adaptor {
 
   class CSV(name: String, schema: String, delimiter: String = ",", action: String = "insert") extends Adaptor {
     val tfs: Array[String => _] = schema.split(",").map {
-      case "int"   | "long"   => (c: String) => java.lang.Long.parseLong(c)
+      case "char" | "short" | "int" => (c: String) => java.lang.Integer.parseInt(c)
+      case "long" => (c: String) => java.lang.Long.parseLong(c)
       case "float" | "double" => (c: String) => java.lang.Double.parseDouble(c)
       case "date"   => (c: String) => Functions.Udate(c)
       case "string" => (c: String) => if (c.length == 0) "" else c(0) match {
@@ -189,9 +190,10 @@ object Adaptor {
     }
 
     val btfs: Array[DataInputStream => _] = schema.split(",").map {
-      case "int"   | "long"   => (in: DataInputStream) => in.readLong()
+      case "char" | "short" | "int" => (in: DataInputStream) => in.readInt()
+      case "long"   => (in: DataInputStream) => in.readLong()
       case "float" | "double" => (in: DataInputStream) => in.readDouble()
-      case "date"   => (in: DataInputStream) => in.readLong()
+      case "date"   => (in: DataInputStream) => in.readInt()
       case "string" => (in: DataInputStream) => in.readUTF()
       case _ => sys.error("Unsupported schema type")
     }
@@ -219,10 +221,10 @@ object Adaptor {
   }
 
   class OrderBook(brokers: Int = 10, bids: String = null, asks: String = null, deterministic: Boolean = true) extends Adaptor {
-    case class BookRow(t: Int, id: Long, brokerId: Long, volume: Double, price: Double) {
+    case class BookRow(t: Int, id: Int, brokerId: Int, volume: Double, price: Double) {
       def pack = List[Any](t.toDouble, id, brokerId, volume, price) // XXX: t as Double is a legacy from DBToaster
     }
-    type Hist = java.util.HashMap[Long, BookRow]
+    type Hist = java.util.HashMap[Int, BookRow]
     val asksMap = new Hist()
     val bidsMap = new Hist()
 
@@ -234,7 +236,7 @@ object Adaptor {
     def apply(str: String): List[OrderedInputEvent] = {
       val col = str.split(",")
       val t = java.lang.Integer.parseInt(col(0)) //order or timestamp
-      val id = java.lang.Long.parseLong(col(1))
+      val id = java.lang.Integer.parseInt(col(1))
       val volume = java.lang.Double.parseDouble(col(3))
       val price = java.lang.Double.parseDouble(col(4))
       

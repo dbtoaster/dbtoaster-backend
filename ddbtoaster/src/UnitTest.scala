@@ -49,8 +49,17 @@ object UnitTest {
       "employee/query20.sql",
       "employee/query21.sql",
       "employee/query23.sql",   // MAX
-      "employee/query24.sql",
-      "employee/query34.sql",
+      "employee/query24.sql",   // MAX
+      "employee/query25.sql",   // ORDER
+      "employee/query26.sql",   // GROUP BY non-variables
+      "employee/query27.sql",   // HAVING
+      "employee/query28.sql",   // HAVING
+      "employee/query29.sql",   // HAVING
+      "employee/query30.sql",   // HAVING
+      "employee/query31.sql",   // GROUP BY non-variables
+      "employee/query32.sql",   // GROUP BY non-variables
+      "employee/query33.sql",   // HAVING, GROUP BY non-variables
+      "employee/query34.sql",   // MAX
       "employee/query41.sql",
       "employee/query44.sql",   // ANY
       "employee/query52.sql",

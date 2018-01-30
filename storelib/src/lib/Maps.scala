@@ -37,8 +37,9 @@ object M3Map {
   }
   // Implicit default zero
   def zero[V]()(implicit cV:ClassTag[V]):V = (cV.toString match {
+    case "Char" | "Short" | "Int" => 0
     case "Long" => 0L
-    case "Double" => 0.0
+    case "Float" | "Double" => 0.0
     case "java.lang.String" => ""
     case "java.util.Date" => new java.util.Date(0)
     case n => sys.error("No zero for "+n)

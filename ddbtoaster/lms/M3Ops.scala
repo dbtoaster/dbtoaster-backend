@@ -47,13 +47,35 @@ trait M3OpsExp extends BaseExp with EffectExp
       __ifThenElse(equals(x, unit(0.0)), unit(0.0), numeric_divide(unit(1.0), x))
   }
 
+  def mulInt(l: Rep[Int], r: Rep[Int]): Rep[Int] = {
+    val ll = (l match {
+      case Const(v) if l.tp.toString == "Long" => 
+        Const(scala.runtime.BoxesRunTime.unboxToLong(v).toInt)
+      case Const(v) if l.tp.toString == "Double" => 
+        Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toInt)
+      case _ => l
+    }).asInstanceOf[Rep[Int]]
+    val rr = (r match {
+      case Const(v) if r.tp.toString == "Long" => 
+        Const(scala.runtime.BoxesRunTime.unboxToLong(v).toInt)
+      case Const(v) if r.tp.toString == "Double" => 
+        Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toInt)
+      case _ => r
+    }).asInstanceOf[Rep[Int]]
+    numeric_times[Int](ll, rr)
+  }
+
   def mulLong(l: Rep[Long], r: Rep[Long]): Rep[Long] = {
     val ll = (l match {
+      case Const(v) if l.tp.toString == "Int" => 
+        Const(scala.runtime.BoxesRunTime.unboxToInt(v).toLong)
       case Const(v) if l.tp.toString == "Double" => 
         Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
       case _ => l
     }).asInstanceOf[Rep[Long]]
     val rr = (r match {
+      case Const(v) if r.tp.toString == "Int" => 
+        Const(scala.runtime.BoxesRunTime.unboxToInt(v).toLong)
       case Const(v) if r.tp.toString == "Double" => 
         Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
       case _ => r
@@ -63,11 +85,15 @@ trait M3OpsExp extends BaseExp with EffectExp
 
   def mulDouble(l: Rep[Double], r: Rep[Double]): Rep[Double] = {
     val ll = (l match {
+      case Const(v) if l.tp.toString == "Int" => 
+        Const(scala.runtime.BoxesRunTime.unboxToInt(v).toDouble)
       case Const(v) if l.tp.toString == "Long" => 
         Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => l
     }).asInstanceOf[Rep[Double]]
     val rr = (r match {
+      case Const(v) if r.tp.toString == "Int" => 
+        Const(scala.runtime.BoxesRunTime.unboxToInt(v).toDouble)
       case Const(v) if r.tp.toString == "Long" => 
         Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => r
@@ -75,34 +101,53 @@ trait M3OpsExp extends BaseExp with EffectExp
     numeric_times[Double](ll, rr)
   }
 
-  def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = 
-    if (v1 > v2) v1 else v2
+  def maxInt(v1: Rep[Int], v2: Rep[Int]): Rep[Int] = if (v1 > v2) v1 else v2
+  def maxLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = if (v1 > v2) v1 else v2
+  def maxDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if (v1 > v2) v1 else v2
+
+  def minInt(v1: Rep[Int], v2: Rep[Int]): Rep[Int] = if (v1 > v2) v1 else v2
+  def minLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = if (v1 > v2) v1 else v2
+  def minDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if (v1 > v2) v1 else v2
   
-  def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = 
-    if (v1 < v2) v1 else v2
-  
-  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] =
-    infix_substring(str, 
-      rep_asinstanceof[Long, Int](start, manifest[Long], manifest[Int]), 
-      rep_asinstanceof[Long, Int](start + length, manifest[Long], manifest[Int]))
+  def substring(str: Rep[String], start: Rep[Int], length: Rep[Int]): Rep[String] =
+    infix_substring(str,
+      rep_asinstanceof[Int, Int](start, manifest[Int], manifest[Int]), 
+      rep_asinstanceof[Int, Int](start + length, manifest[Int], manifest[Int]))
 
   def m3apply(fn: String, args: List[Exp[_]], tp: Type) = fn match {
-    case "div" => div(args(0).asInstanceOf[Rep[Double]])
+    case "div" => 
+      div(args(0).asInstanceOf[Rep[Double]])
     case "mul" => tp match {
+      case TypeChar | TypeShort | TypeInt => 
+        mulInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
       case TypeLong => 
         mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
-      case TypeDouble => 
+      case TypeFloat | TypeDouble => 
         mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
       case _ => M3Apply(fn, args, man(tp))
     }
-    case "listmax" => 
-      max(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
-    case "listmin" => 
-      min(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+    case "listmax" => tp match {
+      case TypeChar | TypeShort | TypeInt =>
+        maxInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
+      case TypeLong =>
+        maxLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+      case TypeFloat | TypeDouble =>
+        maxDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+      case _ => sys.error("Wrong type (" + tp + ") of listmax")        
+    }
+    case "listmin" => tp match {
+      case TypeChar | TypeShort | TypeInt =>
+        minInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
+      case TypeLong =>
+        minLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+      case TypeFloat | TypeDouble =>
+        minDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+      case _ => sys.error("Wrong type (" + tp + ") of listmin")
+    }
     case "substring" => 
       substring(args(0).asInstanceOf[Rep[String]], 
-                args(1).asInstanceOf[Rep[Long]],
-                args(2).asInstanceOf[Rep[Long]])
+                args(1).asInstanceOf[Rep[Int]],
+                args(2).asInstanceOf[Rep[Int]])
     //case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
     //case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
 

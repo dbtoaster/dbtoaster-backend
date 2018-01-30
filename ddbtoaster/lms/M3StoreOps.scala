@@ -60,8 +60,9 @@ trait M3StoreOpsExp extends BaseExp
 
   override def namedVar(name: String, tp: Type): Rep[_] = {
     val init = tp match {
-      case TypeLong   => unit(0L)
-      case TypeDouble => unit(0.0)
+      case TypeChar | TypeShort | TypeInt => unit(0)
+      case TypeLong => unit(0L)
+      case TypeFloat | TypeDouble => unit(0.0)
       case TypeString => unit("")
       case _ => sys.error("Unsupported type " + tp) 
     }
@@ -652,8 +653,8 @@ trait CGenM3StoreOps extends CGenBase
         val n = argTypes.size
         out.println(
           "case class " + clsName + "(" + 
-          argTypes.zipWithIndex.map { case (tp, i) => 
-            "var _" + (i + 1) + ":" + tp + " = " + zeroValue(tp) 
+          argTypes.zipWithIndex.map { case (tp, i) =>
+            "var _" + (i + 1) + ": " + tp + " = " + zeroValue(tp) 
           }.mkString(", ") + ") extends Entry1[" + clsName + "] {")
         out.println("  val hash = " + hashFun(argTypes,idx0loc))
         out.println(

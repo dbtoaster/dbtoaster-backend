@@ -7,10 +7,12 @@ import ddbt.lib.store.{ Store, Entry }
 object ManifestHelper {
 
   def man(tp: Type): Manifest[_] = tp match {
+    case TypeChar | TypeShort | TypeInt => manifest[Int]
     case TypeLong   => manifest[Long]
+    case TypeFloat  => manifest[Float]
     case TypeDouble => manifest[Double]
     case TypeString => manifest[String]
-    case TypeDate   => manifest[Long]    //java.util.Date
+    case TypeDate   => manifest[Int]    //java.util.Date
     case _ => sys.error("No manifest for " + tp)
   }
 
@@ -43,18 +45,21 @@ object ManifestHelper {
   }
 
   def zero(tp: Type) = tp match {
+    case TypeChar | TypeShort | TypeInt => 0
     case TypeLong   => 0L
-    case TypeDouble => 0.0
+    case TypeFloat | TypeDouble => 0.0
     case TypeString => ""
-    case TypeDate   => 0L         // new java.util.Date()
+    case TypeDate   => 0         // new java.util.Date()
     case _ => sys.error("Bad Type")
   }
 
   def zero(m: Manifest[_]) = m.toString match {
+    case "Char" | "Short" | "Int" => 0
     case "Long"   => 0L
+    case "Float"  => 0.0f
     case "Double" => 0.0
     case "String" => ""
-    case "java.util.Date" => 0L   // new java.util.Date()
+    case "java.util.Date" => 0   // new java.util.Date()
     case _ => sys.error("Bad manifest")
   }
 }

@@ -10,13 +10,13 @@ namespace dbtoaster {
 // Date extraction functions
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
-long Udate_year(date d) { 
+int Udate_year(date d) { 
 	return (d / 10000) % 10000;
 }
-long Udate_month(date d) { 
+int Udate_month(date d) { 
 	return (d / 100) % 100;
 }
-long Udate_day(date d) { 
+int Udate_day(date d) { 
 	return d % 100;
 }
 
@@ -152,13 +152,18 @@ int Upreg_match(const regex_t &preg, const STRING_TYPE &s){
 }
 
 long UmulLng(long x, long y) { return x * y; }
-long Ulistmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
-
 DOUBLE_TYPE Udiv(DOUBLE_TYPE x) { if(x==0.0) return 0.0; else return (1.0 / x); }
 DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y) { return x * y; }
-DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
-DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2) { return ((v2 < v1) ? v1 : v2); }
-DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2) { return ((v1 > v2) ? v1 : v2); }
+
+long Ulistmax(int v1, int v2) { return ((v1 > v2) ? v1 : v2 ); }
+long Ulistmax(int v1, long v2) { return ((v1 > v2) ? v1 : v2 ); }
+DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
+
+// long Ulistmax(long v1, int v2) { return ((v1 > v2) ? v1 : v2 ); }
+// long Ulistmax(long v1, long v2) { return ((v1 > v2) ? v1 : v2 ); }
+// DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
+// DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2) { return ((v2 < v1) ? v1 : v2); }
+// DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
 // Type conversion functions
 template <class T> 

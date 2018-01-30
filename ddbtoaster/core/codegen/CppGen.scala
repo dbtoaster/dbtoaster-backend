@@ -383,7 +383,7 @@ trait ICppGen extends CodeGen {
   protected def emitFieldNames(fields: List[(String, Type)]) = fields.map(_._1).mkString(", ")
 
   protected def emitInsertToMapFunc(map: String, entry: String) = 
-    map + ".addOrDelOnZero(" + entry + ", 1L);"
+    map + ".addOrDelOnZero(" + entry + ", 1);"
 
   protected def emitTableTriggers(sources: List[Source]) = {
     sources.filter(!_.isStream).map { s =>
@@ -393,7 +393,7 @@ trait ICppGen extends CodeGen {
       val args = emitFieldNames(fields)
 
       s"""|void on_insert_${name}(${params}) {
-          |  ${name}_entry e(${args}, 1L);
+          |  ${name}_entry e(${args}, 1);
           |  ${emitInsertToMapFunc(name, "e")}
           |}
           |""".stripMargin +
@@ -401,8 +401,8 @@ trait ICppGen extends CodeGen {
       // TODO: perhaps enable in all cases
       (if (EXPERIMENTAL_RUNTIME_LIBRARY) {
          s"""|void on_insert_${name}(${name}_entry &e) {
-             |  e.${VALUE_NAME} = 1L;
-             |  ${name}.addOrDelOnZero(e, 1L);
+             |  e.${VALUE_NAME} = 1;
+             |  ${name}.addOrDelOnZero(e, 1);
              |}
              |""".stripMargin
       }
@@ -418,7 +418,7 @@ trait ICppGen extends CodeGen {
               |  size_t sz = eaList.size();
               |  for (size_t i = 0; i < sz; i++) {
               |    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());
-              |    ${name}_entry e(${castArgs}, 1L);
+              |    ${name}_entry e(${castArgs}, 1);
               |    ${emitInsertToMapFunc(name, "e")}
               |  }
               |}
@@ -486,14 +486,14 @@ trait ICppGen extends CodeGen {
         code +
         s"""|void unwrap_insert_${name}(const event_args_t& ea) {
             |  ${deltaRel}.clear(); 
-            |  ${deltaRel}_entry e(${constructorArgs}, 1L);
+            |  ${deltaRel}_entry e(${constructorArgs}, 1);
             |  ${deltaRel}.${insertOp}(e);
             |  on_batch_update_${name}(${deltaRel});
             |}
             |
             |void unwrap_delete_${name}(const event_args_t& ea) {
             |  ${deltaRel}.clear(); 
-            |  ${deltaRel}_entry e(${constructorArgs}, -1L);
+            |  ${deltaRel}_entry e(${constructorArgs}, -1);
             |  ${deltaRel}.${insertOp}(e);
             |  on_batch_update_${name}(${deltaRel});
             |}
@@ -633,7 +633,11 @@ trait ICppGen extends CodeGen {
 
     val sStringInit = 
       keys.zipWithIndex.map { case ((n, tp), i) => tp match {
-          case TypeLong => n + " = std::stol(f[" + i + "]);"
+          case TypeChar   => n + " = (char) std::stoi(f[" + i + "]);"
+          case TypeShort  => n + " = (short) std::stoi(f[" + i + "]);"
+          case TypeInt    => n + " = std::stoi(f[" + i + "]);"
+          case TypeLong   => n + " = std::stol(f[" + i + "]);"
+          case TypeFloat  => n + " = std::stof(f[" + i + "]);"
           case TypeDouble => n + " = std::stod(f[" + i + "]);"
           case TypeString => n + " = f[" + i + "];"
           case TypeDate => n + " = Udate(f[" + i + "]);"
@@ -1089,7 +1093,7 @@ trait ICppGen extends CodeGen {
 
   private def cmpFunc(tp: Type, op: OpCmp, arg1: String, arg2: String, withIfThenElse: Boolean = true) = 
     if(withIfThenElse)
-      "(/*if */(" + arg1 + " " + cmpToString(op) + " " + arg2 + ")" + " ? 1L : 0L)"
+      "(/*if */(" + arg1 + " " + cmpToString(op) + " " + arg2 + ")" + " ? 1 : 0)"
     else
       arg1 + " " + cmpToString(op) + " " + arg2
 
@@ -1104,6 +1108,7 @@ trait ICppGen extends CodeGen {
 
     case Const(tp, v) => tp match {
       case TypeLong => co(v + "L")
+      case TypeFloat => co(v + "f")
       case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co, am)
       case _ => co(v)
     }
@@ -1119,7 +1124,7 @@ trait ICppGen extends CodeGen {
         "(/*if */((" +
         r.map(x => cpsExpr(x, (rr: String) => "(" + ll + " == " + rr + ")"))
          .mkString(" || ") +
-        ")) ? 1L : 0L)"
+        ")) ? 1 : 0)"
       ))
 
     case Apply(fn, tp, as) => applyFunc(co, fn, tp, as)
@@ -1234,7 +1239,7 @@ trait ICppGen extends CodeGen {
         }
       }
 
-    // "1L" is the neutral element for multiplication, and chaining is done with multiplication
+    // "1" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n, e) =>
       // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) {
@@ -1243,11 +1248,11 @@ trait ICppGen extends CodeGen {
       else e match {
         case Ref(n2) => 
           ctx.add(n, (e.tp, rn(n2)))
-          co("1L")    // de-aliasing         
+          co("1")    // de-aliasing         
         // This renaming is required
         case _ =>
           ctx.add(n, (e.tp, fresh("l")))
-          cpsExpr(e, (v: String) => typeToString(e.tp) + " " + rn(n) + " = " + v + ";\n" + co("1L"), am)
+          cpsExpr(e, (v: String) => typeToString(e.tp) + " " + rn(n) + " = " + v + ";\n" + co("1"), am)
       }
 
     // Mul(el,er)
@@ -1257,7 +1262,7 @@ trait ICppGen extends CodeGen {
     //   (v = vl * vr , ctx2)
     case Mul(el, er) => 
       def vx(vl: String, vr: String) = 
-        if (vl == "1L") vr else if (vr == "1L") vl else "(" + vl + " * " + vr + ")"
+        if (vl == "1") vr else if (vr == "1") vl else "(" + vl + " * " + vr + ")"
 
       cpsExpr(el, (vl: String) => {
         var ifcond = ""
