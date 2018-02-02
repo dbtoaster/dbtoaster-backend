@@ -26,12 +26,12 @@ object TypeCheck extends (M3.System => M3.System) {
 
     // Replace access by MapRefs (M3 fix?)
     def replaceExpr(e: Expr): Expr = e.replace {
-      case MapRefConst(n, ks) =>
+      case m @ MapRefConst(n, ks) =>
         accessedMaps += n
-        MapRef(n, TypeInt, ks)
-      case DeltaMapRefConst(n, ks) =>
+        MapRef(n, m.tp, ks)
+      case m @ DeltaMapRefConst(n, ks) =>
         accessedMaps += delta(n)
-        MapRef(delta(n), TypeInt, ks)
+        MapRef(delta(n), m.tp, ks)
     }
     
     def replaceStmt(s0: Statement): Statement = s0 match {
@@ -52,13 +52,13 @@ object TypeCheck extends (M3.System => M3.System) {
     val usedTableDefs = s0.sources.filter { s => 
         !s.isStream && accessedMaps.contains(s.schema.name)
       }.map { s => 
-        MapDef(s.schema.name, TypeInt, toLowerCase(s.schema.fields), Const(TypeInt, "0"), LocalExp)
+        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), LocalExp)
       } 
     val usedDeltaDefs = 
       s0.sources.filter { s =>
         s.isStream && accessedMaps.contains(delta(s.schema.name))
       }.map { s =>
-        MapDef(delta(s.schema.name), TypeInt, toLowerCase(s.schema.fields), Const(TypeInt, "0"), LocalExp)
+        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), LocalExp)
       }
 
     System(s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
@@ -83,8 +83,8 @@ object TypeCheck extends (M3.System => M3.System) {
         Ref(vn(n))
       case MapRef(n, tp, ks, tmp) => 
         MapRef(localMapRenaming.getOrElse(n, n), tp, renameKeys(ks), tmp)
-      case DeltaMapRefConst(n, ks) => 
-        MapRef(delta(n), TypeInt, renameKeys(ks))
+      case m @ DeltaMapRefConst(n, ks) =>
+        MapRef(delta(n), m.tp, renameKeys(ks))
       case Lift(n, e) => 
         Lift(vn(n), renameExpr(e))
       case AggSum(ks, e) => 
@@ -241,7 +241,7 @@ object TypeCheck extends (M3.System => M3.System) {
       var ctxRet = ctx0 // new bindings
       try {
         expr match { 
-          case m @ Mul(l, r) => 
+          case m @ Mul(l, r) =>
             ctxRet = typeExpr(r, typeExpr(l, ctx0, t), t)
             m.tp = resolveType(l.tp, r.tp)
           case a @ Add(l, r) =>

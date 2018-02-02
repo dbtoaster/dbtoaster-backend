@@ -470,7 +470,7 @@ object M3 {
 
   // Map reference of a table
   case class MapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
-    val tp = TypeInt 
+    val tp = TypeLong
     var locality: Option[LocalityType] = None
     override def toString = name + "(" + keys.map(_._1).mkString(", ") + ")"
     def toDecoratedString = name + "(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
@@ -478,7 +478,7 @@ object M3 {
 
   // Map reference of a delta update
   case class DeltaMapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
-    val tp = TypeInt
+    val tp = TypeLong
     var locality: Option[LocalityType] = None
     override def toString = "(DELTA " + name + ")(" + keys.map(_._1).mkString(", ") + ")"
     def toDecoratedString = "(DELTA " + name + ")(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
