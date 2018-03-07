@@ -1362,6 +1362,12 @@ FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V> >& m, const
     else /*k.__av = v;*/ m.insert_nocheck(k);
 }
 
+template<typename T, typename V, typename V2>
+FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V> >& m, T& k, const V2 &v)
+{  
+    k.__av = v;
+    add_to_temp_map(m, k);
+}
 #endif
 
 }

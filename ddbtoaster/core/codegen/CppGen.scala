@@ -11,8 +11,8 @@ object CppGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
-  val EXPERIMENTAL_HASHMAP = true
-  val EXPERIMENTAL_MAX_INDEX_VARS = Int.MaxValue  
+  val EXPERIMENTAL_HASHMAP = false
+  val EXPERIMENTAL_MAX_INDEX_VARS = Int.MaxValue
 }
 
 class CppGen(val cgOpts: CodeGenOptions) extends ICppGen
@@ -1180,6 +1180,17 @@ trait ICppGen extends CodeGen {
                   |  }
                   |}
                   |""".stripMargin
+
+              // s"""|{ //slice
+              //     |  const LinkedNode<${mapEntryType}>* ${n0} = static_cast<const LinkedNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
+              //     |  ${mapEntryType}* ${e0};
+              //     |  while (${n0}) {
+              //     |    ${e0} = ${n0}->obj;
+              //     |${ind(body, 2)}
+              //     |    ${n0} = ${n0}->next;
+              //     |  }
+              //     |}
+              //     |""".stripMargin
             }
             else {
               val (h0, idx0) = (fresh("h"), fresh("i"))

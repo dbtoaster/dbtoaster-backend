@@ -135,9 +135,20 @@ object M3Parser extends ExtParser with (String => M3.System) {
   // ------------ Expressions
   lazy val mapref = 
     ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> 
-    repsep(ident,",") <~ "]") ^^ { case n ~ ot ~ ks => 
-      MapRef(n, ot.getOrElse(null), ks.map ((_, null))) 
+    repsep(ident,",") <~ "]") ~ opt(locality) ^^ { 
+      case n ~ ot ~ ks ~ loc => 
+        val m = MapRef(n, ot.getOrElse(null), ks.map ((_, null)))
+        m.locality = if (loc == None) Some(LocalExp) else loc
+        m
     }
+
+  lazy val locality = 
+    ( "<" ~> "Local" ~> ">" ^^^ LocalExp
+    | "<" ~> "DistRandom" ~> ">" ^^^ DistRandomExp
+    | "<" ~> "DistByKey(" ~> repsep(ident ~ (":" ~> tpe), ",") <~ ")>" ^^ { 
+        case ks => DistByKeyExp(ks.map { case n ~ t => (n, t) })
+      }
+    )
 
   lazy val expr: Parser[Expr] = 
     prod ~ opt("+" ~> expr) ^^ { case l ~ or => or match { 
