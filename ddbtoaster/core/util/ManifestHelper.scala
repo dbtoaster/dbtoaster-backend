@@ -13,6 +13,7 @@ object ManifestHelper {
     case TypeDouble => manifest[Double]
     case TypeString => manifest[String]
     case TypeDate   => manifest[Int]    //java.util.Date
+    case t: TypeCustom => sys.error("Custom types not supported")      
     case _ => sys.error("No manifest for " + tp)
   }
 
@@ -50,6 +51,7 @@ object ManifestHelper {
     case TypeFloat | TypeDouble => 0.0
     case TypeString => ""
     case TypeDate   => 0         // new java.util.Date()
+    case t: TypeCustom => sys.error("Custom types not supported")  
     case _ => sys.error("Bad Type")
   }
 

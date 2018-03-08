@@ -1,6 +1,7 @@
 package ddbt.frontend
 
 import ddbt.ast._
+import ddbt.lib.{ TypeHelper, TypeMismatchException }
 
 /**
   * Fixes the M3 parse result to provide a correct AST and annotates 
@@ -61,7 +62,7 @@ object TypeCheck extends (M3.System => M3.System) {
         MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), LocalExp)
       }
 
-    System(s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
+    System(s0.typeDefs, s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
   }
 
   // 2. Prettify variable names (not streams, not maps) 
@@ -133,7 +134,7 @@ object TypeCheck extends (M3.System => M3.System) {
     
     val queries = s0.queries.map { q => Query(q.name, renameExpr(q.expr)) }
     
-    System(sources, s0.maps, queries, triggers)
+    System(s0.typeDefs, sources, s0.maps, queries, triggers)
   }
 
   // 4. Type trigger arguments by binding to the corresponding input schema
@@ -179,7 +180,7 @@ object TypeCheck extends (M3.System => M3.System) {
       MapDef(m.name, tp, m.keys, m.expr, m.locality)
     }
 
-    System(s0.sources, maps, s0.queries, triggers)
+    System(s0.typeDefs, s0.sources, maps, s0.queries, triggers)
   }
 
   // 6. Rename lifted variables to avoid name clashes when code gets flattened.
@@ -225,7 +226,7 @@ object TypeCheck extends (M3.System => M3.System) {
     
     freshClear()
     
-    System(s0.sources, s0.maps, queries, triggers)
+    System(s0.typeDefs, s0.sources, s0.maps, queries, triggers)
   }
 
   // 7. Resolve missing types (and also make sure operations are correctly typed)
@@ -234,7 +235,8 @@ object TypeCheck extends (M3.System => M3.System) {
     val mapTypes: Map[String, (List[Type], Type)] =
       s0.maps.map { m => (m.name, (m.keys.map(_._2), m.tp)) }.toMap
 
-    def resolveType(tp1: Type, tp2: Type) = tp1.resolve(tp2)
+    def resolveType(tp1: Type, tp2: Type) = 
+      try { tp1.resolve(tp2) } catch { case _: Throwable => tp2.resolve(tp1) }
 
     // give a type to all untyped nodes
     def typeExpr(expr: Expr, ctx0: Map[String, Type], t: Option[Trigger]): Map[String, Type] = {
@@ -276,7 +278,7 @@ object TypeCheck extends (M3.System => M3.System) {
             a.keys = ks.map { case (n, _) => (n, ctxRet(n)) }   // resolved types
           case a @ Apply(n, tp, args) => 
             args.map(typeExpr(_, ctx0, t))
-            a.tp = Library.typeCheck(n, args.map(_.tp))
+            // a.tp = Library.typeCheck(n, args.map(_.tp))
           case r @ Ref(n) => 
             r.tp = ctx0(n)
           case m @ MapRef(n, tp, ks, tmp) =>
@@ -288,7 +290,7 @@ object TypeCheck extends (M3.System => M3.System) {
                   err("Bad value type: expected " + mtp + ", got " + tp + " for " + expr)
                 }
                 m.keys = (ks zip mktps).map { case ((n, _), t) =>
-                  if (ctx0.contains(n) && !Library.cast(ctx0(n), t)) {
+                  if (ctx0.contains(n) && !TypeHelper.cast(ctx0(n), t)) {
                     err("Key type (" + n + ") mismatch in " + expr + ", tp1: " + ctx0(n) + "  tp2: " + t)
                   }
                   (n, t)
@@ -323,12 +325,12 @@ object TypeCheck extends (M3.System => M3.System) {
         
         // Check if target and init expr are of same type
         initExpr.foreach(ie =>
-          if (!Library.cast(ie.tp, target.tp))
+          if (!TypeHelper.cast(ie.tp, target.tp))
             err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
                 " and init expression " + ie.toDecoratedString + " of type " + ie.tp))
         
         // Check if target and expr are of same type
-        if (!Library.cast(expr.tp, target.tp))
+        if (!TypeHelper.cast(expr.tp, target.tp))
           err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
               " and RHS expression " + expr.toDecoratedString + " of type " + expr.tp)
         
@@ -353,7 +355,7 @@ object TypeCheck extends (M3.System => M3.System) {
       Query(q.name, q.expr)
     }
 
-    System(s0.sources, s0.maps, queries, triggers)
+    System(s0.typeDefs, s0.sources, s0.maps, queries, triggers)
   }
 
   def apply(s: System) = {
@@ -430,7 +432,7 @@ object Library {
     // matching with cast
     candidates.foreach { 
       case (retType, paramTypes) => 
-        if ((true /: (args zip paramTypes)) { case (c, (t1, t2)) => c && cast(t1, t2) })
+        if ((true /: (args zip paramTypes)) { case (c, (t1, t2)) => c && TypeHelper.cast(t1, t2) })
           return retType
     }
     sys.error("Library: bad arguments for " + name + 
@@ -477,11 +479,6 @@ object Library {
       }
     }
   }
-
-  // Implicit castings allowed by second-stage compiler ('a' can be promoted to 'b'?)
-  def cast(a: Type, b: Type) = 
-    try { b == a.resolve(b) } 
-    catch { case TypeMismatchException(msg) => false }
 
   inspect(ddbt.lib.Functions, "U")
 }

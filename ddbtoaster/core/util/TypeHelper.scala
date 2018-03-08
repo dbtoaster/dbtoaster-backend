@@ -2,6 +2,8 @@ package ddbt.lib
 
 import ddbt.ast._
 
+case class TypeMismatchException(msg: String) extends Exception(msg) 
+
 /* Helper to convert AST types into language-specific string constants */
 object TypeHelper {
 
@@ -17,6 +19,7 @@ object TypeHelper {
       case TypeDouble => "DOUBLE_TYPE"
       case TypeDate   => "date"
       case TypeString => "STRING_TYPE"
+      case t: TypeCustom => t.name
     }
 
     def refTypeToString(t: Type) = t match {
@@ -28,6 +31,7 @@ object TypeHelper {
       case TypeDouble => "DOUBLE_TYPE"
       case TypeDate   => "date"
       case TypeString => "STRING_TYPE&"
+      case t: TypeCustom => t.name + "&"
     }
 
     def typeToChar(t: Type) = t match {
@@ -39,6 +43,7 @@ object TypeHelper {
       case TypeDouble => 'D'
       case TypeDate   => 'T'
       case TypeString => 'S'
+      case t: TypeCustom => 'R'
     }
 
     def zeroOfType(t: Type) = t match {
@@ -50,6 +55,7 @@ object TypeHelper {
       case TypeDouble => "0.0"
       case TypeDate   => "0"
       case TypeString => "\"\""
+      case t: TypeCustom => t.name + "::zero"
     }
   }
 
@@ -63,6 +69,7 @@ object TypeHelper {
       case TypeDouble => "Double"
       case TypeDate   => "Int"
       case TypeString => "String"
+      case t: TypeCustom => sys.error("Custom types not supported")
     }
 
     def typeToChar(t: Type) = t match {
@@ -72,6 +79,7 @@ object TypeHelper {
       case TypeDouble => 'D'
       case TypeDate   => 'T'
       case TypeString => 'S'
+      case t: TypeCustom => sys.error("Custom types not supported")
     }
 
     def zeroOfType(t: Type) = t match {
@@ -81,6 +89,7 @@ object TypeHelper {
       case TypeDouble => "0.0"
       case TypeDate   => "0"
       case TypeString => "\"\""
+      case t: TypeCustom => sys.error("Custom types not supported")
     }
   }
 
@@ -91,6 +100,11 @@ object TypeHelper {
     case TypeDouble => s.trim.replaceAll("(l|L|f|F)$", "").toDouble
     case TypeString => s.replaceAll("^\"|\"$", "")
     case TypeDate   => s.trim.replaceAll("(l|L)$", "").toInt   // dateConv(v.toLong)
-    case _ => scala.sys.error("Cannot convert " + s + " into " + tp)
+    case _ => sys.error("Cannot convert " + s + " into " + tp)
   }
+
+  // Implicit castings allowed by second-stage compiler ('a' can be promoted to 'b'?)
+  def cast(a: Type, b: Type): Boolean = 
+    try { b == a.resolve(b) } catch { case TypeMismatchException(msg) => false }
+
 }

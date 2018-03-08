@@ -1425,8 +1425,13 @@ trait ICppGen extends CodeGen {
           s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
       }.mkString("\n")
 
+    val sIncludeTypeDefs =
+      s0.typeDefs.map(_.path).distinct
+                 .map(s => "#include \"" + s + "\"").mkString("\n") + "\n"
+
     // Generating the entire file
     s"""|${sIncludeHeaders}
+        |${sIncludeTypeDefs}
         |${sRelationTypeDirectives}
         |
         |namespace dbtoaster {

@@ -1,6 +1,7 @@
 package ddbt.ast
 
 import ddbt.lib.Utils.ind
+import ddbt.lib.TypeMismatchException
 
 /**
   * Defines basic types AST nodes for M3 and SQL 
@@ -72,8 +73,14 @@ case object TypeString extends Type {
   }    
   override def toString = "string" 
 }
-
-case class TypeMismatchException(msg: String) extends Exception(msg) 
+case class TypeCustom(val name: String, val typeDef: TypeDefinition) extends Type { 
+  def resolve(b: Type) = b match {
+    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
+    case b: TypeCustom if typeDef == b.typeDef => this
+    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+  override def toString = name
+}
 
 // ------ Comparison operators
 sealed abstract class OpCmp extends Tree
@@ -124,6 +131,11 @@ case class Adaptor(name: String, options: Map[String, String]) extends Tree {
              else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")" )
 }
 
+// ------ Custom type definitions
+case class TypeDefinition(val name: String, val path: String) {
+  override def toString = "CREATE TYPE " + name + " FROM FILE " + path + ";"
+}
+
 // ------ Expression locality types
 abstract sealed class LocalityType extends Tree
 case object LocalExp extends LocalityType {
@@ -157,8 +169,10 @@ object M3 {
   case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores
 
   // -------- M3 system
-  case class System(sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
+  case class System(typeDefs: List[TypeDefinition], sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
     override def toString =
+      "---------------- TYPE DEFINITIONS ---------------\n" +
+      typeDefs.mkString("\n\n") + "\n\n" + 
       "-------------------- SOURCES --------------------\n" + 
       sources.mkString("\n\n") + "\n\n" + 
       "--------------------- MAPS ----------------------\n" + 

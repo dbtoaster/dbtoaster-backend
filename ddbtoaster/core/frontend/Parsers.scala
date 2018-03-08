@@ -76,14 +76,30 @@ class ExtParser extends StandardTokenParsers {
     | ("float" | "decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
     // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
-    | failure("Bad type")
+    | customType
   )
+
+  // ------------ Custom type definition
+  val typeMap = collection.mutable.Map[String,TypeDefinition]()
+
+  lazy val typeDef = 
+    "CREATE" ~> "TYPE" ~> ident ~ ("FROM" ~> "FILE" ~> stringLit) <~ ";" ^^ {
+      case i ~ f => 
+        val t = TypeDefinition(i, f)
+        typeMap += ((i, t))
+        t
+    }
+
+  lazy val customType: Parser[TypeCustom] =
+    acceptIf (x => typeMap.contains(x.chars) ) (x => "No such type '" + x.chars + "'") ^^ {
+      case i => TypeCustom(i.chars, typeMap(i.chars))
+    }
 
   // ------------ Library function (validates name)
   lazy val func: Parser[String] = 
     acceptIf (x => Library(x.chars.toLowerCase)) (x => 
       "No such function '" + x.chars + "'") ^^ (_.chars.toLowerCase)
-    
+  
   // ------------ Partitioning information
   lazy val partitioning = 
     ( ("PARTITIONED" ~> "BY" ~> "[" ~> 
@@ -193,7 +209,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
       ("(" ~> expr <~ ")") ^^ { 
         case t ~ e => Apply("/", t, List(e)) 
       }
-    | ("[" ~> func <~ ":") ~ (tpe <~ "]") ~ 
+    | ("[" ~> /* func */ ident <~ ":") ~ (tpe <~ "]") ~ 
       ("(" ~> repsep(expr,",") <~ ")") ^^ { 
         case n ~ t ~ as => Apply(n, t, as) 
       }
@@ -270,9 +286,8 @@ object M3Parser extends ExtParser with (String => M3.System) {
     )
 
   lazy val system = 
-    rep(source) ~ rep(map) ~ rep(query) ~ 
-    rep(trigger) ^^ { 
-      case ss ~ ms ~ qs ~ ts => System(ss, ms, qs, ts) 
+    rep(typeDef) ~ rep(source) ~ rep(map) ~ rep(query) ~ rep(trigger) ^^ { 
+      case td ~ ss ~ ms ~ qs ~ ts => System(td, ss, ms, qs, ts) 
     }
 
   def load(path: String) = apply(scala.io.Source.fromFile(path).mkString)
