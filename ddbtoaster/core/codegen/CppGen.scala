@@ -11,7 +11,7 @@ object CppGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
-  val EXPERIMENTAL_HASHMAP = false
+  val EXPERIMENTAL_HASHMAP = true
   val EXPERIMENTAL_MAX_INDEX_VARS = Int.MaxValue
 }
 
@@ -935,7 +935,7 @@ trait ICppGen extends CodeGen {
       val paramsVar = adaptorVar + "_params"
       val schemaTypes = s.schema.fields.map { _._2.toString }.mkString(",")
 
-      s.adaptor.name match {
+      s.adaptor.name.toUpperCase match {
         case "ORDERBOOK" => {
           val (orderBookTypes, others) = 
             s.adaptor.options.partition { x => x._1 == "bids" || x._1 == "asks"}
