@@ -63,15 +63,13 @@ object Utils {
     System.err.println(sb.toString)
   }
 
+  private val defaultPathDBTBin = "./bin/dbtoaster_frontend"
+
   private val prop_ = new java.util.Properties
-  
+
   try { 
     prop_.load(this.getClass.getResource("/ddbt.properties").openStream()) 
-  } catch { case _: Throwable => 
-    warning("conf/ddbt.properties does not exist.\n" +
-        "Please configure at least ddbt.dbtoaster to dbtoaster_frontend binary path.\n" + 
-        "Set ddbt.base_repo if you have access to DBToaster's repository.") 
-  }
+  } catch { case _: Throwable => }
 
   def prop(name: String, d: String = "") = prop_.getProperty("ddbt." + name, d)
 
@@ -86,7 +84,18 @@ object Utils {
   // Paths related to DBToaster
   val pathRepo = prop("base_repo", null)
 
-  val pathDBTBin  = stringIf(pathRepo != null, pathRepo + "/bin/dbtoaster_release", "./bin/dbtoaster")
+  val pathDBTBin =
+    if (pathRepo != null) pathRepo + "/bin/dbtoaster_release"
+    else {
+      val defaultPath = "./bin/dbtoaster_frontend"
+      if (!new File(defaultPath).exists) {
+        warning(
+          "The DBToaster frontend binary is missing.\n" +
+          "Copy bin/dbtoaster_frontend from a DBToaster release (keep the same path)\n" +
+          "or set ddbt.base_repo in ddbtoaster/conf/ddbt.properties (extended setup).")
+      }
+      defaultPath
+    }
 
   private lazy val pathJDK = { 
     var p = prop("jdk", null) 
