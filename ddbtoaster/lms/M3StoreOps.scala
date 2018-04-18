@@ -557,17 +557,17 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
   }
 
   def emitCreateBuffer(manifest: Manifest[_]): String = manifest.toString match {
-    case "Long"   | "long"   => "new IntBuffer(16)"
-    case "Double" | "double" => "new DoubleBuffer(16)"
+    case "Char" | "Short" | "Int" | "Long" => "new IntBuffer(16)"
+    case "Float" | "Double" => "new DoubleBuffer(16)"
     case "java.lang.String" | "char*" => "new CharArrayBuffer(16, 30)" 
-    case _ => sys.error("Unsupported buffer type")
+    case x => sys.error("Unsupported buffer type" + x)
   }
 
   def emitCastBuffer(manifest: Manifest[_]): String = manifest.toString match {
-    case "Long"   | "long"   => ".asInstanceOf[IntBuffer]"
-    case "Double" | "double" => ".asInstanceOf[DoubleBuffer]"
+    case "Char" | "Short" | "Int" | "Long"   => ".asInstanceOf[IntBuffer]"
+    case "Float" | "Double" => ".asInstanceOf[DoubleBuffer]"
     case "java.lang.String" | "char*" => ".asInstanceOf[CharArrayBuffer]" 
-    case _ => sys.error("Unsupported buffer type")
+    case x => sys.error("Unsupported buffer type" + x)
   }
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
