@@ -15,23 +15,20 @@ Currently the project matches original DBToaster code generation based on M3 and
  [Spark](http://spark.apache.org/) backends.
 
 #### Setup
-1. Install [SBT](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html) and [Git](http://git-scm.com) in your PATH.
+1. Install [Scala 2.11](https://www.scala-lang.org/download/), [SBT](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html) and [Git](http://git-scm.com) in your PATH.
 2. Checkout the repository `$ git clone https://github.com/epfldata/dbtoaster-backend`
 3. Get some data/queries to play with: add `bin/dbtoaster_frontend` and `examples/{data,queries}` from [here](https://dbtoaster.github.io/) to the `dbtoaster-backend` folder (keep the same paths).
-4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. The list of available options is show using `$ sbt 'toast --help'`.
+4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. For example, `sbt 'toast -l cpp examples/queries/simple/r_count.sql'`. The list of available options is show using `$ sbt 'toast --help'`.
 5. You can also run the whole test suit by following the extended setup.
 
-#### Extended setup (to connect with dbtoaster-frontend)
-1. Checkout and compile DBToaster. You'll need [OCaml](http://caml.inria.fr/download.en.html) to compile the front-end. Please checkout the [front-end repository](https://github.com/dbtoaster/dbtoaster-a5) for more instructions.
-2. Create a file `conf/ddbt.properties` to suit your needs. In particular:
-   - `ddbt.base_repo` path to dbtoaster-frontend repository (required for unit tests)
-   - `ddbt.dbtoaster` dbtoaster binary (required if `base_repo` is not set)
-   - Options to run unit tests and benchmarking: `$ sbt 'unit --help'`
-   - Tests queries using `$ sbt queries`.
-
-   A sample configuration file named `conf/ddbt.properties.example` exists in the repository and you can create a copy of it, rename it to `conf/ddbt.properties` and modify it to have your desired parameters.
-
-   Please note that for running the unit-tests, you need the base data files for the relations. Currently, these data files are missing from the front-end repository. Please contact us if you want to get access to these base data files for running the tests.
+#### [Optional] Extended setup (to connect with dbtoaster-frontend)
+1. Follow steps 1 and 2 from the basic setup. No need to copy `bin/dbtoaster_frontend`.
+2. Checkout the DBToaster [front-end repository](https://github.com/dbtoaster/dbtoaster-a5). You will need [OCaml](http://caml.inria.fr/download.en.html) to compile the front-end. Compile using the `make` command.
+3. Create a file `ddbtoaster/conf/ddbt.properties` and set `ddbt.base_repo` path to dbtoaster-frontend repository (required for unit tests). A sample configuration file named `ddbtoaster/conf/ddbt.properties.example` exists in the repository. You can create a copy of it, rename it to `ddbtoaster/conf/ddbt.properties`, and modify it to have your desired parameters.
+4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. For example, `sbt 'toast -l cpp test/queries/simple/r_count.sql'`. Note that filenames are relative to `ddbt.base_repo`. Use absolute filenames if necessary.
+5. Run unit tests and benchmarking: `$ sbt 'unit --help'`
+   
+   Please note that for running the unit tests, you need the base data files for the relations. Currently, these data files are missing from the front-end repository. Please contact us if you want to get access to these base data files for running the tests.
 
 #### Instructions for running the distributed version
 
