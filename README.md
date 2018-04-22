@@ -1,4 +1,4 @@
-## DBToaster Backend
+# DBToaster Backend
 
 [DBToaster](http://www.dbtoaster.org) creates query engines for incremental view maintenance (IVM) by recursively computing the delta of each individual modification on the query result. This allow dramatic
 speedup over traditional database systems. More information:
@@ -17,7 +17,7 @@ Currently the project matches original DBToaster code generation based on M3 and
 #### Setup
 1. Install [Scala 2.11](https://www.scala-lang.org/download/), [SBT](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html) and [Git](http://git-scm.com) in your PATH.
 2. Checkout the repository `$ git clone https://github.com/epfldata/dbtoaster-backend`
-3. Get some data/queries to play with: add `bin/dbtoaster_frontend` and `examples/{data,queries}` from [here](https://dbtoaster.github.io/) to the `dbtoaster-backend` folder (keep the same paths).
+3. Get some data/queries to play with: copy the `bin/dbtoaster_frontend` and `examples/{data,queries}` folders from the [DBToaster binary distribution](https://dbtoaster.github.io/) to the `dbtoaster-backend` folder (keep the same paths).
 4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. For example, `sbt 'toast -l cpp examples/queries/simple/r_count.sql'`. The list of available options is show using `$ sbt 'toast --help'`.
 5. You can also run the whole test suit by following the extended setup.
 
