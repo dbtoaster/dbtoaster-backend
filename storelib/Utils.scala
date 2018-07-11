@@ -83,6 +83,7 @@ object Utils {
 
   // Paths related to DBToaster
   val pathRepo = prop("base_repo", null)
+  val dataRepo = prop("data_repo", null)
 
   val pathDBTBin =
     if (pathRepo != null) pathRepo + "/bin/dbtoaster_release"

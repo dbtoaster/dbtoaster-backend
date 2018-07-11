@@ -24,7 +24,7 @@ Currently the project matches original DBToaster code generation based on M3 and
 #### [Optional] Extended setup (to connect with dbtoaster-frontend)
 1. Follow steps 1 and 2 from the basic setup. No need to copy `bin/dbtoaster_frontend`.
 2. Checkout the DBToaster [front-end repository](https://github.com/dbtoaster/dbtoaster-a5). You will need [OCaml](http://caml.inria.fr/download.en.html) to compile the front-end. Compile using the `make` command.
-3. Create a file `ddbtoaster/conf/ddbt.properties` and set `ddbt.base_repo` path to dbtoaster-frontend repository (required for unit tests). A sample configuration file named `ddbtoaster/conf/ddbt.properties.example` exists in the repository. You can create a copy of it, rename it to `ddbtoaster/conf/ddbt.properties`, and modify it to have your desired parameters.
+3. Create a file `ddbtoaster/conf/ddbt.properties` and set `ddbt.base_repo` path to dbtoaster-frontend repository and `ddbt.data_repo` path to the dbtoaster-experiments-data repository (required for unit tests). A sample configuration file named `ddbtoaster/conf/ddbt.properties.example` exists in the repository. You can create a copy of it, rename it to `ddbtoaster/conf/ddbt.properties`, and modify it to have your desired parameters.
 4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. For example, `sbt 'toast -l cpp test/queries/simple/r_count.sql'`. Note that filenames are relative to `ddbt.base_repo`. Use absolute filenames if necessary.
 5. Run unit tests and benchmarking: `$ sbt 'unit --help'`
    

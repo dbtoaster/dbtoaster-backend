@@ -354,7 +354,10 @@ object Compiler {
     else {
       val repo = new File(pathRepo)
       val m3 = toast(repo, inputFile, lang, batchingEnabled, optLevel, debugFlags, ivmDepth)
-      m3.replaceAll("../../experiments/data", repo.getParentFile.getParent + "/experiments/data")
+      if(Utils.dataRepo != null)
+        m3.replaceAll("../../experiments/data",  Utils.dataRepo)
+      else
+        m3
     }
   }
 
