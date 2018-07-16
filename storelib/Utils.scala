@@ -179,7 +179,8 @@ object Utils {
     val jcp = if (cp == null || cp == "") "" else " -cp " + cp
     val args = jbootcp + jcp + " -d " + pathDir + " " + opts.mkString(" ") + " "
     val exe = if (useFsc) "fsc " else "scalac "
-    val scalac = exe + prop("jvm").split(" +").map("-J"+_).mkString(" ") + " " + args
+    val jopts = if(prop("jvm").isEmpty()) "" else prop("jvm").split(" +").map("-J"+_).mkString(" ")
+    val scalac = exe + jopts + " " + args
     (fs: List[String]) => 
       try { execOut(scalac + fs.mkString(" ")) } 
       catch { case _: IOException => 
