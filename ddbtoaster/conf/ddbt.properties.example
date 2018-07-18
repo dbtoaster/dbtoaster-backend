@@ -1,5 +1,5 @@
 # The base_repo path should be absolute
-ddbt.base_repo = /path/to/frontend/dbtoaster-a5/
+ddbt.base_repo = /path/to/frontend/dbtoaster-a5
 ddbt.data_repo = /path/to/data/dbtoaster-experiments-data
 
 # ddbt.lms       = 0
