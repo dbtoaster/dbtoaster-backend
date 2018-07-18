@@ -657,18 +657,31 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     codeGen.refSymbols ++= optTP.tempVars.map(_._1)
     for (x <- optTP.codeBlocks) {
       import codeGen.{doc => _, _}
-      val preBody =
-        s"""
-           |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
-           |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
-           |${if (x._1.contains("system_ready")) "" else "++tN;"}
+
+      val sTimeout = if(cgOpts.timeoutMilli > 0)
+        s"""|if (tS > 0) { ++tS; return; }
+            |if ((tN & 127) == 0) {
+            |  gettimeofday(&t, NULL);
+            |  tT = (t.tv_sec - t0.tv_sec) * 1000L;
+            |  if (tT > ${cgOpts.timeoutMilli}) { tS = 1; return; }
+            |}
+            |""".stripMargin else ""
+      var preBody = ""
+      var postBody = ""
+      if (!x._1.contains("system_ready")) {
+        preBody = s"""
+                    |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
+                    |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+                    |$sTimeout
+                    |++tN;
          """.stripMargin
-      val postBody =
-        s"""
-           |clearTempMem();
-           |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
-           |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+        postBody =
+          s"""
+             |clearTempMem();
+             |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
+             |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
          """.stripMargin
+      }
       val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
       def argTypeToDoc(tp: TypeRep[_]) = tp match {
         case StringType => doc"const $tp&"
