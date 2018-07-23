@@ -81,7 +81,7 @@ trait IScalaGen extends CodeGen {
     // }
     case _ => 
       if (withIfThenElse) 
-        "(if (" + arg1 + " " + cmpToString(op) + " " + arg2 + ") 1 else 0)"
+        "(if (" + arg1 + " " + cmpToString(op) + " " + arg2 + ") 1L else 0L)"
       else
         arg1 + " " + cmpToString(op) + " " + arg2
   }
@@ -212,12 +212,11 @@ trait IScalaGen extends CodeGen {
     case Ref(n) => co(rn(n))
     case Const(tp, v) => tp match {
       case TypeLong => co(v + "L")
-      case TypeFloat => co(v + "f")
       case TypeString => co("\"" + v + "\"")
       case _ => co(v)
     }
     case Exists(e) => 
-      cpsExpr(e, (v: String) => co("(if (" + v + " != 0) 1 else 0)"))
+      cpsExpr(e, (v: String) => co("(if (" + v + " != 0) 1L else 0L)"))
     case Cmp(l, r, op) => 
       cpsExpr(l, (ll: String) =>
         cpsExpr(r, (rr: String) => co(cmpFunc(l.tp, op, ll, rr))))
@@ -227,7 +226,7 @@ trait IScalaGen extends CodeGen {
         co("(if ((" +
           r.map(x => cpsExpr(x, (rr: String) => "(" + ll + " == " + rr + ")"))
           .mkString(" || ") +
-          ")) 1 else 0)"))
+          ")) 1L else 0L)"))
 
     case Apply(fn, tp, as) => applyFunc(co, fn, tp, as)
     //ki : inner key
@@ -270,14 +269,14 @@ trait IScalaGen extends CodeGen {
         ) + "\n" +
         "}\n" // bind free variables from retrieved key
       }
-    // "1" is the neutral element for multiplication, 
+    // "1L" is the neutral element for multiplication, 
     //  and chaining is done with multiplication
     case Lift(n, e) =>
     // Mul(Lift(x,3), Mul(Lift(x,4),x)) ==> (x=3; x) == (x=4; x)
       if (ctx.contains(n)) 
-        cpsExpr(e, (v: String) => co(cmpFunc(TypeChar, OpEq, rn(n), v)), am)
+        cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpEq, rn(n), v)), am)
       else e match {
-        case Ref(n2) => ctx.add(n, (e.tp, rn(n2))); co("1") // de-aliasing
+        case Ref(n2) => ctx.add(n, (e.tp, rn(n2))); co("1L") // de-aliasing
         //This renaming is required. As an example:
         //
         //C[x] = Add(A[x,y], B[x,y])
@@ -286,7 +285,7 @@ trait IScalaGen extends CodeGen {
         // will fail without a renaming.
         case _ =>
           ctx.add(n, (e.tp, fresh("l")))
-          cpsExpr(e, (v: String) => "val " + rn(n) + " = " + v + ";\n" + co("1"), am)
+          cpsExpr(e, (v: String) => "val " + rn(n) + " = " + v + ";\n" + co("1L"), am)
       }
     // Mul(el,er)
     // ==
@@ -296,8 +295,8 @@ trait IScalaGen extends CodeGen {
     case Mul(el, er) =>     
       def mul(vl: String, vr: String) = { // simplifies (vl * vr)
         def vx(vl: String, vr: String) = 
-          if (vl == "1") vr 
-          else if (vr == "1") vl 
+          if (vl == "1L") vr 
+          else if (vr == "1L") vl 
           else "(" + vl + " * " + vr + ")"
         //pulling out the conditionals from a multiplication
         (extractBooleanExp(vl), extractBooleanExp(vr)) match {
@@ -467,7 +466,7 @@ trait IScalaGen extends CodeGen {
     ctx = null
     val params = t.event match {
       case EventBatchUpdate(Schema(name, fields)) =>
-        delta(name) + ":M3Map[" + genTupleDef(fields.map(_._2)) + ", " + typeToString(TypeInt) + "]"
+        delta(name) + ":M3Map[" + genTupleDef(fields.map(_._2)) + ", " + typeToString(TypeLong) + "]"
       case _ =>
         as.map(a => a._1 + ": " + typeToString(a._2)).mkString(", ")
     }
@@ -498,7 +497,7 @@ trait IScalaGen extends CodeGen {
   }
 
   def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) =
-    map + ".add(" + keyNamesConcat + ", 1)"
+    map + ".add(" + keyNamesConcat + ", 1L)"
 
   def genAddBatchTuple(name: String, keys: List[(String, Type)], value: String): String = {
     name + ".add(" + 
@@ -697,7 +696,7 @@ trait IScalaGen extends CodeGen {
       
       // val ms = s0.triggers.map(_.event match { //delta relations
       //   case EventBatchUpdate(s) =>
-      //     genMap(MapDef(delta(s.name), TypeInt, schema.fields, null, LocalExp)) + "\n"
+      //     genMap(MapDef(delta(s.name), TypeLong, schema.fields, null, LocalExp)) + "\n"
       //   case _ => ""
       // }).mkString +
       // s0.triggers.flatMap { t => //local maps

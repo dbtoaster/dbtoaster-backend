@@ -21,11 +21,11 @@ object Functions {
 
   private val regExpCache = new collection.mutable.HashMap[String, Pattern]()
 
-  def Uregexp_match(re: String, str: String): Int = 
+  def Uregexp_match(re: String, str: String): Long = 
     Upreg_match(regExpCache.getOrElseUpdate(re, Pattern.compile(re)), str)
 
-  def Upreg_match(p: Pattern, str: String): Int =
-    if (p.matcher(str).find) 1 else 0
+  def Upreg_match(p: Pattern, str: String): Long =
+    if (p.matcher(str).find) 1L else 0L
 
   // --------  Arithmetic functions
   def Udiv(x: Int): Double = if (x == 0) 0.0 else 1.0 / x
@@ -41,18 +41,18 @@ object Functions {
   def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
 
   // --------  Date functions
-  def Udate(str: String): Int = {
+  def Udate(str: String): Long = {
     val s = str.split("-")
-    (s(0).toInt * 100 + s(1).toInt) * 100 + s(2).toInt
+    (s(0).toLong * 100 + s(1).toLong) * 100 + s(2).toLong
   }
 
-  def Udate_year(date: Int): Int  = date / 10000
+  def Udate_year(date: Long): Long  = date / 10000
 
-  def Udate_month(date: Int): Int = (date / 100) % 100
+  def Udate_month(date: Long): Long = (date / 100) % 100
 
-  def Udate_day(date: Int): Int = date % 100
+  def Udate_day(date: Long): Long = date % 100
 
-  def Udate_part(field: String, date: Int): Int = field.toLowerCase match {
+  def Udate_part(field: String, date: Long): Long = field.toLowerCase match {
     case "year"  => Udate_year(date)
     case "month" => Udate_month(date)
     case "day"   => Udate_day(date)

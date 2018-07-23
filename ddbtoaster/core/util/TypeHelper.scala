@@ -63,43 +63,35 @@ object TypeHelper {
   object Scala {
     
     def typeToString(t: Type) = t match {
-      case TypeChar | TypeShort | TypeInt => "Int"
-      case TypeLong   => "Long"
-      case TypeFloat  => "Float"
-      case TypeDouble => "Double"
-      case TypeDate   => "Int"
+      case TypeChar | TypeShort | TypeInt | TypeLong => "Long"
+      case TypeFloat | TypeDouble => "Double"
+      case TypeDate   => "Long"
       case TypeString => "String"
       case t: TypeCustom => sys.error("Custom types not supported")
     }
 
     def typeToChar(t: Type) = t match {
-      case TypeChar | TypeShort | TypeInt    => 'I'
-      case TypeLong   => 'L'
-      case TypeFloat  => 'f'
-      case TypeDouble => 'D'
-      case TypeDate   => 'T'
+      case TypeChar | TypeShort | TypeInt | TypeLong => 'L'
+      case TypeFloat | TypeDouble => 'D'
+      case TypeDate => 'T'
       case TypeString => 'S'
       case t: TypeCustom => sys.error("Custom types not supported")
     }
 
     def zeroOfType(t: Type) = t match {
-      case TypeChar | TypeShort | TypeInt => "0"
-      case TypeLong   => "0L"
-      case TypeFloat  => "0.0f"
-      case TypeDouble => "0.0"
-      case TypeDate   => "0"
+      case TypeChar | TypeShort | TypeInt | TypeLong => "0L"
+      case TypeFloat | TypeDouble => "0.0"
+      case TypeDate => "0"
       case TypeString => "\"\""
       case t: TypeCustom => sys.error("Custom types not supported")
     }
   }
 
   def fromString(s: String, tp: Type) = tp match {
-    case TypeChar | TypeShort | TypeInt => s.trim.toInt
-    case TypeLong   => s.trim.replaceAll("(l|L)$", "").toLong
-    case TypeFloat  => s.trim.replaceAll("(l|L|f|F)$", "").toFloat
-    case TypeDouble => s.trim.replaceAll("(l|L|f|F)$", "").toDouble
+    case TypeChar | TypeShort | TypeInt | TypeLong => s.trim.replaceAll("(l|L)$", "").toLong
+    case TypeFloat | TypeDouble => s.trim.replaceAll("(l|L|f|F)$", "").toDouble
     case TypeString => s.replaceAll("^\"|\"$", "")
-    case TypeDate   => s.trim.replaceAll("(l|L)$", "").toInt   // dateConv(v.toLong)
+    case TypeDate => s.trim.replaceAll("(l|L)$", "").toLong   // dateConv(v.toLong)
     case _ => sys.error("Cannot convert " + s + " into " + tp)
   }
 

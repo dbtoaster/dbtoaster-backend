@@ -282,24 +282,15 @@ object M3 {
 
     def replace(f: PartialFunction[Expr, Expr]): Expr = 
       f.applyOrElse(this, (ex: Expr) => ex match { // also preserve types
-        case Mul(l, r) => 
-          val newEx = Mul(l.replace(f), r.replace(f))
-          newEx.tp = tp
-          newEx
-        case a @ Add(l, r) => 
-          val newEx = Add(l.replace(f), r.replace(f))
-          newEx.tp = tp
-          newEx
+        case Mul(l, r) => new Mul(l.replace(f), r.replace(f), tp)          
+        case a @ Add(l, r) => new Add(l.replace(f), r.replace(f), tp)
         case Cmp(l, r, op) => Cmp(l.replace(f), r.replace(f), op)
         case CmpOrList(l, r) => CmpOrList(l.replace(f), r.map(_.replace(f)))
         case Exists(e) => Exists(e.replace(f))
         case Lift(n, e) => Lift(n, e.replace(f))
         case AggSum(ks, e) => AggSum(ks, e.replace(f))
         case Apply(fn, tp, as) => Apply(fn, tp, as.map(_.replace(f)))
-        case Tuple(es) => 
-          val newEx = Tuple(es.map(_.replace(f)))
-          newEx.tp = tp
-          newEx
+        case Tuple(es) => new Tuple(es.map(_.replace(f)), tp)
         case TupleLift(ns, e) => TupleLift(ns, e.replace(f))
         case Repartition(ks, e) => Repartition(ks, e.replace(f))
         case Gather(e) => Gather(e.replace(f))
@@ -307,26 +298,19 @@ object M3 {
       })
 
     def rename(r: String => String): Expr = replace {
-      case Ref(n) => 
-        val newEx = Ref(r(n))
-        newEx.tp = tp
-        newEx
+      case Ref(n) => new Ref(r(n), tp)
       case m @ MapRef(n, tp, ks, isTemp) =>
-        val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp)
-        newEx.locality = m.locality match { 
-          case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
-          case Some(DistRandomExp) => Some(DistRandomExp)
-          case Some(LocalExp) => Some(LocalExp)
-          case None => None
-        }
-        newEx
+        new MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp, 
+          m.locality match { 
+            case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
+            case Some(DistRandomExp) => Some(DistRandomExp)
+            case Some(LocalExp) => Some(LocalExp)
+            case None => None
+          })
       case Lift(n, e) => Lift(r(n), e.rename(r))
       case AggSum(ks, e) => AggSum(ks.map(x => (r(x._1), x._2)), e.rename(r)) 
       case Repartition(ks, e) => Repartition(ks.map(x => (r(x._1), x._2)), e.rename(r))
-      case a @ Add(el, er) => 
-        val newEx = Add(el.rename(r), er.rename(r))
-        newEx.tp = a.tp
-        newEx
+      case a @ Add(el, er) => new Add(el.rename(r), er.rename(r), a.tp)
     }
 
     def rename(m: Map[String, String]): Expr = 
@@ -456,6 +440,7 @@ object M3 {
   // Variables
   case class Ref(name: String) extends Expr { 
     var tp: Type = null 
+    def this(name0: String, tp0: Type) = { this(name0); tp = tp0 }
     val locality: Option[LocalityType] = None
     override def toString = name
     def toDecoratedString = name + ": " + tp
@@ -464,6 +449,12 @@ object M3 {
   // Map reference
   case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], val isTemp: Boolean = false) extends Expr {
     var locality: Option[LocalityType] = Some(LocalExp)
+
+    def this(name0: String, tp0: Type, keys0: List[(String, Type)], 
+             isTemp0: Boolean, locality0: Option[LocalityType]) = {
+      this(name0, tp0, keys0, isTemp0)
+      locality = locality0;
+    }
 
     override def toString = 
       name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
@@ -516,6 +507,7 @@ object M3 {
   // Multiplication operator
   case class Mul(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null 
+    def this(l0: Expr, r0: Expr, tp0: Type) = { this(l0, r0); tp = tp0 }
     def locality = (l.locality, r.locality) match {
       case (Some(LocalExp), Some(LocalExp)) => Some(LocalExp)
       case (Some(DistByKeyExp(a)), Some(DistRandomExp)) 
@@ -538,6 +530,7 @@ object M3 {
   // Union operator
   case class Add(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null
+    def this(l0: Expr, r0: Expr, tp0: Type) = { this(l0, r0); tp = tp0 }
     def locality = (l.locality, r.locality) match {
       case (Some(LocalExp), Some(LocalExp)) => Some(LocalExp)
       case (Some(DistRandomExp), Some(DistRandomExp)) => Some(DistRandomExp)
@@ -586,6 +579,7 @@ object M3 {
   // Tupling
   case class Tuple(es: List[Expr]) extends Expr { 
     var tp: Type = null 
+    def this(es0: List[Expr], tp0: Type) = { this(es0); tp = tp0 }
     val locality: Option[LocalityType] = None
     override def toString = "<" + es.mkString(", ") + ">"
     def toDecoratedString = "<" + es.map(_.toDecoratedString).mkString(", ") + ">: " + tp

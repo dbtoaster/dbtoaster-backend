@@ -78,6 +78,8 @@ object UnitTest {
       // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
       "employee/query35b.sql",
       "employee/query36b.sql",
+      // non-aggregate subquery
+      "employee/query38.sql",
       // too long to compile
       "mddb/query3.sql",
       "finance/missedtrades.sql",
@@ -87,7 +89,14 @@ object UnitTest {
       "simple/r_case2.sql",
       // Nested subqueries not supported outside of aggregates
       "simple/selectnesting.sql",
-      "simple/type_mappings.sql"
+      "simple/type_mappings.sql",
+      // Undefined UDF
+      "simple/external_fn_test.sql",
+      // frontend bugs?
+      "tpch/query11_1.sql",
+      "tpch/query11_2.sql",
+      "tpch/query11_5.sql",
+      "tpch/query11_2nest_2.sql"
     )
 
   private val pathExamples = "examples/queries"

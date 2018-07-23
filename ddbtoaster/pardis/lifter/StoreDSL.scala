@@ -227,34 +227,28 @@ trait StoreDSL extends
     fn match {
       case "div" => div(args(0).asInstanceOf[Rep[Double]])
       case "mul" => tp match {
-        case TypeChar | TypeShort | TypeInt => 
-          mulInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-        case TypeLong => 
+        case TypeChar | TypeShort | TypeInt | TypeLong => 
           mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
         case TypeFloat | TypeDouble => 
           mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => m3_apply(fn, args)(man(tp))
       }
       case "listmax" => tp match {
-        case TypeChar | TypeShort | TypeInt =>
-          maxInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-        case TypeLong =>
+        case TypeChar | TypeShort | TypeInt | TypeLong =>
           maxLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
         case TypeFloat | TypeDouble =>
           maxDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => sys.error("Wrong type (" + tp + ") of listmax")        
       }
       case "listmin" => tp match {
-        case TypeChar | TypeShort | TypeInt =>
-          minInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-        case TypeLong =>
+        case TypeChar | TypeShort | TypeInt | TypeLong =>
           minLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
         case TypeFloat | TypeDouble =>
           minDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => sys.error("Wrong type (" + tp + ") of listmin")
       }
       case "substring" => 
-        substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Int]], args(2).asInstanceOf[Rep[Int]])
+        substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Long]], args(2).asInstanceOf[Rep[Long]])
       case "date" => args(0) match {
         case Constant(strDate) => Constant(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
         case _ => m3_apply(fn, args)(man(tp))
@@ -464,7 +458,7 @@ trait StoreDSL extends
   def minLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = __ifThenElse(v1 < v2, v1, v2)
   def minDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 < v2, v1, v2)
 
-  def substring(str: Rep[String], start: Rep[Int], length: Rep[Int]): Rep[String] = (str, start, length) match {
+  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = (str, start, length) match {
     case (Constant(s), Constant(t), Constant(l)) => Constant(s.substring(t.toInt, l.toInt))
     case (s, Constant(t), Constant(l)) => str.substring(unit(t.toInt), unit(l.toInt))
     case _ => str.substring(start.toInt, length.toInt)

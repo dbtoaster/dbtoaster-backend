@@ -68,11 +68,10 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
-      case TypeChar | TypeShort | TypeInt => runtimeType[Int]
-      case TypeLong => runtimeType[Long]
+      case TypeChar | TypeShort | TypeInt | TypeLong => runtimeType[Long]
       case TypeFloat | TypeDouble => runtimeType[Double]
       case TypeString => runtimeType[String]
-      case TypeDate => runtimeType[Int]
+      case TypeDate => runtimeType[Long]
       // case TypeDate => runtimeType[Date]
       case _ => sys.error("Unsupported type: " + tp)
     }
@@ -115,8 +114,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
-      case TypeChar | TypeShort | TypeInt => co(IR.unit(v.toInt))
-      case TypeLong => co(IR.unit(v.toLong))
+      case TypeChar | TypeShort | TypeInt | TypeLong => co(IR.unit(v.toLong))
       case TypeFloat | TypeDouble => co(IR.unit(v.toDouble))
       case TypeString => co(IR.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
@@ -124,7 +122,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
     }
     case Exists(e) => 
       expr(e, (ve: Rep[_]) => 
-        co(IR.BooleanExtra.conditional(IR.infix_!=(ve.asInstanceOf[Rep[Int]], IR.unit(0)), IR.unit(1), IR.unit(0))))
+        co(IR.BooleanExtra.conditional(IR.infix_!=(ve.asInstanceOf[Rep[Long]], IR.unit(0L)), IR.unit(1L), IR.unit(0L))))
     case Cmp(l, r, op) => 
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(cmp(vl, op, vr, ex.tp)))) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case CmpOrList(l, rr) =>
@@ -134,7 +132,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
            expr(r, (vr: Rep[_]) => { cond = condition(vl, OpEq, vr, ex.tp); IR.unit })
            cond
          }.reduce(_ || _)
-        co(IR.BooleanExtra.conditional(orCond, IR.unit(1), IR.unit(0)))
+        co(IR.BooleanExtra.conditional(orCond, IR.unit(1L), IR.unit(0L)))
       })
     case a@M3ASTApply(fn, tp, as) =>
       def app(es: List[Expr], vs: List[Rep[_]]): Rep[Unit] = es match {
@@ -154,17 +152,17 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
     case Lift(n, e) =>
       if (cx.contains(n))
         expr(e, (ve: Rep[_]) => 
-          co(IR.BooleanExtra.conditional(IR.infix_==(ve.asInstanceOf[Rep[Any]], cx(n).asInstanceOf[Rep[Any]]), IR.unit(1), IR.unit(0))), am)
+          co(IR.BooleanExtra.conditional(IR.infix_==(ve.asInstanceOf[Rep[Any]], cx(n).asInstanceOf[Rep[Any]]), IR.unit(1L), IR.unit(0L))), am)
       else e match {
         case Ref(n2) => 
           cx.add(n, cx(n2))
-          co(IR.unit(1))
+          co(IR.unit(1L))
         case _ => expr(e, (ve: Rep[_]) => {
           cx.add(n, ve);
-          co(IR.unit(1))
+          co(IR.unit(1L))
         })
       }
-    //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1), unit(0))))))) //TODO: SBJ: am??
+    //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
     case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSliceOrLift(rr) =>
       val tp = man(rr.tp).asInstanceOf[TypeRep[Any]]
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
@@ -255,14 +253,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur = cx.save;
         ex.tp match {
-          case TypeChar | TypeShort | TypeInt =>
-            val agg: IR.Var[Int] = IR.__newVar[Int](IR.unit(0))
-            expr(e,
-              (v: Rep[_]) => IR.__assign[Int](agg.asInstanceOf[IR.Var[Int]], IR.numeric_plus[Int](IR.readVar[Int](agg.asInstanceOf[IR.Var[Int]]), v.asInstanceOf[Rep[Int]]))
-            )
-            cx.load(cur)
-            co(IR.readVar(agg))
-          case TypeLong =>
+          case TypeChar | TypeShort | TypeInt | TypeLong =>
             val agg: IR.Var[Long] = IR.__newVar[Long](IR.unit(0L))
             expr(e,
               (v: Rep[_]) => IR.__assign[Long](agg.asInstanceOf[IR.Var[Long]], IR.numeric_plus[Long](IR.readVar[Long](agg.asInstanceOf[IR.Var[Long]]), v.asInstanceOf[Rep[Long]]))
@@ -333,8 +324,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def add(l: Rep[_], r: Rep[_], tp: Type) = {
     @inline def plus[T: TypeRep]() = IR.numeric_plus[T](l.asInstanceOf[Rep[T]], r.asInstanceOf[Rep[T]])
     tp match {
-      case TypeChar | TypeShort | TypeInt => plus[Int]()
-      case TypeLong => plus[Long]()
+      case TypeChar | TypeShort | TypeInt | TypeLong => plus[Long]()
       case TypeFloat | TypeDouble => plus[Double]()
       case _ => sys.error("Add(l,r) only allowed on numeric types")
     }
@@ -351,18 +341,17 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       }
     }
     tp match {
-      case TypeChar | TypeShort | TypeInt => cmp2[Int](l, r)
-      case TypeLong => cmp2[Long](l, r)
+      case TypeChar | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
       case TypeFloat | TypeDouble => cmp2[Double](l, r)
       case TypeString => cmp2[String](l, r)
-      case TypeDate => cmp2[Int](l, r)
+      case TypeDate => cmp2[Long](l, r)
       // case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
     }
   }
 
-  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Int] = {
-    IR.BooleanExtra.conditional(condition(l, op, r, tp), IR.unit(1), IR.unit(0))
+  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Long] = {
+    IR.BooleanExtra.conditional(condition(l, op, r, tp), IR.unit(1L), IR.unit(0L))
   }
 
   def filterStatement(s: M3.Statement) = s match {
@@ -397,11 +386,10 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val (mm, mmtp) = m.tp match {
-              case TypeChar | TypeShort | TypeInt => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Int]]]) -> IntType
-              case TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
+              case TypeChar | TypeShort | TypeInt | TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
               case TypeFloat | TypeDouble => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Double]]]) -> DoubleType
               case TypeString => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[String]]]) -> StringType
-              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> IntType
+              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> LongType
               // case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
               case _ => sys.error("Unsupported type " + m.tp)
             }
@@ -613,10 +601,10 @@ class PardisScalaGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optim
     if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert($name(" + (if (Optimizer.secondaryIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ", 1))"
+      map + s".unsafeInsert($name(" + (if (Optimizer.secondaryIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ", 1L))"
     }
     else
-      map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ", 1))"
+      map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ", 1L))"
   }
 
   override def toMapFunction(q: Query) = {
