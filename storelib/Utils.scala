@@ -192,7 +192,7 @@ object Utils {
   // C++ compiler wrapper
   def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
     val as = 
-      ( List(prop("gpp", "g++"), cppLibDir + "/main.cpp", "-Wall", 
+      ( List(prop("gpp", "g++"), cppLibDir + "/main.cpp", "-Wall", "-Wno-maybe-uninitialized",
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
           "-I" + cppLibDir, "-L" + cppLibDir) :::

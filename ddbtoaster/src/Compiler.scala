@@ -432,6 +432,7 @@ object Compiler {
         Optimizer.coldMotion = (frontendOptLevel == "-O3")
         // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
         Optimizer.parameterPromotion = true
+        Optimizer.cTransformer = false
         new PardisScalaGen(codegenOpts) //DSL
       case LANG_SPARK_LMS => 
         new LMSSparkGen(codegenOpts)
