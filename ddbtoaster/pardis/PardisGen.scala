@@ -88,7 +88,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def mapProxy2(m: Rep[_]) = new IR.StoreRep1(m.asInstanceOf[Rep[Store[Entry]]])
 
 
-  def containsForeachOrSliceOrLift(ex: Expr): Boolean = ex match {
+  def containsForeachOrSlice(ex: Expr): Boolean = ex match {
     case MapRef(_, _, ks, _) => {
       ks.size > 0 && {
         val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
@@ -97,31 +97,71 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
     }
     case a@Add(l, r) if a.schema._2.exists { case (n, t) => !cx.contains(n) } => true
     case a@AggSum(ks, e) if ks.exists { case (n, t) => !cx.contains(n) } => true
-    case Lift(n, e) =>
-      if (cx.contains(n)) false
-      else e match {
-        case Ref(n2) => false
-        case _ => true
-      }
-    case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSliceOrLift(e) }.foldLeft(false)(_ || _)
+    case _ => false
   }
 
   val nameToSymMap = collection.mutable.HashMap[String, Rep[_]]() //maps the name used in IScalaGen/ICppGen to SC Symbols
+  var unionDepth = 0
+  /**
+    Extracts from expressions boolean conditions  on which the result depends on. Used for MultCmp optimization
+  */
+  def extractBoolean(ex: Expr): Option[Rep[Boolean]] = ex match {
 
+    case Exists(e) if containsForeachOrSlice(e) => None  //No conditions for foreach and slice. They always exist
+
+    case Exists(e@MapRef(n, tp, ks, isTemp)) if ks.size > 0 && ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1)) => //check if it is a get on a store
+      val vs = ks.zipWithIndex.map { case (k, i) => (i + 1, cx(k._1)) }
+      val r = mapProxy2(cx(n)).get1(vs: _*)
+      Some(IR.infix_!=(r, IR.unit(null)))
+
+    case Exists(e) =>
+      var cond: Rep[Boolean] = null
+      expr(e, (ve: Rep[_]) => {cond = IR.infix_!=(ve.asInstanceOf[Rep[Int]],IR.unit(0)); IR.unit})
+      Some(cond)
+
+    case Cmp(l, r, op) =>
+      var cond: Rep[Boolean] = null
+      expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => {cond = condition(vl, op, vr, ex.tp); IR.unit}))
+      Some(cond)
+
+    case CmpOrList(l, rr) =>
+      var orCond: Rep[Boolean] = null
+      expr(l, (vl: Rep[_]) => {
+        orCond = rr.map { r =>
+          var cond: Rep[Boolean] = null
+          expr(r, (vr: Rep[_]) => {
+            cond = condition(vl, OpEq, vr, ex.tp);
+            IR.unit
+          })
+          cond
+        }.reduce(_ || _)
+        IR.unit
+      })
+      Some(orCond)
+    case Lift(n, e) if cx.contains(n) =>
+      var cond: Rep[Boolean] = null
+      expr(e, (ve: Rep[_]) => {cond = IR.infix_==(ve.asInstanceOf[Rep[Any]], cx(n).asInstanceOf[Rep[Any]]); IR.unit})
+      Some(cond)
+    case _ => None
+  }
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
   //   co : continuation in which the result should be plugged
   //   am : shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
+
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
       case TypeChar | TypeShort | TypeInt => co(IR.unit(v.toInt))
       case TypeLong => co(IR.unit(v.toLong))
       case TypeFloat | TypeDouble => co(IR.unit(v.toDouble))
+      case TypeString if Optimizer.regexHoister && Optimizer.cTransformer => expr(M3ASTApply("STRING_TYPE", TypeString, List(ex)), co, am)
       case TypeString => co(IR.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type " + tp)
     }
+    case Exists(e@MapRef(n, tp, ks, isTemp)) if Optimizer.m3CompareMultiply && (ks.size > 0 && !ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1))) =>
+      expr(e, (ve: Rep[_]) => co(IR.unit(1)))
     case Exists(e) => 
       expr(e, (ve: Rep[_]) => 
         co(IR.BooleanExtra.conditional(IR.infix_!=(ve.asInstanceOf[Rep[Int]], IR.unit(0)), IR.unit(1), IR.unit(0))))
@@ -148,6 +188,14 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, Utils.fresh("preg"))
         val regex = nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(RegexType))
         expr(as(1), (v: Rep[_]) => co(IR.m3apply("preg_match", List(regex, v), tp)))
+      } else if (fn.equals("date_part")) { //Need to handle it here before the string constant get hoisted
+        val (as2, fn2) = as.head.asInstanceOf[Const].v.toLowerCase match {
+          case "year" => (as.tail, "date_year")
+          case "month" => (as.tail, "date_month")
+          case "day" => (as.tail, "date_day")
+          case p => throw new Exception("Invalid date part: " + p)
+        }
+        expr(M3ASTApply(fn2, tp, as2), co)
       }
       else app(as, Nil)
 
@@ -164,27 +212,35 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
           co(IR.unit(1))
         })
       }
-    //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1), unit(0))))))) //TODO: SBJ: am??
-    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSliceOrLift(rr) =>
-      val tp = man(rr.tp).asInstanceOf[TypeRep[Any]]
-      expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
-        var tmpVrr: Rep[_] = null;
-        expr(rr, (vrr: Rep[_]) => {
-          tmpVrr = vrr;
-          IR.unit(())
-        });
-        tmpVrr
-      }, IR.unit(zero(rr.tp))(tp))(tp)), am), am)
-    case Mul(l, r) => 
-      expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
+
+    case Mul(l, r) => extractBoolean(l) match {
+
+      //If unionDepth is zero, the zero result is not added to anything else. So entire result cna be discarded and continuation not applied
+      case Some(cond) if Optimizer.m3CompareMultiply && unionDepth == 0 =>
+        IR.__ifThenElse(cond, {
+          expr(r, (vr: Rep[_]) => {
+            co(vr)
+          },am)
+        }, IR.unit())
+
+      //If UnionDepth is non-zero, if condition evaluates to false, the result continuation should still be invoked with  value 0
+      case Some(cond) if Optimizer.m3CompareMultiply =>
+        val tp = man(r.tp).asInstanceOf[TypeRep[Any]]
+        expr(r, (vr: Rep[_]) =>
+          co(IR.__ifThenElse(cond, vr, IR.unit(zero(r.tp))(tp))(tp)), am)
+      case _ =>  expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
+    }
+
     case a@Add(l, r) =>
       val agg = a.schema._2.filter { case (n, t) => !cx.contains(n) }
       if (agg == Nil) {
         val cur = cx.save
+        unionDepth += 1
         expr(l, (vl: Rep[_]) => {
           cx.load(cur)
           expr(r, (vr: Rep[_]) => {
             cx.load(cur)
+            unionDepth -= 1
             co(add(vl, vr, ex.tp).asInstanceOf[Rep[_]])
           }, am)
         }, am)

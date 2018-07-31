@@ -227,11 +227,11 @@ trait StoreDSL extends
     fn match {
       case "div" => div(args(0).asInstanceOf[Rep[Double]])
       case "mul" => tp match {
-        case TypeChar | TypeShort | TypeInt => 
+        case TypeChar | TypeShort | TypeInt =>
           mulInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-        case TypeLong => 
+        case TypeLong =>
           mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
-        case TypeFloat | TypeDouble => 
+        case TypeFloat | TypeDouble =>
           mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => m3_apply(fn, args)(man(tp))
       }
@@ -242,7 +242,7 @@ trait StoreDSL extends
           maxLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
         case TypeFloat | TypeDouble =>
           maxDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
-        case _ => sys.error("Wrong type (" + tp + ") of listmax")        
+        case _ => sys.error("Wrong type (" + tp + ") of listmax")
       }
       case "listmin" => tp match {
         case TypeChar | TypeShort | TypeInt =>
@@ -253,19 +253,10 @@ trait StoreDSL extends
           minDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
         case _ => sys.error("Wrong type (" + tp + ") of listmin")
       }
-      case "substring" => 
+      case "substring" =>
         substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Int]], args(2).asInstanceOf[Rep[Int]])
       case "date" => args(0) match {
         case Constant(strDate) => Constant(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
-        case _ => m3_apply(fn, args)(man(tp))
-      }
-      case "date_part" => args(0) match {
-        case Constant(t: String) => t.toLowerCase match {
-          case "year" => m3_apply("date_year", args.drop(1))(man(tp))
-          case "month" => m3_apply("date_month", args.drop(1))(man(tp))
-          case "day" => m3_apply("date_day", args.drop(1))(man(tp))
-          case p => throw new IllegalArgumentException("Invalid date part: " + p)
-        }
         case _ => m3_apply(fn, args)(man(tp))
       }
       case _ => m3_apply(fn, args)(man(tp)) // fallback for large or unknown functions
