@@ -8,20 +8,18 @@ import ch.epfl.data.sc.pardis.ir.CTypes.{Pointer, PointerType}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ch.epfl.data.sc.pardis.optimization._
-
 import ddbt.ast._
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
-
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.{StoreDSL, StoreDSLOptimized}
 import ddbt.lib.Utils
 import ddbt.lib.Utils._
 import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreCppCodeGenerator, StoreScalaCodeGenerator}
-import ddbt.transformer._
-
+import ddbt.transformer.{SchemaFlag, _}
 import java.io.{File, PrintWriter}
+
 import scala.collection.mutable
 import scala.util.parsing.json.JSON
 import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
@@ -695,7 +693,7 @@ class PardisScalaGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optim
 }
 
 class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) with ICppGen {
-  override val codeGen: StoreCppCodeGenerator = new StoreCppCodeGenerator(IR)
+  override val codeGen: StoreCppCodeGenerator = new StoreCppCodeGenerator(IR, cgOpts)
 
   import IR._
 
@@ -726,17 +724,10 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
       var postBody = ""
       if (!x._1.contains("system_ready")) {
         preBody = s"""
-                    |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
-                    |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
                     |$sTimeout
                     |++tN;
          """.stripMargin
-        postBody =
-          s"""
-             |clearTempMem();
-             |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
-             |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
-         """.stripMargin
+        postBody = stringIf(cgOpts.vanillaCompatible, "", "clearTempMem();")
       }
       val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
       def argTypeToDoc(tp: TypeRep[_]) = tp match {
@@ -768,14 +759,18 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     }
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
-        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
+        val result = fields.last
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: s", prv(nullptr), nxt(nullptr) {}"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
-        val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const { ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
+        }).mkDocument(", ") :: s", prv(nullptr), nxt(nullptr) {}"
+        val copyFn = if(cgOpts.vanillaCompatible)
+          doc"${tag.typeName}(const ${tag.typeName}& that) : " :: fields.map(x => doc"${x.name}(that.${x.name})").mkDocument(", ") :: s", prv(nullptr), nxt(nullptr) {}"
+        else
+          doc"FORCE_INLINE ${tag.typeName}* copy() const { ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
 //          if (x.tpe == StringType)
 //            doc"*${x.name}.copy()"
 //          else
@@ -813,16 +808,22 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
       if (s.tp.isInstanceOf[StoreType[_]]) {
         def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
         val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
-        val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
+        val resultTp = typeToTypeRep(ctx0(s.name)._3)
+        val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s), resultTp)).zipWithIndex
         val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}_map;"
+        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, ${resultTp}," :/: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}_map;"
         val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
         val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
         val storeDecl = s.name :: "_map  " :: s.name :: initSize
         toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name)
         idxSymNames ++= idx2(s).filter(_._2 != "INone").map(s => s._1.name)
-        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
+        def idxMapping(n: Int) =
+          if (cgOpts.vanillaCompatible) {
+            if (n == 0) doc"primary_index;" else doc"secondary_indexes[${n - 1}];"
+          }
+          else doc"index[$n];"
+        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.":: idxMapping(t._2)).mkDocument("\n")
         val primaryIdx = idx2(s)(0)
         idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl
       } else {
@@ -839,11 +840,11 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
 
     }).mkDocument("\n\n") + "\n"
 
-    val checks = doc"void checkAll() {" :/: Document.nest(2, {
+    val checks = if(cgOpts.vanillaCompatible) doc"" else doc"void checkAll() {" :/: Document.nest(2, {
       toCheck.map(s => doc"CHECK_STAT($s);").mkDocument("\n")
     }) :/: "}"
 
-    val runtime = doc"void getRuntimeInfo() {" :/: Document.nest(2, {
+    val runtime = if(cgOpts.vanillaCompatible) doc"" else doc"void getRuntimeInfo() {" :/: Document.nest(2, {
       doc"""std::ofstream info("$infoFilePath");""" :\\:
         idxSymNames.map(s => doc"GET_RUN_STAT($s, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";") :\\:
         doc"info.close();"
@@ -861,16 +862,24 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
   //    case StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops))))) =>
   //  }
 
-  def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
+  def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)], resultTp : TypeRep[_]): Document = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
-    idx._2 match {
-      case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
-      case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
-      case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
-      case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
-      case "IList" => doc"ListIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
-    }
+    if(cgOpts.vanillaCompatible) {
+      idx match {
+        case (_, "IHash", true, _, idx) => doc"PrimaryHashIndex<$entryTp, $idx>"
+        case (_, "IHash", false, _, idx) => doc"SecondaryHashIndex<$entryTp, $idx>"
+        case _ => ???
+      }
 
+    } else {
+      idx._2 match {
+        case "IHash" => doc"HashIndex<$entryTp, $resultTp, ${idx._5}, ${unit(idx._3)}>"
+        case "IDirect" => doc"ArrayIndex<$entryTp, $resultTp, ${idx._5}, ${unit(idx._4)}>"
+        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, $resultTp, ${idx2._5}, ${idx._5}, ${unit(true)}>"
+        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, $resultTp, ${idx2._5}, ${idx._5}, ${unit(false)}>"
+        case "IList" => doc"ListIndex<$entryTp, $resultTp, ${idx._5}, ${unit(idx._3)}>"
+      }
+    }
   }
 
   override def getTriggerNameArgs(t: Trigger) = t.event match {
@@ -892,9 +901,9 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     s"void on_$Cname(" + params.map(i => "const")
   }
 
-  override def emitIncludeHeaders = 
-    s"""|#define SC_GENERATED 1
-        |#include "program_base.hpp"
+  override def emitIncludeHeaders =
+    stringIf(cgOpts.vanillaCompatible,"#include \"ScExtra.h\"\n","#define SC_GENERATED 1\n") +
+    s"""|#include "program_base.hpp"
         |#include "hpds/KDouble.hpp"
         |#include "hash.hpp"
         |#include "mmap/mmap.hpp"
@@ -925,14 +934,14 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
   override protected def emitTakeSnapshotBody = 
     super.emitTakeSnapshotBody + 
     "\n// checkAll(); //print bucket statistics\n" +
-    stringIf(pardisProfilingOn, "// ") + 
-    "ExecutionProfiler::printProfileToFile(\"profile${cgOpts.className}.csv\");\n"
+    stringIf(pardisProfilingOn, "ExecutionProfiler::printProfileToFile(\"profile"+cgOpts.className+".csv\");\n")
+
 
   override protected def emitFieldNames(fields: List[(String, Type)]) = 
     stringIf(pardisExtendEntryParam, "false_type(), ") + super.emitFieldNames(fields)
 
   override protected def emitInsertToMapFunc(map: String, entry: String) = 
-    map + ".insert_nocheck(" + entry + ");"
+    map + stringIf(cgOpts.vanillaCompatible,".insert(",".insert_nocheck(") + entry + ");"
 
   override protected def prepareCodegen(s0: System): Unit = {
     val x = genPardis(s0)

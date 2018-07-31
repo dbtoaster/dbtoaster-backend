@@ -541,7 +541,7 @@ object Compiler {
     val codegenOpts =
       new CodeGenOptions(
         className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli, 
-        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, execPrintProgress)
+        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, execPrintProgress, true)
 
     val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
 

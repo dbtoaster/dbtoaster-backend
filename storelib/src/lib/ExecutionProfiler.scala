@@ -27,6 +27,6 @@ object ExP {
   }
 
   def print() = {
-    System.err.println(durations.keySet.map(k => s"$k  count = ${counters(k)}   time =  ${durations(k) / 1000000.0} ms    avg time = ${durations(k) / counters(k)} ns").mkString("\n"))
+    System.err.println(durations.keySet.toSeq.sorted.map(k => s"$k  count = ${counters(k)}   time =  ${durations(k) / 1000000.0} ms    avg time = ${durations(k) / counters(k)} ns").mkString("\n"))
   }
 }

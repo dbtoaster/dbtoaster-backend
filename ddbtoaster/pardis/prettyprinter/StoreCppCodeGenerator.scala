@@ -5,18 +5,19 @@ import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
 import ch.epfl.data.sc.pardis.types._
+import ch.epfl.data.sc.pardis.utils.TypeUtils
 import ch.epfl.data.sc.pardis.utils.document._
-import ddbt.codegen.Optimizer
+import ddbt.codegen.{CodeGenOptions, Optimizer}
 import ddbt.lib.store.{IHash, IList}
 import ddbt.lib.store.deep.{ProfileEnd, ProfileStart, StoreDSL, StructDynamicFieldAccess, StructFieldDecr, StructFieldIncr}
-import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
+import ddbt.transformer._
 import sun.security.x509.CRLDistributionPointsExtension
 
 
 /**
   * Created by sachin on 28.04.16.
   */
-class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator with StoreCodeGenerator {
+class StoreCppCodeGenerator(override val IR: StoreDSL, cgOpts: CodeGenOptions=null) extends CCodeGenerator with StoreCodeGenerator {
 
   import IR._
 
@@ -102,14 +103,29 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           s"GenericFixedRange_$cols"
       }
       val idxes = sym.attributes.get(IndexesFlag).get.indexes
-      def idxToDoc(t: (Index, String)) = t._1.tp match {
-        case IHash => doc"HashIndex<$entryTp, char, ${t._2 }, ${if (t._1.unique) "1" else "0" }>"
-        case IList => doc"ListIndex<$entryTp, char, ${t._2 },  ${if (t._1.unique) "1" else "0" }>"
+      def idxToDoc(t: (Index, String), rtp: TypeRep[_]) = if(cgOpts.vanillaCompatible)
+          t._1 match {
+            case Index(_,_,IHash,true,_,_,_) => doc"PrimaryHashIndex<$entryTp, ${t._2}>"
+            case Index(_,_,IHash,false,_,_,_) => doc"SecondaryHashIndex<$entryTp, ${t._2}>"
+            case _ => ???
+          }
+      else
+        t._1.tp match {
+        case IHash => doc"HashIndex<$entryTp, $rtp, ${t._2 }, ${if (t._1.unique) "1" else "0" }>"
+        case IList => doc"ListIndex<$entryTp, $rtp, ${t._2 },  ${if (t._1.unique) "1" else "0" }>"
+        case _ => ???
       }
+      val resultType =  sym.attributes.get(SchemaFlag).get.sch.last
       val initSize = if (Optimizer.initialStoreSize) doc"(${sym }ArrayLengths, ${sym }PoolSizes);" else doc";"
-      val idxTypeDefs = idxes.zip(names).map(t => doc"typedef ${idxToDoc(t) } ${sym }_Idx_${t._1.idxNum }_Type;").mkDocument("\n")
+      val idxTypeDefs = idxes.zip(names).map(t => doc"typedef ${idxToDoc(t, resultType)} ${sym }_Idx_${t._1.idxNum }_Type;").mkDocument("\n")
       idxTypeDefs :/:
-        doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym }_Idx_${i.idxNum }_Type").mkDocument(", ") :: doc"> $sym$initSize"
+        doc"MultiHashMap<$entryTp, $resultType," :: idxes.map(i => doc"${sym }_Idx_${i.idxNum }_Type").mkDocument(", ") :: doc"> $sym$initSize"
+
+
+    case Statement(sym, StoreIndex(self, idxNum, _, _, _)) if cgOpts.vanillaCompatible => idxNum match {
+      case Constant(0) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.primary_index;"
+      case Constant(n) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.secondary_indexes[${n-1}];"
+    }
 
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self }_Idx_${idxNum }_Type& $sym = * (${self }_Idx_${idxNum }_Type *)$self.index[$idxNum];"
 
@@ -137,6 +153,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
     /** ************************* INDEX *********************************************/
+    case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if cgOpts.vanillaCompatible =>
+      doc"auto* $sym = $idx.slice($key);"
+
     case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if Optimizer.sliceInline =>
       val h = "h" + sym.id
       val IDX_FN = "IDXFN" + sym.id
@@ -168,6 +187,15 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val post = doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
+    case Statement(sym, IdxSliceResMapNoUpd(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)), res: Sym[_])) if cgOpts.vanillaCompatible =>
+       val pre = doc"//sliceResMapNoUpd " :\\:
+        doc"auto* n$res = $res;" :\\:
+        doc"while(n$res) {" :\\:
+        doc"  auto $i = n$res->obj;"
+      val post = doc"  n$res = (n$res != $res ? n$res->nxt : n$res->child);" :\\:
+        doc"}"
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
+
     case Statement(sym, IdxSliceResMapNoUpd(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)), res: Sym[_])) if Optimizer.sliceInline =>
       val h = "h" + res.id
       val IDX_FN = "IDXFN" + res.id
@@ -179,9 +207,20 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val post = doc"} while((n$res = n$res->nxt));"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
+    case Statement(sym, IdxForeachRes(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)))) if cgOpts.vanillaCompatible => doc"auto* $sym = $self.head;"
     case Statement(sym, IdxForeachRes(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)))) if Optimizer.sliceInline => doc"auto* $sym = $idx.dataHead;"
 
     case Statement(sym, IdxForeachRes(idx)) => doc"auto* $sym = $idx.foreachRes();"
+
+    case Statement(sym, IdxForeachResMap(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)), res: Sym[_])) if cgOpts.vanillaCompatible =>
+      val pre =
+        doc"//foreach" :\\:
+          doc"${i.tp } $i= $res;" :\\:
+          doc"while($i) {"
+      val post =
+        doc"  $i = $i -> nxt;" :\\:
+          doc"}"
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeachResMap(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)), res: Sym[_])) if Optimizer.sliceInline =>
       val pre =
@@ -313,6 +352,11 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
+    case Statement(sym, n@IdxGet(idx,key)) if cgOpts.vanillaCompatible =>
+      val h1 = "h" + sym.id
+      val h2 = "h" + key.asInstanceOf[Sym[_]].id
+      doc"HASH_RES_t $h1 = $idx.computeHash($key), $h2 = $h1;" :\\:
+      doc"${sym.tp} $sym = $idx.get($key, $h2);"
     //    case Statement(sym, n@IdxGet(_, _)) if Optimizer.mvget =>
     //      doc"const ${sym.tp} $sym = " :: nodeToDocument(n) :: ";"
 
@@ -435,6 +479,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.concCPP => doc"$self.resultForUpdate(xact)"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
+    case StoreUnsafeInsert(self, e) if cgOpts.vanillaCompatible =>
+      val h = "h" + e.asInstanceOf[Sym[_]].id
+      doc"$self.insert($e, $h)"
     case StoreUnsafeInsert(self, e) if Optimizer.concCPP => doc"$self.insert_nocheck($e, xact)"
     case StoreUnsafeInsert(self, e)  => doc"$self.insert_nocheck($e)"
     case StoreGet(self, idx, key) => doc"$self.get($key, $idx)"
@@ -443,6 +490,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreUpdate(self, key) => doc"$self.update($key)"
     case StoreUpdateCopy(self, key) => doc"$self.updateCopy($key)"
     case StoreUpdateCopyDependent(self, key) => doc"$self.updateCopyDependent($key)"
+    case StoreDelete1(self, key) if cgOpts.vanillaCompatible =>
+      val h = "h" + key.asInstanceOf[Sym[_]].id
+      doc"$self.del($key, $h)"
     case StoreDelete1(self, key) => doc"$self.del($key)"
     case StoreDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"
     case StoreDeleteCopy(self, key) => doc"$self.delCopy($key)"
@@ -534,11 +584,15 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //    case Equal(a, b) if a.tp == StringType => //doc"!strcmpi($a, $b)"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
+      val cmpEquals = if(cgOpts.vanillaCompatible)
+        (doc"FORCE_INLINE static bool equals(const ${c.i1.tp }& ${c.i1 }, const ${c.i2.tp }& ${c.i2 }) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: doc"return ${c.o.res} == 0;") :/: "}")
+      else
+        (doc"FORCE_INLINE static char cmp(const ${c.i1.tp }& ${c.i1 }, const ${c.i2.tp }& ${c.i2 }) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}")
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
         doc"#define int unsigned int" :\\:
           doc"FORCE_INLINE static size_t hash(const ${h.i.tp }& ${h.i })  { " :: Document.nest(NEST_COUNT, blockToDocument(h.o) :/: getBlockResult(h.o, true)) :/: "}" :\\:
-          doc"#undef int" :\\:
-          doc"FORCE_INLINE static char cmp(const ${c.i1.tp }& ${c.i1 }, const ${c.i2.tp }& ${c.i2 }) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}") :/: "};"
+          doc"#undef int" :\\: cmpEquals) :/: "};"
+
 
     case EntryIdxGenericOpsObject(Constant(cols)) =>
       if (cols != Nil) {

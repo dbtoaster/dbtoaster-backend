@@ -469,6 +469,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       entryTypes += ssym -> TypeVar(sym)
       ssym.attributes += sym.attributes.get(IndexesFlag).get
       ssym.attributes += entry
+      ssym.attributes += StoreSchema(sch)
       newS
     }
 //SBJ: TODO: Change types of StoreFilter as well

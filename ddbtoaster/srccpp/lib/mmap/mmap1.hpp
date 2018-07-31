@@ -510,7 +510,7 @@ public:
 
 template <typename T, typename V, typename PRIMARY_INDEX, typename... SECONDARY_INDEXES> 
 class MultiHashMap {
-  private:
+  public:
     Pool<T> pool;
     PRIMARY_INDEX* primary_index;
     SecondaryIndex<T>** secondary_indexes;
@@ -595,10 +595,12 @@ class MultiHashMap {
       return primary_index->get(key);
     }
 
+#ifndef SC_GENERATED 
     FORCE_INLINE const V& getValueOrDefault(const T& key) const {
         T* elem = primary_index->get(key);
         return (elem != nullptr ? elem->__av : Zero);
     }
+#endif
 
     FORCE_INLINE const SecondaryIdxNode<T>* slice(const T& k, size_t idx) {
         return secondary_indexes[idx]->slice(k);
@@ -614,6 +616,7 @@ class MultiHashMap {
         insert(k, primary_index->computeHash(k));
     }
 
+#ifndef SC_GENERATED 
     FORCE_INLINE void add(T& k, const V& v) {
         if (ZeroValue<V>().isZero(v)) { return; }
 
@@ -655,7 +658,7 @@ class MultiHashMap {
             insert(k, h);
         }
     }
-
+#endif
     FORCE_INLINE void clear() {
         if (primary_index->count() == 0) return;
 
@@ -1041,6 +1044,8 @@ class HashIndex : public Index<T, V>
       return IDX_FN::hash(key);
     }
 
+    #ifndef SC_GENERATED 
+
     inline virtual const V& getValueOrDefault(const T &key) const {
       HASH_RES_t h = IDX_FN::hash(key);
       IdxNode *n = &buckets_[h & mask_];
@@ -1137,7 +1142,7 @@ class HashIndex : public Index<T, V>
       }
       return 0;
     }
-
+#endif
     template <typename TP, typename VP, typename... INDEXES>
     friend class MultiHashMap;
 };
@@ -1318,6 +1323,8 @@ class MultiHashMap {
       });
     }
 
+    #ifndef SC_GENERATED 
+
     inline virtual const V& getValueOrDefault(const T &key, int mainIdx = 0) const {
       return index[mainIdx]->getValueOrDefault(key);
     }
@@ -1351,8 +1358,10 @@ class MultiHashMap {
         break;
       }
     }
+    #endif
 };
 
+#ifndef SC_GENERATED 
 template<typename T, typename V>
 FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V> >& m, const T& k)
 {
@@ -1368,6 +1377,7 @@ FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V> >& m, T& k,
     k.__av = v;
     add_to_temp_map(m, k);
 }
+#endif
 #endif
 
 }
