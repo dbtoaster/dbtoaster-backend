@@ -109,36 +109,30 @@ trait M3OpsExp extends BaseExp with EffectExp
   def minLong(v1: Rep[Long], v2: Rep[Long]): Rep[Long] = if (v1 > v2) v1 else v2
   def minDouble(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if (v1 > v2) v1 else v2
   
-  def substring(str: Rep[String], start: Rep[Int], length: Rep[Int]): Rep[String] =
+  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] =
     infix_substring(str,
-      rep_asinstanceof[Int, Int](start, manifest[Int], manifest[Int]), 
-      rep_asinstanceof[Int, Int](start + length, manifest[Int], manifest[Int]))
+      rep_asinstanceof[Long, Int](start, manifest[Long], manifest[Int]), 
+      rep_asinstanceof[Long, Int](start + length, manifest[Long], manifest[Int]))
 
   def m3apply(fn: String, args: List[Exp[_]], tp: Type) = fn match {
     case "div" => 
       div(args(0).asInstanceOf[Rep[Double]])
     case "mul" => tp match {
-      case TypeChar | TypeShort | TypeInt => 
-        mulInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-      case TypeLong => 
+      case TypeChar | TypeShort | TypeInt | TypeLong => 
         mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
       case TypeFloat | TypeDouble => 
         mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
       case _ => M3Apply(fn, args, man(tp))
     }
     case "listmax" => tp match {
-      case TypeChar | TypeShort | TypeInt =>
-        maxInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-      case TypeLong =>
+      case TypeChar | TypeShort | TypeInt | TypeLong =>
         maxLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
       case TypeFloat | TypeDouble =>
         maxDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
       case _ => sys.error("Wrong type (" + tp + ") of listmax")        
     }
     case "listmin" => tp match {
-      case TypeChar | TypeShort | TypeInt =>
-        minInt(args(0).asInstanceOf[Rep[Int]], args(1).asInstanceOf[Rep[Int]])
-      case TypeLong =>
+      case TypeChar | TypeShort | TypeInt | TypeLong =>
         minLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
       case TypeFloat | TypeDouble =>
         minDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
@@ -146,8 +140,8 @@ trait M3OpsExp extends BaseExp with EffectExp
     }
     case "substring" => 
       substring(args(0).asInstanceOf[Rep[String]], 
-                args(1).asInstanceOf[Rep[Int]],
-                args(2).asInstanceOf[Rep[Int]])
+                args(1).asInstanceOf[Rep[Long]],
+                args(2).asInstanceOf[Rep[Long]])
     //case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
     //case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
 

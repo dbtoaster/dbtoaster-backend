@@ -507,8 +507,8 @@ trait GenericGenStore extends GenericNestedCodegen {
   def zeroValue(tp: String): String = tp match {
     case "Char" | "char" | "Short" | "short" | "Int" | "int" => "0"
     case "Long" | "long" => "0L"
-    case "Float" | "float" => "0f"
-    case "Double" | "double" => "0D"
+    case "Float" | "float" => "0.0f"
+    case "Double" | "double" => "0.0"
     case "Boolean" | "boolean" => "false"
     case _ => "null"
   }

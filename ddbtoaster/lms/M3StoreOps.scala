@@ -60,8 +60,7 @@ trait M3StoreOpsExp extends BaseExp
 
   override def namedVar(name: String, tp: Type): Rep[_] = {
     val init = tp match {
-      case TypeChar | TypeShort | TypeInt => unit(0)
-      case TypeLong => unit(0L)
+      case TypeChar | TypeShort | TypeInt | TypeLong => unit(0L)
       case TypeFloat | TypeDouble => unit(0.0)
       case TypeString => unit("")
       case _ => sys.error("Unsupported type " + tp) 

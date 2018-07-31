@@ -323,18 +323,16 @@ object TypeCheck extends (M3.System => M3.System) {
         initExpr.map(e => typeExpr(e, ctx, t))
         typeExpr(target, ctx, t)
         
-        // Check if target and init expr are of same type
-        initExpr.foreach(ie =>
-          if (!TypeHelper.cast(ie.tp, target.tp))
-            err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
-                " and init expression " + ie.toDecoratedString + " of type " + ie.tp))
-        
-        // Check if target and expr are of same type
-        if (!TypeHelper.cast(expr.tp, target.tp))
-          err("Type mismatch in map " + target.toDecoratedString + " of type " + target.tp +
-              " and RHS expression " + expr.toDecoratedString + " of type " + expr.tp)
-        
-        TriggerStmt(target, expr, op, initExpr)
+        def tryCast(e: Expr, target: Expr): Expr = 
+          if (e.tp == target.tp || TypeHelper.cast(e.tp, target.tp)) e 
+          else err("Type mismatch in LHS " + target.toDecoratedString + " of type " + 
+                   target.tp + " and RHS " + e.toDecoratedString + " of type " + e.tp)
+
+        val cInitExpr = initExpr.map(e => tryCast(e, target))
+
+        val cExpr = tryCast(expr, target)
+
+        TriggerStmt(target, cExpr, op, cInitExpr)
 
       case IfStmt(cond, thenBlk, elseBlk) =>
         // TODO: avoid state mutation

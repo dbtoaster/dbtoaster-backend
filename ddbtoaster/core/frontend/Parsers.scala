@@ -47,23 +47,19 @@ class ExtParser extends StandardTokenParsers {
   lexical.delimiters ++= List("(", ")", ",", ".", ";", "+", "-", ":=", "<", ">")
 
   // ------------ Literals
-  lazy val intLit = 
-    opt("+" | "-") ~ numericLit ^^ { 
-      case s ~ n => s.getOrElse("") + n 
+  lazy val intLit: Parser[String] =
+    opt("+" | "-") ~ numericLit ^^ { case s ~ n => s.getOrElse("") + n }
+
+  lazy val longLit: Parser[String] = 
+    intLit <~ ("L" | "l")
+
+  lazy val doubleLit: Parser[String] =
+    (intLit <~ ".") ~ opt(numericLit) ~ opt(("E" | "e") ~> intLit) ^^ {
+      case i ~ d ~ e => i + "." + d.getOrElse("0") + e.map("E" + _).getOrElse("")
     }
 
-  lazy val longLit = intLit <~ ("L"|"l") ^^ { case n => n }
-
-  lazy val doubleLit = 
-    (intLit <~ ".") ~ opt(numericLit) ~ 
-    opt(("E" | "e") ~> intLit) ^^ { 
-      case i ~ d ~ e => 
-        val f = i + "." + d.getOrElse("") + (e match { 
-                                               case Some(j) => "E" + j 
-                                               case _ => "" 
-                                             })
-        if (f.endsWith(".")) f + "0" else f 
-    }
+  lazy val floatLit = 
+    doubleLit <~ ("F"|"f")
  
   // ------------ Types
   lazy val tpe: Parser[Type] = (
@@ -72,8 +68,8 @@ class ExtParser extends StandardTokenParsers {
     | "short" ^^^ TypeShort
     | "int" ^^^ TypeInt
     | "long" ^^^ TypeLong
-    // | "float" ^^^ TypeFloat
-    | ("float" | "decimal" | "double") ^^^ TypeDouble
+    | "float" ^^^ TypeFloat
+    | ("decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
     // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
     | customType
@@ -227,9 +223,10 @@ object M3Parser extends ExtParser with (String => M3.System) {
         case v ~ consts => CmpOrList(v, consts)
       }
     | ident ^^ { Ref(_) }
+    | floatLit ^^ { Const(TypeFloat, _) }
     | doubleLit ^^ { Const(TypeDouble, _) }
-    | intLit ^^ { Const(TypeInt, _) }
     | longLit ^^ { Const(TypeLong, _) }
+    | intLit ^^ { Const(TypeInt, _) }
     | stringLit ^^ { Const(TypeString, _) }
     // Tupling
     | ("(" ~> "<" ~> repsep(ident,",") <~ ">" <~ "^=") ~ 
