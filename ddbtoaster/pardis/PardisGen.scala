@@ -37,7 +37,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
     "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx,
     "Med" -> medIdx, "ColdMotion" -> coldMotion, "StoreProfile" -> profileStoreOperations, "BlockProfile" -> profileBlocks,
     "ParameterPromotion" -> parameterPromotion)
-  java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
+//  java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
 
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
