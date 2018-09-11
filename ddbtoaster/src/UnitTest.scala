@@ -34,7 +34,7 @@ object UnitTest {
   private var readMode = 2                        // input stream read mode
   private var cacheM3 = false                     // M3 cache is disabled
   private var replaceQuery = true                 // replaceQuery is enabled
-  
+
   // query test (.sql) -> (dataset -> result set)
   private var unitTestResults = Map[String, Map[String, QueryResultSet]]()
 
@@ -73,7 +73,7 @@ object UnitTest {
       "employee/query65.sql",
       "employee/query66.sql",
       "employee/query66a.sql",
-      // regular expressions not supported by front-end 
+      // regular expressions not supported by front-end
       "employee/query15.sql",
       // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
       "employee/query35b.sql",
@@ -105,7 +105,7 @@ object UnitTest {
   private val pathM3 = "ddbtoaster/target/m3"
 
   private var zeusEnabled = false      // zeus mode
-  private var zeusSeed = 0             // zeus seed  
+  private var zeusSeed = 0             // zeus seed
 
   private var csv: PrintWriter = null
   private var csvFile: String = null
@@ -117,7 +117,7 @@ object UnitTest {
 
   private def tf(ns: Long) = "%7s".format(time(ns, false))
 
-  private def print(k: String, v: String) = { 
+  private def print(k: String, v: String) = {
     System.out.println("%-70s".format("%-30s".format(k) + ": " + v))
   }
 
@@ -145,9 +145,9 @@ object UnitTest {
          .map(queryTest => queryTest.sql -> queryTest.queryResultsByDataset).toMap
     }
     else Map()
-  }  
+  }
 
-  def parseArgs(args: Array[String]) = {    
+  def parseArgs(args: Array[String]) = {
     val qinc = MSet[String]()
     val qexcl = MSet[String]()
     var qfail = false
@@ -155,16 +155,16 @@ object UnitTest {
 
     var as = List[String]()
     var i = 0
-    def eat(f: String => Unit, s: Boolean = false) { 
+    def eat(f: String => Unit, s: Boolean = false) {
       i += 1
-      if (i < args.length) f(if (s) args(i).toLowerCase else args(i)) 
+      if (i < args.length) f(if (s) args(i).toLowerCase else args(i))
     }
     while (i < args.length) { args(i) match {
         case "-d" => eat(s => datasets += s, true)
         case "-dd" => datasets += ("tiny", "tiny_del", "standard", "standard_del")
         case "-l" => eat(s => languages += s, true)
         case "-q" => eat(s => qinc += s)
-        case "-qx" => eat(s => qexcl += s)        
+        case "-qx" => eat(s => qexcl += s)
         case "-qfail" => qfail = true
         case "-qverify" => qverify = true
         case "-x" => runBenchmark = true
@@ -177,15 +177,15 @@ object UnitTest {
         case "-cache" => cacheM3 = true
         case "-noreplace" => replaceQuery = false
         case "-csv" => eat(s => csvFile = s)
-        case "-h" | "-help" | "--help" => 
+        case "-h" | "-help" | "--help" =>
           error("Usage: Unit [options] [compiler options]")
           error("Filtering options:")
           error("  -d <dataset>  add a dataset")
           error("  -dd           add tiny, tiny_del, standard, standard_del datasets")
-          error("  -l <lang>     add language: " + 
+          error("  -l <lang>     add language: " +
                                   List(
-                                    LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS, 
-                                    LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, 
+                                    LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS,
+                                    LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS,
                                     LANG_SPARK_LMS, LANG_AKKA
                                   ).mkString(", ") /* + " (_spec|_full|_0-10)?" */)
           error("  -q <filter>   add an inclusion filter for queries")
@@ -213,32 +213,32 @@ object UnitTest {
           Compiler.parseArgs(Array[String](), true)
         case s => as = s :: as
       }
-      i += 1 
+      i += 1
     }
-    if (verifyOutput && as.contains("--no-output")) { 
+    if (verifyOutput && as.contains("--no-output")) {
       sys.error("Result validation is impossible while the --no-output option is enabled.\n" +
-                "Disable one of these options (-v or --no-output) and try again.") 
+                "Disable one of these options (-v or --no-output) and try again.")
     }
 
     if (datasets.isEmpty) datasets += "standard"
 
     if (languages.isEmpty) languages += DEFAULT_LANG_CPP
-    
+
     if (qinc.size > 0) {
       val pattern = (".*(" + qinc.mkString("|") + ")(\\.sql)?$").r
       queryFilter = (s: String) => pattern.findFirstIn(s) != None
     }
-    if (qexcl.size > 0) { 
+    if (qexcl.size > 0) {
       val pattern = (".*(" + qexcl.mkString("|") + ")(\\.sql)?$").r
       val q0 = queryFilter
       queryFilter = (s: String) => q0(s) && pattern.findFirstIn(s) == None
     }
-    if (!qfail) { 
+    if (!qfail) {
       val q0 = queryFilter
       println("Front-end skip   : %4d".format(skipQueries.size))
-      queryFilter = (s: String) => !skipQueries.exists(s.endsWith) && q0(s) 
+      queryFilter = (s: String) => !skipQueries.exists(s.endsWith) && q0(s)
     }
-    
+
     if (qverify) {
       val q0 = queryFilter
       queryFilter = (s: String) => q0(s) && unitTestResults.contains(s)
@@ -262,24 +262,24 @@ object UnitTest {
       (t, src)
     }
   }
-  
+
   def main(args: Array[String]): Unit = {
 
     parseArgs(args)
 
     // TODO: Zeus mode
-    if (zeusEnabled) { 
+    if (zeusEnabled) {
       testZeus()
-      return 
+      return
     }
 
     val total = findQueries
 
-    if (total.isEmpty) { 
+    if (total.isEmpty) {
       error("No queries found, exiting...", true)
     }
 
-    println("Queries total    : %4d".format(total.size))    
+    println("Queries total    : %4d".format(total.size))
 
     if (verifyOutput) {
       unitTestResults = loadUnitTests
@@ -288,7 +288,7 @@ object UnitTest {
     var selected = total.filter(queryFilter).sorted
 
     println("Queries selected : %4d".format(selected.size))
-    
+
     if (selected.isEmpty) {
       error("No queries selected, exiting...", true)
     }
@@ -308,32 +308,32 @@ object UnitTest {
 
     if (csv != null) {
       csv.println(
-        ( List("Query", "Dataset", "Language", "BatchSize", "SQLtoM3", "M3toCode", "MedianTime", "MedianRate") ++
+        ( List("Query", "Dataset", "Language", "BatchSize", "SQLtoM3", "M3toCode", "Verification", "MedianTime", "MedianRate") ++
           (1 to numRuns).flatMap(i => List("Time" + i, "ProcTuples" + i, "SkipTuples" + i))).mkString(", "))
     }
 
     for (query <- selected) {
-      try {   
+      try {
         var queryName = query.replaceAll("test/queries/|.sql", "")
         Optimizer.infoFileName = queryName
 
         println("---------[[ " + queryName + " ]]---------")
-               
+
         val frontendExt = languages.map(Compiler.frontendFileExtensions(_)).toSet
 
-        val (timeM3, codeM3) = 
+        val (timeM3, codeM3) =
           if (frontendExt.contains("m3")) toast(LANG_M3, query, queryName) else (-1L, "")
-        val (timeDM3, codeDM3) = 
+        val (timeDM3, codeDM3) =
           if (frontendExt.contains("dm3")) toast(LANG_DIST_M3, query, queryName) else (-1L, "")
 
         val t0 = if (timeM3 != -1L) timeM3 else timeDM3
 
         for (dataset <- datasets) {
           for (lang <- languages) lang match {
-            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SPARK_LMS => 
+            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SPARK_LMS =>
               val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
               testQueryScala(query, className, dataset, lang, tmpDir, codeM3)
-            case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS => 
+            case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
               val exeName = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
               testQueryCpp(query, exeName, dataset, lang, tmpDir, codeM3)
             case _ => sys.error("Language is not supported: " + lang)
@@ -362,7 +362,7 @@ object UnitTest {
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
       println("---------[[ Zeus " + id + " ]]---------")
 
-      val queryName = if (replaceQuery) "zeus" + id 
+      val queryName = if (replaceQuery) "zeus" + id
                       else Utils.generateNewFileName("zeus" + id, tmpDir + "/%s.sql")
       val fileName = tmpDir.getPath + "/" + queryName + ".sql"
       val codeM3 = {
@@ -391,8 +391,8 @@ object UnitTest {
 
     unitTestResults.get(queryFile) match {
       case Some(m) => m.get(dataset) match {
-        case Some(resultSet) => 
-          queries.foreach { case (qname, schema) => 
+        case Some(resultSet) =>
+          queries.foreach { case (qname, schema) =>
             val keys = schema.dropRight(1)
             val value = schema.last
 
@@ -409,7 +409,7 @@ object UnitTest {
                         TypeHelper.fromString(kv, tp)
                       },
                       TypeHelper.fromString(v, value._2) )
-                  }    
+                  }
                 Helper.diff(res, refRes)
 
               case Some(QueryResultFile(path, sep)) =>
@@ -419,7 +419,7 @@ object UnitTest {
                       },
                       TypeHelper.fromString((item \ value._1).text, value._2) )
                   }.toMap
-                val refRes = 
+                val refRes =
                   Helper.loadCSV(
                     l => (l.dropRight(1), l.last),
                     Utils.pathRepo + "/" + path,
@@ -442,7 +442,7 @@ object UnitTest {
           e.setStackTrace(Array[StackTraceElement]())
           throw e
       }
-      case None => 
+      case None =>
         warning("Verification failed, test result missing for " + queryFile)
         val e = new Exception
         e.setStackTrace(Array[StackTraceElement]())
@@ -450,7 +450,7 @@ object UnitTest {
     }
   }
 
-  def testQueryCpp(sqlFile: String, queryName: String, dataset: String, 
+  def testQueryCpp(sqlFile: String, queryName: String, dataset: String,
                    lang: String,  dir: File, sourceM3: String) = {
     val langID = lang match {
         case LANG_CPP_VANILLA => "VCpp"
@@ -460,7 +460,7 @@ object UnitTest {
       }
     val exeFile = dir.getPath + "/" + queryName + langID
 
-    val args =  List( "-l", lang, 
+    val args =  List( "-l", lang,
                       "-o", exeFile + "." + Compiler.backendFileExtensions(lang),
                       "-d", dataset,
                       "-xa", "-p" + readMode) ++
@@ -475,14 +475,14 @@ object UnitTest {
       print(langID + " codegen", tf(t))
       sampleRecorder.recordCodegenTime(Math.round(t / 1000000.0))
     }
-    
+
     def compileFn(t: Long) = {
       print(langID + " compile", tf(t))
       sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
     }
 
     val sourceM3Dataset = sourceM3.replace("/standard/", "/" + dataset + "/")
-    
+
     Compiler.compile(sourceM3Dataset, codegenFn, compileFn)
 
     def runFn(t: Long, out: String, err: String) = {
@@ -490,50 +490,56 @@ object UnitTest {
         System.err.println(err)
       }
       else {
+        import sampleRecorder.VerificationStatus._
         samplePattern.findAllIn(out).foreach {
           case samplePattern(_, timeMicro, count, skipped) =>
             sampleRecorder.recordRunInfo(timeMicro.toLong / 1000, count.toLong, skipped.toLong)
+            if(skipped != 0)
+              sampleRecorder.verification = Timeout
         }
 
         if (verifyOutput) {
           resultPattern.findFirstIn(out) match {
-            case Some(result) => 
+            case Some(result) =>
               import ddbt.codegen.CppGen
 
               val m3 = Compiler.string2AST(sourceM3)
 
-              val queries = 
+              val queries =
                 m3.queries.map { q =>
-                  val schema = q.expr.ovars 
-                  val (keys, value) = 
-                    if (lang == LANG_CPP_PARDIS) 
-                      (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) }, 
+                  val schema = q.expr.ovars
+                  val (keys, value) =
+                    if (lang == LANG_CPP_PARDIS)
+                      (schema.zipWithIndex.map { case ((n, tp), i) => ("_" + (i + 1), tp) },
                        ("_" + (schema.size + 1), q.expr.tp))
                     else
                       (schema, (CppGen.VALUE_NAME, q.expr.tp))
                   q.name -> (keys ++ List(value))
-                }.toMap 
+                }.toMap
 
               try {
                 verifyResult(out, sqlFile, dataset, queries)
                 print(langID + " verification", "%7s".format("OK"))
+                sampleRecorder.verification = Correct
               }
-              catch { case ex: Exception => 
-                print(langID + " verification", "%7s".format("FAILED"))
-                ex.printStackTrace()
+              catch {
+                case ex: Exception =>
+                  print(langID + " verification", "%7s".format("FAILED"))
+                  ex.printStackTrace()
+                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
-              warning("Verification failed, result missing")              
+              warning("Verification failed, result missing")
           }
         }
       }
     }
 
-    (1 to numWarmups).foreach(x => 
+    (1 to numWarmups).foreach(x =>
       Compiler.run(dataset, (t, out, err) => ())
     )
 
-    (1 to numRuns).foreach(x => 
+    (1 to numRuns).foreach(x =>
       Compiler.run(dataset, runFn)
     )
 
@@ -545,14 +551,14 @@ object UnitTest {
         sampleRecorder.worstRun._1 / 1000.0) +
       "%11.1f tup/s   (runs=%d, processed=%d, skipped=%d)".format(
         sampleRecorder.bestRefreshRate,
-        numRuns + numWarmups, 
-        sampleRecorder.bestRun._2, 
+        numRuns + numWarmups,
+        sampleRecorder.bestRun._2,
         sampleRecorder.bestRun._3))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
   }
 
-  def testQueryScala(sqlFile: String, queryName: String, dataset: String, 
+  def testQueryScala(sqlFile: String, queryName: String, dataset: String,
                      lang: String,  dir: File, sourceM3: String) = {
     val langID = lang match {
         case LANG_SCALA_VANILLA => "VScala"
@@ -565,7 +571,7 @@ object UnitTest {
     val className = queryName + langID
     val outputSrcFile = dir.getPath + "/" + className
 
-    val args =  List( "-l", lang, 
+    val args =  List( "-l", lang,
                       "-o", outputSrcFile + "." + Compiler.backendFileExtensions(lang),
                       "-xd", pathClasses,
                       "-n", "ddbt.test.gen." + className,
@@ -576,7 +582,7 @@ object UnitTest {
                 (if (verifyOutput) List("-xa", "-m1") else Nil) ++
                 (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
-                
+
     Compiler.parseArgs(args.toArray)
 
     val sampleRecorder = SampleRecorder(queryName, dataset, langID, Compiler.batchSize)
@@ -585,7 +591,7 @@ object UnitTest {
       print(langID + " codegen", tf(t))
       sampleRecorder.recordCodegenTime(Math.round(t / 1000000.0))
     }
-    
+
     def compileFn(t: Long) = {
       print(langID + " compile", tf(t))
       sampleRecorder.recordCompileTime(Math.round(t / 1000000.0))
@@ -594,38 +600,43 @@ object UnitTest {
     val sourceM3Dataset = sourceM3.replace("/standard/", "/" + dataset + "/")
 
     Compiler.compile(sourceM3Dataset, codegenFn, compileFn)
-    
+
     def runFn(t: Long, out: String, err: String) = {
       if (err.trim != "") {
         System.err.println(err)
       }
       else {
+        import sampleRecorder.VerificationStatus._
         samplePattern.findAllIn(out).foreach {
           case samplePattern(_, timeMilli, count, skipped) =>
             sampleRecorder.recordRunInfo(timeMilli.toLong, count.toLong, skipped.toLong)
+            sampleRecorder.verification = Timeout
         }
 
         if (verifyOutput) {
           resultPattern.findFirstIn(out) match {
-            case Some(result) => 
+            case Some(result) =>
               import ddbt.codegen.ScalaGen
 
               val m3 = Compiler.string2AST(sourceM3)
 
-              val queries = 
+              val queries =
                 m3.queries.map { q =>
-                  val keys = q.expr.ovars 
+                  val keys = q.expr.ovars
                   val value = (ScalaGen.VALUE_NAME, q.expr.tp)
                   q.name -> (q.expr.ovars ++ List(value))
-                }.toMap 
+                }.toMap
 
               try {
                 verifyResult(result, sqlFile, dataset, queries)
                 print(langID + " verification", "%7s".format("OK"))
+                sampleRecorder.verification = Correct
               }
-              catch { case ex: Exception => 
-                print(langID + " verification", "%7s".format("FAILED"))
-                ex.printStackTrace()
+              catch {
+                case ex: Exception =>
+                  print(langID + " verification", "%7s".format("FAILED"))
+                  ex.printStackTrace()
+                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
               warning("Verification failed, result missing")
@@ -644,8 +655,8 @@ object UnitTest {
         sampleRecorder.worstRun._1 / 1000.0) +
       "%11.1f tup/s   (runs=%d, processed=%d, skipped=%d)".format(
         sampleRecorder.bestRefreshRate,
-        numRuns + numWarmups, 
-        sampleRecorder.bestRun._2, 
+        numRuns + numWarmups,
+        sampleRecorder.bestRun._2,
         sampleRecorder.bestRun._3))
 
     if (csv != null) csv.println(sampleRecorder.toCSV)
@@ -653,7 +664,17 @@ object UnitTest {
 
   case class SampleRecorder(query: String, dataset: String, lang: String, batchSize: Long) {
 
-    private val runInfo = scala.collection.mutable.ArrayBuffer[(Long, Long, Long)]()
+    object VerificationStatus extends Enumeration {
+      type VerificationStatus = Value
+      val Unknown = Value("Unknown")
+      val Correct = Value("Correct")
+      val Wrong = Value("Wrong")
+      val Timeout = Value("Timeout")
+    }
+    var verification = VerificationStatus.Unknown
+    private val rawRunInfo = scala.collection.mutable.ArrayBuffer[(Long, Long, Long)]()
+
+    lazy val runInfo = rawRunInfo.takeRight(numRuns)
 
     private var codegenTimeMilli = 0L
 
@@ -675,7 +696,7 @@ object UnitTest {
     def recordCompileTime(timeMilli: Long) = compileTimeMilli = timeMilli
 
     def recordRunInfo(timeMilli: Long, numProcessedTuples: Long, numSkippedTuples: Long) =
-      runInfo += ((timeMilli, numProcessedTuples, numSkippedTuples))
+      rawRunInfo += ((timeMilli, numProcessedTuples, numSkippedTuples))
 
     def bestRun = if (runInfo.isEmpty) (0L, 0L, 0L) else runInfo.sortBy(_._1).head
 
@@ -690,13 +711,14 @@ object UnitTest {
     def medianRefreshRate = median(runInfo.map(r => (refreshRate(r) * 1000).toLong)) / 1000.0
 
     def toCSV =
-      ( List(query, dataset, lang, batchSize.toString,
-             "%1.3f".format(codegenTimeMilli / 1000.0),
-             "%1.3f".format(compileTimeMilli / 1000.0),
-             "%1.3f".format(medianTimeMilli / 1000.0),
-             "%1.2f".format(medianRefreshRate)) ++
+      (List(query, dataset, lang, batchSize.toString,
+        "%1.3f".format(codegenTimeMilli / 1000.0),
+        "%1.3f".format(compileTimeMilli / 1000.0),
+        verification.toString,
+        "%1.3f".format(medianTimeMilli / 1000.0),
+        "%1.2f".format(medianRefreshRate)) ++
         runInfo.map { case (t, count, skip) => s"""${"%1.3f".format(t / 1000.0)}, $count, $skip""" }
-      ).mkString(", ")
+        ).mkString(", ")
   }
 
   // ---------------------------------------------------------------------------
@@ -708,15 +730,15 @@ object UnitTest {
 
   case class QueryResultSet(subs: List[(String, String)] = Nil, queryResultByName: Map[String, QueryResult] = Map())
 
-  case class QueryTest(sql: String, queryResultsByDataset: Map[String, QueryResultSet] = Map(("standard",QueryResultSet()))) { 
-    override def toString = 
-      sql + ind(queryResultsByDataset.map { case (k, v) => "\n - " + k + ": " + v.queryResultByName.toString }.mkString) 
+  case class QueryTest(sql: String, queryResultsByDataset: Map[String, QueryResultSet] = Map(("standard",QueryResultSet()))) {
+    override def toString =
+      sql + ind(queryResultsByDataset.map { case (k, v) => "\n - " + k + ": " + v.queryResultByName.toString }.mkString)
   }
 
   // Parser for unit tests declarations
   import scala.util.parsing.combinator.RegexParsers
   object UnitParser extends RegexParsers {
-    
+
     lazy val str = "\"" ~> """(\\.|[^\"])*""".r <~ "\"" | "'" ~> """(\\.|[^'])*""".r <~ "'"
 
     lazy val num = "-?[0-9]+(\\.[0-9]*)?([eE][\\-+]?[0-9]+)?".r ^^ {
@@ -726,8 +748,8 @@ object UnitTest {
     lazy val pat = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ {
         _.replaceAll("\\\\/","/")
       } // might need a better solution
-   
-    lazy val qrow = ("[" ~> repsep(num|(str ^^ { s => "\"" + s + "\"" }), ",") <~ "]") ~ ("=>" ~> num) ^^ { 
+
+    lazy val qrow = ("[" ~> repsep(num|(str ^^ { s => "\"" + s + "\"" }), ",") <~ "]") ~ ("=>" ~> num) ^^ {
         case cs ~ n => (cs, n)
       }
 
@@ -740,14 +762,14 @@ object UnitTest {
       ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ {
         case f ~ op => QueryResultFile(f, op match { case Some(p) => p case None => null })
       }
-    
+
     lazy val qout =
       "{"~>":type"~>"=>"~> ((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) |
                             (":singleton"~>","~>":expected"~>"=>"~>num ^^ {
                               case n => QueryResultSingleton(n) })) <~ opt(",") <~"}" ^^ {
         case q => q
       }
-    
+
     lazy val qsub = ("[" ~> pat <~ ",") ~ (str <~ "]") ^^ {
         case p ~ r => (p, r)
       }
@@ -755,16 +777,16 @@ object UnitTest {
     lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ {
         case ss ~ os => QueryResultSet(ss match { case Some(s) => s case None => Nil }, os)
       }
-    
-    lazy val qtest = 
-      ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ 
+
+    lazy val qtest =
+      ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~
       (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ {
         case n ~ qs => QueryTest(n, qs)
       }
 
-    private def map[T](p:Parser[T]) = 
-      "{" ~> repsep((str <~ "=>") ~ p, ",") <~ "}" ^^ { 
-        case rs => rs.map { case n ~ v => (n, v) }.toMap 
+    private def map[T](p:Parser[T]) =
+      "{" ~> repsep((str <~ "=>") ~ p, ",") <~ "}" ^^ {
+        case rs => rs.map { case n ~ v => (n, v) }.toMap
       } // JSON-like map String -> T
 
     def apply(input: String): QueryTest =
