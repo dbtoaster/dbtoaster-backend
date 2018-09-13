@@ -341,15 +341,9 @@ object Utils {
     val o = out.toString
     val e = err.toString
     if (fatal && (e.trim != "" || exitVal != 0)) {
-      if(e.trim != "") {
-        println("Execution error in: " + cmd.mkString(" "))
-        scala.Console.out.print(o)
-        scala.Console.err.print(e)
-      } 
-      else {
-        scala.Console.err.print("Error: exit value is " + exitVal)
-      }
-      System.exit(if (exitVal != 0) exitVal else 1)
+      scala.Console.out.print(o)
+      scala.Console.err.print(e)
+      throw new RuntimeException("Execution error in: " + cmd.mkString(" "))
     }
     (o, e)
   }

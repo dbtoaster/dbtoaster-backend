@@ -53,6 +53,12 @@ namespace dbtoaster {
       seed ^= string_hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 
+ template <>
+  FORCE_INLINE void hash_combine(std::size_t& seed, const float& v)
+  {
+      seed ^= float2int(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+  }
+  
 #if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 
   template <>

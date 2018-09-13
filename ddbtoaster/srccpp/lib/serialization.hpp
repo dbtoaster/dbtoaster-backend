@@ -96,6 +96,21 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STR
     return ar;
 }
 
+template<class Archive>
+inline Archive & serialize(Archive & ar, const unsigned int version, const float & t){
+    ar << std::setprecision(15) << t;
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const float & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+
 #if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 
 template<class Archive>
