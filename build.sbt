@@ -74,17 +74,6 @@ val LANG_SCALA = "vscala"
 val LANG_SCALA_SC = "scala"
 
 addCommandAlias("queries", "unit -dd -v -x -r 0 -l " + LANG_SCALA_SC + " ")
-// addCommandAlias("queries-lms", "unit -dd -v -x -r 0 -l lms -xsc ") ++
-// addCommandAlias("queries-akka", "unit -dd -v -x -r 0 -l akka -qx mddb/query2 -qx tpch/query21 ") // too long to compile/execute
-
-// // Akka individual queries testing
-// addCommandAlias("aq","unit -dd -v -x -r 0 -l akka -q ")
-
-// addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
-// addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l " + LANG_SCALA + " -l " + LANG_SCALA_SC + " -l lscala -l llms ") ++ // usage: sbt 'bench-all'
-// //addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l lscala -l llms -l "+LANG_SCALA+" -l "+LANG_SCALA_SC+" -l cpp -l lcpp -w 2 -r 3 -t 60000 -d big_del -q tpch.*query[0-9]+.sql ")
-// addCommandAlias("bench-all-tpch", ";unit -x -xsc -xvm -p 2 -w 2 -r 3 -t 60000 -csv bench-all.csv -dump bench-all-dump.txt -l " + LANG_SCALA + " -l " + LANG_SCALA_SC + " -l cpp -d big_del -q tpch.*query[0-9]+ ")
-
 
 commands += Command.command("release")((state: State) => {
   def copyFile(file: File, targetDir: File) = { 
@@ -152,9 +141,9 @@ commands += Command.command("release")((state: State) => {
 
   println("cleaning")
   IO.delete(releaseDir/"bin"/"dbtoaster_frontend")
-  IO.delete(releaseDir/"CHANGELOG")
+  // IO.delete(releaseDir/"CHANGELOG")
   IO.delete(releaseDir/"LICENSE")
-  IO.delete(releaseDir/"README")
+  // IO.delete(releaseDir/"README")
   IO.delete(releaseDir/"doc")
   IO.delete(releaseDir/"examples")
   IO.delete(releaseDir/"lib")
@@ -211,24 +200,26 @@ commands += Command.command("release")((state: State) => {
     ("mv " + (releaseDir/"bin"/dbtBinPath.getName).getAbsolutePath + " " + (releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
     ("chmod +x " + (releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
     
-    val websitePath = frontendRepo/".."/".."/"website"
+    println("copy LICENSE")
+    copyFile(baseDir/".."/"LICENSE", releaseDir)
 
-    println("copy README, LICENSE and CHANGELOG")
-    copyFile(websitePath/"README", releaseDir)
-    copyFile(websitePath/"CHANGELOG", releaseDir)
-    copyFile(frontendRepo/"LICENSE", releaseDir)
+    // val websitePath = frontendRepo/".."/".."/"website"
+    // println("copy README, LICENSE and CHANGELOG")
+    // copyFile(websitePath/"README", releaseDir)
+    // copyFile(websitePath/"CHANGELOG", releaseDir)
+    // copyFile(frontendRepo/"LICENSE", releaseDir)
     
-    println("copy docs to doc dir")
-    val releaseDocDir = releaseDir/"doc"
-    releaseDocDir.mkdirs
-    copyFiles(
-      List("9.jpg", "bakeoff.png", "bluetab.gif", "bluetabactive.gif", "dbtoaster-logo.gif",
-           "favicon.ico", "internal_arch.png", "perf.png", "schematic.png")
-        .map(f => websitePath/"site_html"/f),
-      releaseDocDir)
-    copyFiles(IO.listFiles(websitePath/"site_html").filter(f => f.getName.endsWith(".html") && !f.getName.startsWith("samples_")), releaseDocDir)
-    copyFiles(IO.listFiles(websitePath/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
-    copyFiles(IO.listFiles(websitePath/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
+    // println("copy docs to doc dir")
+    // val releaseDocDir = releaseDir/"doc"
+    // releaseDocDir.mkdirs
+    // copyFiles(
+    //   List("9.jpg", "bakeoff.png", "bluetab.gif", "bluetabactive.gif", "dbtoaster-logo.gif",
+    //        "favicon.ico", "internal_arch.png", "perf.png", "schematic.png")
+    //     .map(f => websitePath/"site_html"/f),
+    //   releaseDocDir)
+    // copyFiles(IO.listFiles(websitePath/"site_html").filter(f => f.getName.endsWith(".html") && !f.getName.startsWith("samples_")), releaseDocDir)
+    // copyFiles(IO.listFiles(websitePath/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
+    // copyFiles(IO.listFiles(websitePath/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
 
     println("make c++ libs")
     val cppLibDir = baseDir/"srccpp"/"lib"    
@@ -254,13 +245,14 @@ commands += Command.command("release")((state: State) => {
     // copyFile(frontendRepo/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
     // copyFile(frontendRepo/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
 
-    val dataPath = frontendRepo/".."/".."/"experiments"/"data"
-
-    println("copy data files to data")
-    copyFiles(IO.listFiles(dataPath/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
-    copyFiles(IO.listFiles(dataPath/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
-    copyFiles(IO.listFiles(dataPath/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
-    copyFile(frontendRepo/".."/".."/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
+    val dataRepo = file(prop.getProperty("ddbt.data_repo", ""))
+    if (dataRepo != "") {
+      println("copy data files to data")
+      copyFiles(IO.listFiles(dataRepo/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
+      copyFiles(IO.listFiles(dataRepo/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
+      copyFiles(IO.listFiles(dataRepo/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
+      copyFile(dataRepo/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
+    }
     
     println("copy query files to queries")
     fixSqlFiles((frontendRepo/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
