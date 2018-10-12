@@ -51,7 +51,7 @@ trait ICppGen extends CodeGen {
     if (q.expr.ovars.size == 0) typeToString(q.expr.tp) else q.name + "_map"
 
   protected def queryRefTypeToString(q: Query) = 
-    if (q.expr.ovars.size == 0) typeToString(q.expr.tp) else q.name + "_map&"
+    if (q.expr.ovars.size == 0) refTypeToString(q.expr.tp) else q.name + "_map&"
 
   protected def cmpToString(op: OpCmp) = op match {
     case OpEq => "=="
@@ -1153,7 +1153,7 @@ trait ICppGen extends CodeGen {
             ki.map { case ((k, ktp), i) => 
               typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDefs(mapName).keys(i)._1 + ";\n"
             }.mkString + 
-            typeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
+            refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
             co(v0)
 
           if (ko.size > 0) { //slice
@@ -1239,7 +1239,7 @@ trait ICppGen extends CodeGen {
               |  ${tempEntryTypeName(ks.map(_._2), tp)}* ${e0} = ${mapName}.head;
               |  while(${e0}) {
               |${ind(localVars, 2)} 
-              |    ${typeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
+              |    ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
               |
               |${ind(co(v0), 2)}
               |
@@ -1386,7 +1386,6 @@ trait ICppGen extends CodeGen {
   
     case _ => sys.error("Don't know how to generate " + ex)
   }
-
 
   def apply(s0: System): String = {
     implicit val s0_ = s0
