@@ -41,17 +41,16 @@ trait ICppGen extends CodeGen {
   private var isBatchModeActive = false
   
   private def getIndexId(m: String, is: List[Int]): String = 
-    (if (is.isEmpty) (0 until mapDefs(m).keys.size).toList else is).mkString //slice(m,is)
-
+    (if (is.isEmpty) mapDefs(m).keys.indices.toList else is).mkString
 
   protected def mapTypeToString(m: MapDef) = 
-    if (m.keys.size == 0) typeToString(m.tp) else m.name + "_map"
+    if (m.keys.isEmpty) typeToString(m.tp) else m.name + "_map"
 
   protected def queryTypeToString(q: Query) = 
-    if (q.expr.ovars.size == 0) typeToString(q.expr.tp) else q.name + "_map"
+    if (q.expr.ovars.isEmpty) typeToString(q.expr.tp) else q.name + "_map"
 
   protected def queryRefTypeToString(q: Query) = 
-    if (q.expr.ovars.size == 0) refTypeToString(q.expr.tp) else q.name + "_map&"
+    if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else q.name + "_map&"
 
   protected def cmpToString(op: OpCmp) = op match {
     case OpEq => "=="
@@ -185,15 +184,15 @@ trait ICppGen extends CodeGen {
       "/* const static */ " + typeToString(a.tp) + " " + n + ";"
     }.mkString("\n")
 
-    stringIf(s.nonEmpty, "/* Constant defitions */\n" + s)
+    stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
   }
 
-  // Constant member initilization
+  // Constant member initialization
   private def emitConstInits = 
     hoistedConsts.map { case (Apply(fn, _, args), n) => 
-      if (fn == "STRING_TYPE") {      // string initilization
+      if (fn == "STRING_TYPE") {      // string initialization
         assert(args.size == 1)        // sanity check
-        n + " = " + fn + "(\"" + args(0).asInstanceOf[Const].v + "\");"
+        n + " = " + fn + "(\"" + args.head.asInstanceOf[Const].v + "\");"
       }
       else {
         val sArgs = args.map {
@@ -249,7 +248,7 @@ trait ICppGen extends CodeGen {
           if (s.target.keys.isEmpty) 
             s"if (${s.target.name} == ${zeroOfType(iexpr.tp)}) ${s.target.name} = ${v};\n"
           else {
-            val sArgs = localVar + ".modify(" + (s.target.keys.map(x => rn(x._1))).mkString(", ") + ")"
+            val sArgs = localVar + ".modify(" + s.target.keys.map(x => rn(x._1)).mkString(", ") + ")"
             s"if (${s.target.name}.getValueOrDefault(${sArgs}) == ${zeroOfType(iexpr.tp)}) ${s.target.name}.setOrDelOnZero(${localVar}, ${v});\n"
           }
         ) 
@@ -307,10 +306,10 @@ trait ICppGen extends CodeGen {
   private def emitTrigger(t: Trigger): String = {
     // Generate trigger statements    
     val sTriggerBody = {
-      ctx = Ctx(t.event.params.map { case (n, t) => (n, (t, n)) }.toMap)
+      ctx = Ctx(t.event.params.map { case (n, tp) => (n, (tp, n)) }.toMap)
       val body = t.stmts.map(emitStmt).mkString("\n")
       ctx = null
-      body 
+      body
     }
   
     def emitBatchTrigger(s: Schema, body: String) = {
@@ -520,10 +519,10 @@ trait ICppGen extends CodeGen {
     }) +
     {
       // 2. Maps (declared maps + tables + batch updates)
-      s0.maps.filter(_.keys.size > 0) ++
+      s0.maps.filter(_.keys.nonEmpty) ++
       // 3. Queries without a map (with -F EXPRESSIVE-TLQS)
       s0.queries.filter {
-        q => (q.expr.ovars.size > 0) && !s0.maps.exists(_.name == q.name)
+        q => q.expr.ovars.nonEmpty && !s0.maps.exists(_.name == q.name)
       }.map {
         q => MapDef(q.name, q.expr.tp, q.expr.ovars, q.expr, LocalExp)
       }
@@ -537,14 +536,14 @@ trait ICppGen extends CodeGen {
     val mapValueType = typeToString(m.tp)    
     val fields = m.keys ++ List(VALUE_NAME -> m.tp)
     val indices =     // primary + (multiple) secondary 
-      ((0 until m.keys.size).toList -> true /* unique */) ::
-      secondaryIndices(m.name).map(p => (p -> false /* non_unique */))   
+      (m.keys.indices.toList -> true /* unique */) ::
+      secondaryIndices(m.name).map(p => p -> false /* non_unique */)
 
     val sEntryType = {
       val sModifyFn = {
         val s = indices.map { case (cols, unique) =>
-            val params = cols.map { case i => "const " + refTypeToString(fields(i)._2) + " c" + i }.mkString(", ")
-            val body = cols.map { case i => fields(i)._1 + " = c" + i + "; "}.mkString
+            val params = cols.map(i => "const " + refTypeToString(fields(i)._2) + " c" + i).mkString(", ")
+            val body = cols.map(i => fields(i)._1 + " = c" + i + "; ").mkString
             s"FORCE_INLINE ${mapEntryType}& modify" + stringIf(!unique, getIndexId(mapName, cols)) + 
             "(" + params + ") { " + body + " return *this; }"
           }.mkString("\n")
@@ -615,7 +614,7 @@ trait ICppGen extends CodeGen {
         |""".stripMargin
   }
 
-  private def emitEntryType(name: String, keys: List[(String, Type)], value: (String, Type)): (String => String) = {
+  private def emitEntryType(name: String, keys: List[(String, Type)], value: (String, Type)): String => String = {
     val fields = keys ++ List(value)
 
     val sFieldDefinitions = fields.map { case (n, t) => 
@@ -661,7 +660,7 @@ trait ICppGen extends CodeGen {
             |    ${sStringInit}
             |}""".stripMargin)
 
-    (s => 
+    s =>
       s"""|struct ${name} {
           |  ${sFieldDefinitions}
           |
@@ -675,7 +674,7 @@ trait ICppGen extends CodeGen {
           |${ind(sSerialization, 2)}
           |  }
           |};
-          |""".stripMargin)
+          |""".stripMargin
   }
 
   private def emitTLQStructure(s0: System) = {  
@@ -699,11 +698,11 @@ trait ICppGen extends CodeGen {
     val sTLQGetters = {
       val s = s0.queries.map { q =>
         val body = q.expr match {
-          case MapRef(n, _, _, _) if (n == q.name) => 
+          case MapRef(n, _, _, _) if n == q.name =>
             "return " + q.name + ";"
           case _ =>
             ctx = Ctx[(Type, String)]()
-            if (q.expr.ovars.length == 0) {
+            if (q.expr.ovars.isEmpty) {
               cpsExpr(q.expr, (v: String) => "return " + v + ";")
             }
             else {
@@ -756,12 +755,12 @@ trait ICppGen extends CodeGen {
 
   protected def emitTLQMapInitializer(maps: List[MapDef], queries: List[Query]) = {
     // TLQ map initializer
-    maps.filter { m => m.keys.size == 0 && queries.exists(_.name == m.name) }
+    maps.filter { m => m.keys.isEmpty && queries.exists(_.name == m.name) }
         .map { m => ", " + m.name + "(" + zeroOfType(m.tp) + ")" }
         .mkString +
     stringIf(isExpressiveTLQSEnabled, {
       // Non-TLQ map initializer
-      maps.filter { m => m.keys.size == 0 && !queries.exists(_.name == m.name) }
+      maps.filter { m => m.keys.isEmpty && !queries.exists(_.name == m.name) }
           .map { m => ", " + m.name + "(" + zeroOfType(m.tp) + ")" }
           .mkString
     })
@@ -864,7 +863,7 @@ trait ICppGen extends CodeGen {
   protected def emitNonTLQMapInitializer(maps: List[MapDef], queries: List[Query]) =
     stringIf(!isExpressiveTLQSEnabled, {
       // Non-TLQ map initializer
-      maps.filter { m => m.keys.size == 0 && !queries.exists(_.name == m.name) }
+      maps.filter { m => m.keys.isEmpty && !queries.exists(_.name == m.name) }
           .map { m => ", " + m.name + "(" + zeroOfType(m.tp) + ")" }
           .mkString
     })
@@ -1001,7 +1000,7 @@ trait ICppGen extends CodeGen {
       
       val grouped = HashMap[(Boolean, SourceIn), (Schema, Split, Map[String, String], LocalityType)]()     
       obooks.foreach { case Source(isStream, schema, in, split, adp, loc) =>
-        val k = ((isStream, in))
+        val k = (isStream, in)
         val v = (adp.options - "book") + ((adp.options.getOrElse("book", "bids"), schema.name))
         grouped.get(k) match {
           case Some(v2) => grouped += (k -> (schema, split, v2._3 ++ v, loc))
@@ -1075,9 +1074,9 @@ trait ICppGen extends CodeGen {
 
   private def applyFunc(co: String => String, fn1: String, tp: Type, as1: List[Expr]) = {
     val (as, fn) = fn1 match {
-      case "regexp_match" if (ENABLE_REGEXP_PARTIAL_EVAL && 
-                              as1.head.isInstanceOf[Const] && 
-                              !as1.tail.head.isInstanceOf[Const]) => 
+      case "regexp_match" if ENABLE_REGEXP_PARTIAL_EVAL &&
+                             as1.head.isInstanceOf[Const] &&
+                             !as1.tail.head.isInstanceOf[Const] =>
         val regex = as1.head.asInstanceOf[Const].v
         val preg0 = regexpCacheMap.getOrElseUpdate(regex, fresh("preg"))
         (as1.tail, "preg_match(" + preg0 + ",")
@@ -1147,10 +1146,10 @@ trait ICppGen extends CodeGen {
       val mapType = mapName + "_map"
       val mapEntryType = mapName + "_entry"
       
-      if (ks.size == 0) { // variable
+      if (ks.isEmpty) { // variable
         if (ctx contains mapName) co(rn(mapName)) else co(mapName)
       } 
-      else if (ki.size == 0) {
+      else if (ki.isEmpty) {
         val localEntry = fresh("se")
         localEntries += ((localEntry, mapEntryType))
         val argList = (ks map (x => rn(x._1))).mkString(", ")
@@ -1169,7 +1168,7 @@ trait ICppGen extends CodeGen {
             refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
             co(v0)
 
-          if (ko.size > 0) { //slice
+          if (ko.nonEmpty) { //slice
             if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaRelationNames.contains(mapName)) {
               sys.error("Delta relation requires secondary indices. Turn off experimental runtime library.")
             }
@@ -1245,7 +1244,7 @@ trait ICppGen extends CodeGen {
         else { // only foreach for Temp map
           val localVars = 
             ki.map { case ((k, tp), i) => 
-              s"${typeToString(tp)} ${rn(k)} = ${e0}->_${(i + 1)};"
+              s"${typeToString(tp)} ${rn(k)} = ${e0}->_${i + 1};"
             }.mkString("\n") 
 
           s"""|{ // temp foreach
@@ -1347,7 +1346,7 @@ trait ICppGen extends CodeGen {
           ctx.load(cur)
           val s2 = cpsExpr(er, co, am)
           ctx.load(cur)
-          (s1 + s2)
+          s1 + s2
         case _ =>
           val tmp = fresh("sum")
           val cur = ctx.save
@@ -1355,8 +1354,7 @@ trait ICppGen extends CodeGen {
           ctx.load(cur)
           val s2 = cpsExpr(er, (v: String) => addToTempVar(tmp, fks, v, a.tp), Some(fks))
           ctx.load(cur)
-          ( emitInitTempVar(tmp, a.tp, fks) + s1 + s2 +
-            cpsExpr(MapRef(tmp, a.tp, fks, true), co) )
+          emitInitTempVar(tmp, a.tp, fks) + s1 + s2 + cpsExpr(MapRef(tmp, a.tp, fks, true), co)
       }
 
     case a @ AggSum(ks, e) =>
@@ -1371,7 +1369,7 @@ trait ICppGen extends CodeGen {
           ctx.load(cur)
           val s2 = if (fks.isEmpty) co(tmp) 
                    else cpsExpr(MapRef(tmp, e.tp, fks, true), co)
-          ( emitInitTempVar(tmp, a.tp, fks) + s1 + s2 )
+          emitInitTempVar(tmp, a.tp, fks) + s1 + s2
       }
 
     case Repartition(ks, e) => cpsExpr(e, (v: String) => co(v))
@@ -1386,7 +1384,7 @@ trait ICppGen extends CodeGen {
 
     freshClear()
 
-    mapDefs = s0.maps.map { m => (m.name -> m) }.toMap
+    mapDefs = s0.maps.map { m => m.name -> m }.toMap
 
     deltaRelationNames = s0.triggers.flatMap(_.event match {
       case EventBatchUpdate(s) => List(delta(s.name))
@@ -1397,7 +1395,7 @@ trait ICppGen extends CodeGen {
 
     isExpressiveTLQSEnabled = s0.queries.exists { q => 
       q.expr match { 
-        case MapRef(n, _, _, _) => (n != q.name)
+        case MapRef(n, _, _, _) => n != q.name
         case _ => true
       }
     }
