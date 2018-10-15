@@ -1280,13 +1280,28 @@ trait ICppGen extends CodeGen {
 
     // Mul(el,er)
     // ==
-    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) ) 
+    //   Mul( (el,ctx0) -> (vl,ctx1), (er,ctx1) -> (vr,ctx2) ) 
     //    ==>
-    //   (v = vl * vr , ctx2)
+    //   (v = vl * vr, ctx2)
     case Mul(el, er) =>
       def vx(vl: String, vr: String) = 
         if (vl == "1") vr else if (vr == "1") vl else "(" + vl + " * " + vr + ")"
-      
+
+      // Enforce aggregation if er contains MapRefs in order to reduce
+      // the number of (potentially) expensive subsequent er's operations
+      val target = {
+        def canLeftAggregate = el match {
+          case AggSum(_, _) | Add(_, _) => true
+          case _ => false
+        }
+        def isLeftSingleton =
+          el.ovars.filter { case (n, t) => !ctx.contains(n) }.isEmpty
+        def isRightExpensive =
+          er.collect { case m: MapRef => List(m) }.exists(_.keys.nonEmpty)
+
+        if (am.nonEmpty && canLeftAggregate && !isLeftSingleton && isRightExpensive) None else am
+      }
+
       cpsExpr(el, (vl: String) => {
           var ifcond = ""
           val body = cpsExpr(er, (vr: String) => {
@@ -1304,7 +1319,7 @@ trait ICppGen extends CodeGen {
 
               case (None, None) => co(vx(vl, vr))
             }
-          }, am)
+          }, target)
           
           if (ifcond.isEmpty) body else body match {
             case rIfBranch(c, b) =>
@@ -1312,7 +1327,7 @@ trait ICppGen extends CodeGen {
             case _ =>
               "if ((" + ifcond + ")) {\n" + ind(body) + "\n}\n"
           }
-        }, am)
+        }, target)
 
     // Add(el,er)
     // ==
@@ -1326,7 +1341,7 @@ trait ICppGen extends CodeGen {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t) 
     case a @ Add(el, er) =>
-      val fks = a.schema._2.filter { case (n,t) => !ctx.contains(n) }
+      val fks = a.ovars.filter { case (n, t) => !ctx.contains(n) }
       if (fks.isEmpty) {
         val cur = ctx.save
         unionDepth += 1
