@@ -79,16 +79,6 @@ trait ICppGen extends CodeGen {
   // tmp mapName => (List of key types and value type)
   private val tempMapDefinitions = HashMap[String, (List[Type], Type)]()
 
-  // Initialize and (if needed) register a temp variable
-  private def initializeTempMap(n: String, tp: Type, ksTp: List[Type] = Nil): String =     
-    if (ksTp == Nil) {
-      typeToString(tp) + " " + n + " = " + zeroOfType(tp) + ";\n"
-    }
-    else {
-      tempMapDefinitions += (n -> (ksTp, tp))
-      n + ".clear();\n"
-    }
-
   protected def emitTempMapDefinitions = {
     val s = tempMapDefinitions.map { case (n, (ksTp, vTp)) =>
       if (EXPERIMENTAL_HASHMAP)
@@ -101,6 +91,16 @@ trait ICppGen extends CodeGen {
 
     stringIf(s.nonEmpty, "/* Data structures used as temporary materialized views */\n" + s)
   }
+
+  // Initialize and (if needed) register a temp variable
+  private def emitInitTempVar(name: String, tp: Type, keys: List[(String, Type)]): String =
+    if (keys.isEmpty) {
+      typeToString(tp) + " " + name + " = " + zeroOfType(tp) + ";\n"
+    }
+    else {
+      tempMapDefinitions += (name -> (keys.map(_._2), tp))
+      name + ".clear();\n"
+    }
 
   private val tempEntryTypes = HashSet[(List[Type], Type)]()
 
@@ -229,57 +229,57 @@ trait ICppGen extends CodeGen {
   private def emitStmt(s0: Statement): String = s0 match {
     case s: TriggerStmt =>
       val localVar = fresh("se")
-
-      if (s.target.keys.size > 0) {
+      if (s.target.keys.nonEmpty) {
         localEntries += ((localVar, s.target.name + "_entry"))
       }
 
       val sResetTargetMap = s.op match {
-        case OpSet if s.target.keys.size > 0 => s"${s.target.name}.clear();\n"
+        case OpSet if s.target.keys.isEmpty => 
+          s"${s.target.name} = ${zeroOfType(s.target.tp)};\n"
+        case OpSet if s.target.keys.nonEmpty => 
+          s"${s.target.name}.clear();\n"
         case _ => ""
       }
 
       val sInitExpr = s.initExpr.map { iexpr =>
         ctx.load()
         cpsExpr(iexpr, (v: String) =>
-          if (s.target.keys.size == 0) 
+          if (s.target.keys.isEmpty) 
             s"if (${s.target.name} == ${zeroOfType(iexpr.tp)}) ${s.target.name} = ${v};\n"
           else {
-            val sArgs = localVar + ".modify(" + (s.target.keys map (x => rn(x._1))).mkString(", ") + ")"
+            val sArgs = localVar + ".modify(" + (s.target.keys.map(x => rn(x._1))).mkString(", ") + ")"
             s"if (${s.target.name}.getValueOrDefault(${sArgs}) == ${zeroOfType(iexpr.tp)}) ${s.target.name}.setOrDelOnZero(${localVar}, ${v});\n"
           }
         ) 
       }.getOrElse("")
 
-      val sStatement = {
-        val (fop, sop) = s.op match { 
-          case OpAdd => (s.target.name + ".addOrDelOnZero", "+=") 
-          case OpSet => (s.target.name + ".addOrDelOnZero", "=") 
+      ctx.load()
+      val sStatement = cpsExpr(s.expr, (v: String) =>
+        if (s.target.keys.isEmpty) {
+          extractBooleanExp(v) match {
+            case Some((c, t)) =>
+              s"""|if (${c}) {
+                  |${ind(s"${s.target.name} += ${t};")}
+                  |}
+                  |""".stripMargin
+            case _ =>
+              s"${s.target.name} += ${v};\n"
+          }
         }
-
-        ctx.load()
-        cpsExpr(s.expr, (v: String) => {
-            if (s.target.keys.size == 0) {
-              extractBooleanExp(v) match {
-                case Some((c, t)) =>
-                  s"(/*if */(${c}) ? ${s.target.name} ${sop} ${t} : ${zeroOfType(s.target.tp)});\n"
-                case _ =>
-                  s"${s.target.name} ${sop} ${v};\n"
-              }
-            }
-            else {
-              val argList = (s.target.keys map (x => rn(x._1))).mkString(", ")
-              extractBooleanExp(v) match {
-                case Some((c,t)) =>            
-                  s"(/*if */(${c}) ? ${fop}(${localVar}.modify(${argList}), ${t}) : (void)0);\n"
-                case _ =>
-                  s"${fop}(${localVar}.modify(${argList}), ${v});\n"
-              }
-            }
-          },
-          /*if (op==OpAdd)*/ Some(s.target.keys) /*else None*/
-        )
-      }
+        else {
+          val argList = (s.target.keys map (x => rn(x._1))).mkString(", ")
+          extractBooleanExp(v) match {
+            case Some((c,t)) =>
+              s"""|if (${c}) {
+                  |${ind(s"${s.target.name}.addOrDelOnZero(${localVar}.modify(${argList}), ${t});")}
+                  |}
+                  |""".stripMargin
+            case _ =>
+              s"${s.target.name}.addOrDelOnZero(${localVar}.modify(${argList}), ${v});\n"
+          }
+        },
+        Some(s.target.keys)
+      )
 
       sResetTargetMap + sInitExpr + sStatement
 
@@ -1035,30 +1035,40 @@ trait ICppGen extends CodeGen {
       Some(s.substring(posInit, pos - 1), s.substring(pos + " ? ".length, s.lastIndexOf(":") - 1))
     }
 
-  private def addToTempMapFunc(ksTp: List[Type], vsTp: Type, m: String, ks: List[String], vs: String) = {
-    val localEntry = fresh("st")
-    tempEntryTypes += ((ksTp, vsTp))
-    localEntries += ((localEntry, tempEntryTypeName(ksTp, vsTp)))
-
-    if (EXPERIMENTAL_HASHMAP) {
+  private def addToTempVar(name: String, keys: List[(String, Type)], vs: String, vsTp: Type) = 
+    if (keys.isEmpty) {
       extractBooleanExp(vs) match {
         case Some((c, t)) =>
-          s"(/*if */(" + c + ") ? " + m + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
+          "(/*if */(" + c + ") ? " + name + " += " + t + " : " + zeroOfType(vsTp) + ");\n"
         case _ =>
-          m + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + vs + ");\n"
+          name + " += " + vs + ";\n"
       }
     }
     else {
-      extractBooleanExp(vs) match {
-        case Some((c, t)) =>
-          "(/*if */(" + c + ") ? add_to_temp_map" + /*"<"+tempEntryTypeName(ksTp, vsTp)+">"+*/ 
-          "(" + m + ", " + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
-        case _ =>
-          "add_to_temp_map" + /*"<"+tempEntryTypeName(ksTp, vsTp)+">"+*/
-          "(" + m + ", " + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + vs +");\n"
+      val localEntry = fresh("st")
+      val (ks, ksTp) = keys.unzip
+      tempEntryTypes += ((ksTp, vsTp))
+      localEntries += ((localEntry, tempEntryTypeName(ksTp, vsTp)))
+
+      if (EXPERIMENTAL_HASHMAP) {
+        extractBooleanExp(vs) match {
+          case Some((c, t)) =>
+            s"(/*if */(" + c + ") ? " + name + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
+          case _ =>
+            name + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + vs + ");\n"
+        }
+      }
+      else {
+        extractBooleanExp(vs) match {
+          case Some((c, t)) =>
+            "(/*if */(" + c + ") ? add_to_temp_map" + /*"<"+tempEntryTypeName(ksTp, vsTp)+">"+*/ 
+            "(" + name + ", " + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
+          case _ =>
+            "add_to_temp_map" + /*"<"+tempEntryTypeName(ksTp, vsTp)+">"+*/
+            "(" + name + ", " + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + vs +");\n"
+        }
       }
     }
-  }
 
   private def applyFunc(co: String => String, fn1: String, tp: Type, as1: List[Expr]) = {
     val (as, fn) = fn1 match {
@@ -1109,12 +1119,12 @@ trait ICppGen extends CodeGen {
     case Const(tp, v) => tp match {
       case TypeLong => co(v + "L")
       case TypeFloat => co(v + "f")
-      case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co, am)
+      case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co)
       case _ => co(v)
     }
 
-    case Exists(e) => cpsExpr(e, (v: String) => 
-      co(cmpFunc(TypeLong, OpNe, v, zeroOfType(ex.tp))))
+    case Exists(e) => 
+      cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpNe, v, zeroOfType(ex.tp))))
 
     case Cmp(l, r, op) =>
       co(cpsExpr(l, (ll: String) => cpsExpr(r, (rr: String) => cmpFunc(l.tp, op, ll, rr))))
@@ -1254,7 +1264,7 @@ trait ICppGen extends CodeGen {
     case Lift(n, e) =>
       // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) {
-        cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpEq, rn(n), v)), am)
+        cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpEq, rn(n), v)))
       }
       else e match {
         case Ref(n2) => 
@@ -1263,7 +1273,7 @@ trait ICppGen extends CodeGen {
         // This renaming is required
         case _ =>
           ctx.add(n, (e.tp, fresh("l")))
-          cpsExpr(e, (v: String) => typeToString(e.tp) + " " + rn(n) + " = " + v + ";\n" + co("1"), am)
+          cpsExpr(e, (v: String) => typeToString(e.tp) + " " + rn(n) + " = " + v + ";\n" + co("1"))
       }
 
     // Mul(el,er)
@@ -1271,26 +1281,25 @@ trait ICppGen extends CodeGen {
     //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) ) 
     //    ==>
     //   (v = vl * vr , ctx2)
-    case Mul(el, er) => 
+    case Mul(el, er) =>
       def vx(vl: String, vr: String) = 
         if (vl == "1") vr else if (vr == "1") vl else "(" + vl + " * " + vr + ")"
-
       cpsExpr(el, (vl: String) => {
         var ifcond = ""
         val body = cpsExpr(er, (vr: String) => {
           (extractBooleanExp(vl), extractBooleanExp(vr)) match {
               case (Some((cl,tl)), Some((cr,tr))) =>
-                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + zeroOfType(ex.tp) + ")") }
-                else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl,tr) + " : " + zeroOfType(ex.tp) + ")")
+                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl, tr) + " : " + zeroOfType(ex.tp) + ")") }
+                else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl, tr) + " : " + zeroOfType(ex.tp) + ")")
 
               case (Some((cl,tl)), _) =>
-                if (unionDepth == 0) { ifcond = cl; co(vx(tl,vr)) }
-                else co("(/*if */(" + cl + ") ? " + vx(tl,vr) + " : " + zeroOfType(ex.tp) + ")")
+                if (unionDepth == 0) { ifcond = cl; co(vx(tl, vr)) }
+                else co("(/*if */(" + cl + ") ? " + vx(tl, vr) + " : " + zeroOfType(ex.tp) + ")")
 
               case (_, Some((cr,tr))) =>
-                co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + zeroOfType(ex.tp) + ")")
+                co("(/*if */(" + cr + ") ? " + vx(vl, tr) + " : " + zeroOfType(ex.tp) + ")")
 
-              case _ => co(vx(vl,vr))
+              case _ => co(vx(vl, vr))
             }
           }, am)
           if (ifcond == "") body else "if (" + ifcond + ") {\n" + ind(body) + "\n}\n"
@@ -1307,77 +1316,52 @@ trait ICppGen extends CodeGen {
     //   foreach vl in L, T += vl
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t) 
-    case a @ Add(el,er) =>      
-      val agg = a.schema._2.filter { case (n,t) => !ctx.contains(n) }
-      val s =
-        if (agg == Nil) {
+    case a @ Add(el, er) =>
+      val fks = a.schema._2.filter { case (n,t) => !ctx.contains(n) }
+      if (fks.isEmpty) {
+        val cur = ctx.save
+        unionDepth += 1
+        cpsExpr(el, (vl: String) => {
+          ctx.load(cur)
+          cpsExpr(er, (vr: String) => {
+            ctx.load(cur)
+            unionDepth -= 1
+            co(s"(${vl} + ${vr})")
+          })
+        })
+      }
+      else am match {
+        case Some(t) if t.toSet.subsetOf(fks.toSet) =>
           val cur = ctx.save
-          unionDepth += 1
-          cpsExpr(el, (vl: String) => {
-            ctx.load(cur)
-            cpsExpr(er, (vr: String) => {
-              ctx.load(cur)
-              unionDepth -= 1
-              co(s"(${vl} + ${vr})")
-            }, am)
-          }, am)
-        }
-        else am match {
-          case Some(t) if t.toSet.subsetOf(agg.toSet) =>
-            val cur = ctx.save
-            unionDepth += 1
-            val s1 = cpsExpr(el, co, am)
-            ctx.load(cur)
-            val s2 = cpsExpr(er, co, am)
-            ctx.load(cur)
-            unionDepth -= 1
-            (s1 + s2)
-          case _ =>
-            val acc = fresh("_c")
-            val ks = agg.map(_._1)
-            val ksTp = agg.map(_._2)
-            val cur = ctx.save
-            unionDepth += 1
-            val s1 = cpsExpr(el, (v: String) => addToTempMapFunc(ksTp, a.tp, acc, ks, v), Some(agg))
-            ctx.load(cur)
-            val s2 = cpsExpr(er, (v: String) => addToTempMapFunc(ksTp, a.tp, acc, ks, v), Some(agg))
-            ctx.load(cur)
-            unionDepth -= 1
-            ( initializeTempMap(acc, a.tp, agg.map(_._2)) +
-              s1 +
-              s2 +
-              cpsExpr(MapRef(acc, a.tp, agg, true), co) )
-        }
-      s
+          val s1 = cpsExpr(el, co, am)
+          ctx.load(cur)
+          val s2 = cpsExpr(er, co, am)
+          ctx.load(cur)
+          (s1 + s2)
+        case _ =>
+          val tmp = fresh("sum")
+          val cur = ctx.save
+          val s1 = cpsExpr(el, (v: String) => addToTempVar(tmp, fks, v, a.tp), Some(fks))
+          ctx.load(cur)
+          val s2 = cpsExpr(er, (v: String) => addToTempVar(tmp, fks, v, a.tp), Some(fks))
+          ctx.load(cur)
+          ( emitInitTempVar(tmp, a.tp, fks) + s1 + s2 +
+            cpsExpr(MapRef(tmp, a.tp, fks, true), co) )
+      }
 
     case a @ AggSum(ks, e) =>
-      val aks = ks.filter { case(n, t) => !ctx.contains(n) }
-      if (aks.size == 0) {
-        val cur = ctx.save
-        val aggVar = fresh("agg")
-        
-        initializeTempMap(aggVar, a.tp) +
-        cpsExpr(e, (v: String) =>
-          extractBooleanExp(v) match {
-            case Some((c,t)) =>
-              "(/*if */(" + c + ") ? " + aggVar + " += " + t + " : " + zeroOfType(a.tp) + ");\n"
-            case _ =>
-              aggVar + " += " + v + ";\n"
-          }) +
-        { ctx.load(cur); co(aggVar) }
-      } 
-      else am match {
-        case Some(t) if t.toSet.subsetOf(aks.toSet) => 
+      val fks = ks.filter { case(n, t) => !ctx.contains(n) }
+      am match {
+        case Some(t) if t.toSet.subsetOf(fks.toSet) =>
           cpsExpr(e, co, am)
         case _ =>
-          val aggVar = fresh("agg")
-          val tmp = Some(aks)     // declare this as summing target
           val cur = ctx.save
-  
-          initializeTempMap(aggVar, e.tp, aks.map(_._2)) +
-          cpsExpr(e, (v: String) => 
-            addToTempMapFunc(aks.map(_._2), e.tp, aggVar, aks.map(_._1), v), tmp) +
-          { ctx.load(cur); cpsExpr(MapRef(aggVar, e.tp, aks, true), co) }
+          val tmp = fresh("agg")
+          val s1 = cpsExpr(e, (v: String) => addToTempVar(tmp, fks, v, a.tp), Some(fks))
+          ctx.load(cur)
+          val s2 = if (fks.isEmpty) co(tmp) 
+                   else cpsExpr(MapRef(tmp, e.tp, fks, true), co)
+          ( emitInitTempVar(tmp, a.tp, fks) + s1 + s2 )
       }
 
     case Repartition(ks, e) => cpsExpr(e, (v: String) => co(v))
