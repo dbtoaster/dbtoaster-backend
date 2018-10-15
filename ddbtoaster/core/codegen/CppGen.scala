@@ -60,6 +60,8 @@ trait ICppGen extends CodeGen {
     case OpGe => ">="
   }
 
+  protected val rIfBranch = """(?s)if\s+\((.*?)\)\s+\{\n(.*)\}\s*""".r
+
   //---------- Slicing (secondary) indices for a map
   protected val secondaryIndices = 
     HashMap[String, List[List[Int]]]().withDefaultValue(List[List[Int]]())
@@ -255,7 +257,8 @@ trait ICppGen extends CodeGen {
 
       ctx.load()
       val sStatement = cpsExpr(s.expr, (v: String) =>
-        if (s.target.keys.isEmpty) {
+        if (v == zeroOfType(s.expr.tp)) "" 
+        else if (s.target.keys.isEmpty) {
           extractBooleanExp(v) match {
             case Some((c, t)) =>
               s"""|if (${c}) {
@@ -1284,25 +1287,32 @@ trait ICppGen extends CodeGen {
     case Mul(el, er) =>
       def vx(vl: String, vr: String) = 
         if (vl == "1") vr else if (vr == "1") vl else "(" + vl + " * " + vr + ")"
+      
       cpsExpr(el, (vl: String) => {
-        var ifcond = ""
-        val body = cpsExpr(er, (vr: String) => {
-          (extractBooleanExp(vl), extractBooleanExp(vr)) match {
+          var ifcond = ""
+          val body = cpsExpr(er, (vr: String) => {
+            (extractBooleanExp(vl), extractBooleanExp(vr)) match {
               case (Some((cl,tl)), Some((cr,tr))) =>
-                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl, tr) + " : " + zeroOfType(ex.tp) + ")") }
+                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(tl, tr) + " : " + zeroOfType(ex.tp) + ")") }
                 else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl, tr) + " : " + zeroOfType(ex.tp) + ")")
 
-              case (Some((cl,tl)), _) =>
+              case (Some((cl,tl)), None) =>
                 if (unionDepth == 0) { ifcond = cl; co(vx(tl, vr)) }
                 else co("(/*if */(" + cl + ") ? " + vx(tl, vr) + " : " + zeroOfType(ex.tp) + ")")
 
-              case (_, Some((cr,tr))) =>
+              case (None, Some((cr,tr))) =>
                 co("(/*if */(" + cr + ") ? " + vx(vl, tr) + " : " + zeroOfType(ex.tp) + ")")
 
-              case _ => co(vx(vl, vr))
+              case (None, None) => co(vx(vl, vr))
             }
           }, am)
-          if (ifcond == "") body else "if (" + ifcond + ") {\n" + ind(body) + "\n}\n"
+          
+          if (ifcond.isEmpty) body else body match {
+            case rIfBranch(c, b) =>
+              "if ((" + ifcond + ") && " + c + ") {\n" + b + "\n}\n"
+            case _ =>
+              "if ((" + ifcond + ")) {\n" + ind(body) + "\n}\n"
+          }
         }, am)
 
     // Add(el,er)
