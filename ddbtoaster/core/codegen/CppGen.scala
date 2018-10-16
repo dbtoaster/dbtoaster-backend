@@ -60,6 +60,7 @@ trait ICppGen extends CodeGen {
   }
 
   protected val rIfBranch = """(?s)if\s+\((.*?)\)\s+\{\n(.*)\}\s*""".r
+  protected val rInlineIfCond = """\(\/\*if \*\/\((.*)\) \? (.*) : (.*)\)""".r
 
   //---------- Slicing (secondary) indices for a map
   protected val secondaryIndices = 
@@ -1023,19 +1024,10 @@ trait ICppGen extends CodeGen {
   private var unionDepth = 0
   
   // extract cond and then branch of "if (c) t else 0"
-  private def extractBooleanExp(s: String): Option[(String, String)] = 
-    if (!s.startsWith("(/*if */(")) None 
-    else {      
-      val posInit = "(/*if */(".length
-      var pos = posInit
-      var nestingLvl = 1
-      while (nestingLvl > 0) {
-        if (s(pos) == '(') nestingLvl += 1 
-        else if (s(pos)==')') nestingLvl -= 1
-        pos += 1
-      }
-      Some(s.substring(posInit, pos - 1), s.substring(pos + " ? ".length, s.lastIndexOf(":") - 1))
-    }
+  private def extractBooleanExp(s: String): Option[(String, String)] = s match {
+    case rInlineIfCond(c, b, _) => Some(c, b)
+    case _ => None
+  }
 
   private def addToTempVar(name: String, keys: List[(String, Type)], vs: String, vsTp: Type) = 
     if (keys.isEmpty) {
