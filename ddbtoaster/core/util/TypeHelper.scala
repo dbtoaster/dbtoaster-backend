@@ -19,7 +19,7 @@ object TypeHelper {
       case TypeDouble => "DOUBLE_TYPE"
       case TypeDate   => "date"
       case TypeString => "STRING_TYPE"
-      case t: TypeCustom => t.name
+      case TypeCustom(d, p) => d.name + p.mkString
     }
 
     def refTypeToString(t: Type) = t match {
@@ -31,19 +31,19 @@ object TypeHelper {
       case TypeDouble => "DOUBLE_TYPE"
       case TypeDate   => "date"
       case TypeString => "STRING_TYPE&"
-      case t: TypeCustom => t.name + "&"
+      case TypeCustom(d, p) => d.name + p.mkString + "&"
     }
 
     def typeToChar(t: Type) = t match {
-      case TypeChar   => 'c'
-      case TypeShort  => 's'
-      case TypeInt    => 'I'
-      case TypeLong   => 'L'
-      case TypeFloat  => 'f'
-      case TypeDouble => 'D'
-      case TypeDate   => 'T'
-      case TypeString => 'S'
-      case t: TypeCustom => 'R'
+      case TypeChar   => "c"
+      case TypeShort  => "s"
+      case TypeInt    => "I"
+      case TypeLong   => "L"
+      case TypeFloat  => "f"
+      case TypeDouble => "D"
+      case TypeDate   => "T"
+      case TypeString => "S"
+      case TypeCustom(d, p) => d.name + p.mkString
     }
 
     def zeroOfType(t: Type) = t match {
@@ -55,7 +55,7 @@ object TypeHelper {
       case TypeDouble => "0.0"
       case TypeDate   => "0"
       case TypeString => "\"\""
-      case t: TypeCustom => t.name + "::zero"
+      case TypeCustom(d, p) => d.name + p.mkString + "::zero"
     }
   }
 

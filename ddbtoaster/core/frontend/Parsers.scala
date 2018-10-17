@@ -87,8 +87,8 @@ class ExtParser extends StandardTokenParsers {
     }
 
   lazy val customType: Parser[TypeCustom] =
-    acceptIf (x => typeMap.contains(x.chars) ) (x => "No such type '" + x.chars + "'") ^^ {
-      case i => TypeCustom(i.chars, typeMap(i.chars))
+    acceptIf (x => typeMap.contains(x.chars)) (x => "No such type '" + x.chars + "'") ~ opt("(" ~> intLit <~ ")") ^^ {
+      case i ~ p => TypeCustom(typeMap(i.chars), p.map(_.toInt))
     }
 
   // ------------ Library function (validates name)

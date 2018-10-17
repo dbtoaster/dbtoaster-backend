@@ -73,13 +73,15 @@ case object TypeString extends Type {
   }    
   override def toString = "string" 
 }
-case class TypeCustom(val name: String, val typeDef: TypeDefinition) extends Type { 
+case class TypeCustom(typeDef: TypeDefinition, param: Option[Int]) extends Type { 
   def resolve(b: Type) = b match {
     case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
-    case b: TypeCustom if typeDef == b.typeDef => this
+    case b: TypeCustom if typeDef == b.typeDef && param.isEmpty && b.param.isEmpty => this
+    case b: TypeCustom if typeDef == b.typeDef && param.nonEmpty && b.param.nonEmpty => 
+      TypeCustom(typeDef, Some(param.get + b.param.get))
     case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = name
+  override def toString = typeDef.name + param.map("(" + _ + ")").mkString
 }
 
 // ------ Comparison operators
@@ -132,7 +134,7 @@ case class Adaptor(name: String, options: Map[String, String]) extends Tree {
 }
 
 // ------ Custom type definitions
-case class TypeDefinition(val name: String, val path: String) {
+case class TypeDefinition(name: String, path: String) {
   override def toString = "CREATE TYPE " + name + " FROM FILE " + path + ";"
 }
 
