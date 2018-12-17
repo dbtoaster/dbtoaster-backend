@@ -1015,7 +1015,6 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |${ind(gc)}
         |}
         |
-        |
         |  ${pp}
         |
         |""".stripMargin
