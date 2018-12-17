@@ -186,7 +186,6 @@ object UnitTest {
                                   List(
                                     LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS,
                                     LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS,
-                                    LANG_SCALAJS_PARDIS,
                                     LANG_SPARK_LMS, LANG_AKKA
                                   ).mkString(", ") /* + " (_spec|_full|_0-10)?" */)
           error("  -q <filter>   add an inclusion filter for queries")
@@ -331,7 +330,7 @@ object UnitTest {
 
         for (dataset <- datasets) {
           for (lang <- languages) lang match {
-            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SCALAJS_PARDIS|LANG_SPARK_LMS =>
+            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SPARK_LMS =>
               val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
               testQueryScala(query, className, dataset, lang, tmpDir, codeM3)
             case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
@@ -371,7 +370,7 @@ object UnitTest {
         Compiler.toast(fileName, "m3", pathRepo = null)
       }
       for (lang <- languages) lang match {
-        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS|LANG_SCALAJS_PARDIS | LANG_SPARK_LMS =>
+        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SPARK_LMS =>
           val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
           testQueryScala(fileName, className, dataset, lang, tmpDir, codeM3)
         case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
@@ -565,7 +564,6 @@ object UnitTest {
         case LANG_SCALA_VANILLA => "VScala"
         case LANG_SCALA_LMS => "LMSScala"
         case LANG_SCALA_PARDIS => "Scala"
-        case LANG_SCALAJS_PARDIS => "ScalaJS"
         case LANG_SPARK_LMS => "Spark"
         case _ => sys.error("Unknown lang: " + lang)
       }
