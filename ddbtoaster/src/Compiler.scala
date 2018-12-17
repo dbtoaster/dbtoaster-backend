@@ -31,6 +31,7 @@ object Compiler {
   val LANG_SCALA_VANILLA = "vscala"
   val LANG_SCALA_LMS = "lmsscala"
   val LANG_SCALA_PARDIS = "scala"
+  val LANG_SCALAJS_PARDIS = "scalajs"
   val LANG_SPARK_LMS = "spark"
   val LANG_AKKA = "akka"
 
@@ -44,6 +45,7 @@ object Compiler {
       LANG_SCALA_VANILLA -> "m3",
       LANG_SCALA_LMS -> "m3",
       LANG_SCALA_PARDIS -> "m3",
+      LANG_SCALAJS_PARDIS -> "m3",
       LANG_SPARK_LMS -> "dm3",
       LANG_AKKA -> "m3"
     )
@@ -58,6 +60,7 @@ object Compiler {
       LANG_SCALA_VANILLA -> "scala",
       LANG_SCALA_LMS -> "scala",
       LANG_SCALA_PARDIS -> "scala",
+      LANG_SCALAJS_PARDIS -> "scala",
       LANG_SPARK_LMS -> "scala",
       LANG_AKKA -> "scala"
     )
@@ -137,6 +140,7 @@ object Compiler {
     error("                - " + pad(LANG_SCALA_VANILLA) + ": vanilla Scala code")
     error("                - " + pad(LANG_SCALA_LMS)     + ": LMS-optimized Scala")
     error("                - " + pad(LANG_SCALA_PARDIS)  + ": PARDIS-optimized Scala")
+    error("                - " + pad(LANG_SCALAJS_PARDIS)  + ": PARDIS-optimized ScalaJS")
     error("                - " + pad(LANG_SPARK_LMS)     + ": LMS-optimized Spark")
     // error("                - " + pad(LANG_AKKA)          +": distributed Akka code")
     error("Front-end options:")
@@ -236,7 +240,7 @@ object Compiler {
         case "-l" => eat(s => s match { 
             case LANG_CALC|LANG_M3|LANG_DIST_M3|
                  LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS|
-                 LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|
+                 LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALAJS_PARDIS|LANG_SCALA_PARDIS|
                  LANG_SPARK_LMS|LANG_AKKA => lang = s
             case _ => sys.error("Unsupported language: " + s)
           }, true)
@@ -313,7 +317,7 @@ object Compiler {
     def checkLib(s: String) = if (new File(s).exists) { execRuntimeLibs = s :: execRuntimeLibs; true } else false
 
     if (execRuntimeLibs == Nil && execOutput) lang match {
-      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS => 
+      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS|LANG_SCALAJS_PARDIS =>
         if (!checkLib("lib/ddbt.jar") && !checkLib("target/scala-2.11/classes")) { 
           error("Cannot find runtime libraries")
           execOutput = false
@@ -434,6 +438,35 @@ object Compiler {
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = false
         new PardisScalaGen(codegenOpts) //DSL
+      case LANG_SCALAJS_PARDIS =>
+        // Set Pardis optimizer options
+        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
+        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
+        Optimizer.fixedRange = (frontendOptLevel == "-O3")
+        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
+        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
+        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
+        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
+        Optimizer.indexInline = (frontendOptLevel == "-O3")
+        Optimizer.sliceInline = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
+        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
+        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
+        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        Optimizer.refCounter = true
+        Optimizer.regexHoister = (frontendOptLevel == "-O3")
+        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
+        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
+        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
+        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
+        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
+        Optimizer.medIdx = (frontendOptLevel == "-O3")
+        Optimizer.coldMotion = (frontendOptLevel == "-O3")
+        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.parameterPromotion = true
+        Optimizer.cTransformer = false
+        packageName="tutorial.webapp"//TODO change later
+        new PardisScalaJSGen(codegenOpts) //DSL
       case LANG_SPARK_LMS => 
         new LMSSparkGen(codegenOpts)
       case LANG_AKKA => 
@@ -458,7 +491,7 @@ object Compiler {
     if (!outputDir.exists) { outputDir.mkdirs() }
 
     lang match {
-      case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_AKKA =>
+      case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_SCALAJS_PARDIS|LANG_AKKA =>
         Utils.scalaCompiler(outputDir,
                             runtimeLibs.mkString(":"),
                             useExternalScalac) (List(inputFile))
@@ -568,7 +601,7 @@ object Compiler {
         lang match {
           case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
             runCpp(outputExeFile, execArgs, execBatchSize)
-          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
+          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS|LANG_SCALAJS_PARDIS | LANG_AKKA =>
             runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
           case LANG_SPARK_LMS =>
             runSpark(packageName, className, execArgs, execBatchSize, dataset)
