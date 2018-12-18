@@ -973,9 +973,8 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
     val sStreams = streams(sources)
     s"""|package ${cgOpts.packageName}
         |
-        |import lib.{Entry, EntryIdx, IHash, Store}
+        |import lib.storeScala{Entry, EntryIdx, IHash, Store}
         |import Helper._
-        |import tutorial.webapp.Functions.Udate
         |
         |import scala.collection.mutable
         |import scala.concurrent.ExecutionContext.Implicits.global
