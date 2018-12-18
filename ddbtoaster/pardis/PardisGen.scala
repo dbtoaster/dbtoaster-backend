@@ -1024,8 +1024,10 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
     val in = s.in match {
       case SourceFile(path) =>
         {
-          val index=path.indexOfSlice("tpch")
-          val newPath="https://raw.githubusercontent.com/dbtoaster/dbtoaster-experiments-data/master/"+path.substring(index)
+          val trigger="dbtoaster-experiments-data"
+          val index=path.indexOfSlice(trigger)
+          val index1= path.indexOf('/',index+trigger.length)
+          val newPath="https://raw.githubusercontent.com/dbtoaster/dbtoaster-experiments-data/master/"+path.substring(index1+1)
           "getABInputStream(\"" + newPath + "\")"
         }
     }
