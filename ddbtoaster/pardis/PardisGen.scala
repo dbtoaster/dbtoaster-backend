@@ -988,7 +988,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |
         |${ind(getEntryDefinitions)}
         |
-        |def exec(): Unit = {
+        |  def main(args: Array[String]): Unit = {
         |
         |    var res:List[scala.collection.immutable.Map[_ <: Any, Any]]=List()
         |
