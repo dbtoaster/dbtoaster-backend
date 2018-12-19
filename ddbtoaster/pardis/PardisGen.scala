@@ -928,6 +928,9 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     entryDefs = x._3
   }
 }
+class PardisScala2Gen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
+
+}
 class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
 
   override def apply(s0: System): String = {
