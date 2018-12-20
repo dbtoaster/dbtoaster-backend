@@ -7,8 +7,9 @@ import ddbt.lib.store.{ Store, Entry }
 object ManifestHelper {
 
   def man(tp: Type): Manifest[_] = tp match {
-    case TypeChar | TypeShort | TypeInt | TypeLong   => manifest[Long]
+    case TypeByte | TypeShort | TypeInt | TypeLong   => manifest[Long]
     case TypeFloat | TypeDouble => manifest[Double]
+    case TypeChar => manifest[Char]
     case TypeString => manifest[String]
     case TypeDate   => manifest[Long]    //java.util.Date
     case t: TypeCustom => sys.error("Custom types not supported")      
@@ -44,8 +45,9 @@ object ManifestHelper {
   }
 
   def zero(tp: Type) = tp match {
-    case TypeChar | TypeShort | TypeInt | TypeLong => 0L
+    case TypeByte | TypeShort | TypeInt | TypeLong => 0L
     case TypeFloat | TypeDouble => 0.0
+    case TypeChar => 0.toChar
     case TypeString => ""
     case TypeDate   => 0L         // new java.util.Date()
     case t: TypeCustom => sys.error("Custom types not supported")  
@@ -53,8 +55,9 @@ object ManifestHelper {
   }
 
   def zero(m: Manifest[_]) = m.toString match {
-    case "Char" | "Short" | "Int" | "Long" => 0L
+    case "Byte" | "Short" | "Int" | "Long" => 0L
     case "Float" | "Double" => 0.0
+    case "Char" => 0.toChar
     case "String" => ""
     case "java.util.Date" => 0L   // new java.util.Date()
     case _ => sys.error("Bad manifest")

@@ -37,8 +37,9 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
 
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong  => co(impl.unit(v.toLong))
+      case TypeByte | TypeShort | TypeInt | TypeLong  => co(impl.unit(v.toLong))
       case TypeFloat | TypeDouble => co(impl.unit(v.toDouble))
+      case TypeChar => co(impl.unit(v(0)))
       case TypeString => co(impl.unit(v))
       case TypeDate   => sys.error("No date constant conversion") 
                          // co(impl.unit(new java.util.Date()))
@@ -56,12 +57,13 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
       assert(r.forall(_.isInstanceOf[Const]))
       expr(l, (vl: Rep[_]) => {
         val vr = r.map {
-          case Const(TypeChar, v) => impl.unit(v.toLong)
+          case Const(TypeByte, v) => impl.unit(v.toLong)
           case Const(TypeShort, v) => impl.unit(v.toLong)
           case Const(TypeInt, v) => impl.unit(v.toLong)
           case Const(TypeLong, v) => impl.unit(v.toLong)
           case Const(TypeFloat, v) => impl.unit(v.toDouble)
           case Const(TypeDouble, v) => impl.unit(v.toDouble)
+          case Const(TypeChar, v) => impl.unit(v(0))
           case Const(TypeString, v) => impl.unit(v)
           case Const(TypeDate, v) => sys.error("No date constant conversion")
           case x => sys.error("Unsupported type: " + x.tp)
@@ -163,7 +165,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
         // we ignore ctx
         val cur = cx.save;
         val acc: impl.Var[_] = ex.tp match {
-          case TypeChar | TypeShort | TypeInt | TypeLong =>
+          case TypeByte | TypeShort | TypeInt | TypeLong =>
             val agg: impl.Var[Long] = impl.var_new[Long](impl.unit(0L))
             expr(e,
               (v: Rep[_]) => 
@@ -189,19 +191,19 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
                 )
             )
             agg
-          case TypeString =>
-            val agg: impl.Var[String] = impl.var_new[String](impl.unit(""))
-            expr(e,
-              (v: Rep[_]) => 
-                impl.var_assign[String](
-                  agg.asInstanceOf[impl.Var[String]], 
-                  impl.string_plus(
-                    impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),
-                    v.asInstanceOf[Rep[String]]
-                  )
-                )
-            )
-            agg
+          // case TypeString =>
+          //   val agg: impl.Var[String] = impl.var_new[String](impl.unit(""))
+          //   expr(e,
+          //     (v: Rep[_]) => 
+          //       impl.var_assign[String](
+          //         agg.asInstanceOf[impl.Var[String]], 
+          //         impl.string_plus(
+          //           impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),
+          //           v.asInstanceOf[Rep[String]]
+          //         )
+          //       )
+          //   )
+          //   agg
           //case TypeDate =>
           // val agg:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date()))
           // expr(e,
@@ -248,7 +250,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
   }
 
   def mul(l: Rep[_], r: Rep[_], tp: Type) = tp match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
+    case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
       impl.m3apply("mul", List(l, r), tp)
     case _ => sys.error("Mul(l,r) only allowed on numeric types")
   }
@@ -257,7 +259,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
     def plus[T: Numeric: Manifest](l: Rep[_], r: Rep[_]) = 
       impl.numeric_plus[T](l.asInstanceOf[Rep[T]], r.asInstanceOf[Rep[T]])
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => plus[Long](l, r)
+      case TypeByte | TypeShort | TypeInt | TypeLong => plus[Long](l, r)
       case TypeFloat | TypeDouble => plus[Double](l, r)
       case _ => sys.error("Add(l,r) only allowed on numeric types")
     }
@@ -274,8 +276,9 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
       }
     }
     impl.__ifThenElse(tp match {
-        case TypeChar | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
+        case TypeByte | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
         case TypeFloat | TypeDouble => cmp2[Double](l, r)
+        case TypeChar => cmp2[Char](l, r)
         case TypeString => cmp2[String](l, r)
         case TypeDate => cmp2[Long](l, r)
           // cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]),
@@ -298,8 +301,9 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
           cmp2(vl, tl))
     }
     impl.__ifThenElse(tp match {
-        case TypeChar | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
+        case TypeByte | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
         case TypeFloat | TypeDouble => cmp2[Double](l, r)
+        case TypeChar => cmp2[Char](l, r)
         case TypeString => cmp2[String](l, r)
         case TypeDate => cmp2[Long](l, r)
         case _ => sys.error("Unsupported type")
@@ -353,10 +357,12 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val mm = m.tp match {
-              case TypeChar | TypeShort | TypeInt | TypeLong => 
+              case TypeByte | TypeShort | TypeInt | TypeLong => 
                 impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
               case TypeFloat | TypeDouble => 
                 impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Double]]])
+              case TypeChar => 
+                impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Char]]])
               case TypeString => 
                 impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[String]]])
               //case TypeDate => 

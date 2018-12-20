@@ -235,14 +235,26 @@ object TypeCheck extends (M3.System => M3.System) {
     val mapTypes: Map[String, (List[Type], Type)] =
       s0.maps.map { m => (m.name, (m.keys.map(_._2), m.tp)) }.toMap
 
-    def resolveType(tp1: Type, tp2: Type) = 
+    def resolveType(tp1: Type, tp2: Type) =
       try { tp1.resolve(tp2) } catch { case _: Throwable => tp2.resolve(tp1) }
+
+    // Change type of Const from String to Char when comparing strings and chars
+    // Consequence of using quotes for both strings and chars in SQL/M3
+    def demoteString2Char(l: Expr, r: Expr) = (l, r) match {
+      case (_, r2 @ Const(TypeString, vr)) if l.tp == TypeChar =>
+        TypeHelper.fromString(vr, TypeChar) // check vr is char
+        r2.tp = TypeChar
+      case (l2 @ Const(TypeString, vl), _) if r.tp == TypeChar =>
+        TypeHelper.fromString(vl, TypeChar) // check vl is char
+        l2.tp = TypeChar
+      case _ =>
+    } 
 
     // give a type to all untyped nodes
     def typeExpr(expr: Expr, ctx0: Map[String, Type], t: Option[Trigger]): Map[String, Type] = {
       var ctxRet = ctx0 // new bindings
       try {
-        expr match { 
+        expr match {
           case m @ Mul(l, r) =>
             ctxRet = typeExpr(r, typeExpr(l, ctx0, t), t)
             m.tp = resolveType(l.tp, r.tp)
@@ -253,9 +265,11 @@ object TypeCheck extends (M3.System => M3.System) {
             a.tp = resolveType(l.tp, r.tp)
           case Cmp(l, r, _) => 
             ctxRet = typeExpr(l, ctx0, t) ++ typeExpr(r, ctx0, t)
+            demoteString2Char(l, r)
             resolveType(l.tp, r.tp)   // check types
           case CmpOrList(l, rl) =>
             ctxRet = typeExpr(l, ctx0, t) ++ rl.flatMap(x => typeExpr(x, ctx0, t))
+            rl.foreach(r => demoteString2Char(l, r))
             rl.foreach(r => resolveType(l.tp, r.tp))   // check types
           case Exists(e) =>
             ctxRet = typeExpr(e, ctx0, t)

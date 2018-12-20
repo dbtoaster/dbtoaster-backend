@@ -60,7 +60,6 @@ trait ICppGen extends CodeGen {
   }
 
   protected val rIfBranch = """(?s)if\s+\((.*?)\)\s+\{\n(.*)\}\s*""".r
-  protected val rInlineIfCond = """\(\/\*if \*\/\((.*)\) \? (.*) : (.*)\)""".r
 
   //---------- Slicing (secondary) indices for a map
   protected val secondaryIndices = 
@@ -270,7 +269,7 @@ trait ICppGen extends CodeGen {
           }
         }
         else {
-          val argList = (s.target.keys map (x => rn(x._1))).mkString(", ")
+          val argList = s.target.keys.map(x => rn(x._1)).mkString(", ")
           extractBooleanExp(v) match {
             case Some((c,t)) =>
               s"""|if (${c}) {
@@ -636,12 +635,13 @@ trait ICppGen extends CodeGen {
 
     val sStringInit = 
       keys.zipWithIndex.map { case ((n, tp), i) => tp match {
-          case TypeChar   => n + " = (char) std::stoi(f[" + i + "]);"
+          case TypeByte   => n + " = (byte) std::stoi(f[" + i + "]);"
           case TypeShort  => n + " = (short) std::stoi(f[" + i + "]);"
           case TypeInt    => n + " = std::stoi(f[" + i + "]);"
           case TypeLong   => n + " = std::stol(f[" + i + "]);"
           case TypeFloat  => n + " = std::stof(f[" + i + "]);"
           case TypeDouble => n + " = std::stod(f[" + i + "]);"
+          case TypeChar   => n + " = f[" + i + "][0];"
           case TypeString => n + " = f[" + i + "];"
           case TypeDate => n + " = Udate(f[" + i + "]);"
           case _ => sys.error("Unsupported type in fromString")
@@ -1024,10 +1024,19 @@ trait ICppGen extends CodeGen {
   private var unionDepth = 0
   
   // extract cond and then branch of "if (c) t else 0"
-  private def extractBooleanExp(s: String): Option[(String, String)] = s match {
-    case rInlineIfCond(c, b, _) => Some(c, b)
-    case _ => None
-  }
+  private def extractBooleanExp(s: String): Option[(String, String)] =
+    if (!s.startsWith("(/*if */(")) None
+    else {
+      val posInit = "(/*if */(".length
+      var pos = posInit
+      var nestingLvl = 1
+      while (nestingLvl > 0) {
+        if (s(pos) == '(') nestingLvl += 1
+        else if (s(pos)==')') nestingLvl -= 1
+        pos += 1
+      }
+      Some(s.substring(posInit, pos - 1), s.substring(pos + " ? ".length, s.lastIndexOf(":") - 1))
+    }
 
   private def addToTempVar(name: String, keys: List[(String, Type)], vs: String, vsTp: Type) = 
     if (keys.isEmpty) {
@@ -1113,6 +1122,7 @@ trait ICppGen extends CodeGen {
     case Const(tp, v) => tp match {
       case TypeLong => co(v + "L")
       case TypeFloat => co(v + "f")
+      case TypeChar => co("'" + v + "'")
       case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co)
       case _ => co(v)
     }
@@ -1424,7 +1434,7 @@ trait ICppGen extends CodeGen {
       }.mkString("\n")
 
     val sIncludeTypeDefs =
-      s0.typeDefs.map(_.path).distinct
+      s0.typeDefs.map(_.file.path).distinct
                  .map(s => "#include \"" + s + "\"").mkString("\n") + "\n"
 
     // Generating the entire file

@@ -68,8 +68,9 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => runtimeType[Long]
+      case TypeByte | TypeShort | TypeInt | TypeLong => runtimeType[Long]
       case TypeFloat | TypeDouble => runtimeType[Double]
+      case TypeChar => runtimeType[Char]
       case TypeString => runtimeType[String]
       case TypeDate => runtimeType[Long]
       // case TypeDate => runtimeType[Date]
@@ -151,8 +152,9 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => co(IR.unit(v.toLong))
+      case TypeByte | TypeShort | TypeInt | TypeLong => co(IR.unit(v.toLong))
       case TypeFloat | TypeDouble => co(IR.unit(v.toDouble))
+      case TypeChar => co(IR.unit(v(0)))
       case TypeString if Optimizer.regexHoister && Optimizer.cTransformer => expr(M3ASTApply("STRING_TYPE", TypeString, List(ex)), co, am)
       case TypeString => co(IR.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
@@ -309,7 +311,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur = cx.save;
         ex.tp match {
-          case TypeChar | TypeShort | TypeInt | TypeLong =>
+          case TypeByte | TypeShort | TypeInt | TypeLong =>
             val agg: IR.Var[Long] = IR.__newVar[Long](IR.unit(0L))
             expr(e,
               (v: Rep[_]) => IR.__assign[Long](agg.asInstanceOf[IR.Var[Long]], IR.numeric_plus[Long](IR.readVar[Long](agg.asInstanceOf[IR.Var[Long]]), v.asInstanceOf[Rep[Long]]))
@@ -324,14 +326,14 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
             cx.load(cur)
             co(IR.readVar(agg))
-          case TypeString =>
-            val agg: IR.Var[String] = IR.__newVar[String](IR.unit(""))
-            expr(e,
-              (v: Rep[_]) => IR.__assign[String](agg.asInstanceOf[IR.Var[String]], IR.string$plus(IR.readVar[String](agg.asInstanceOf[IR.Var[String]]), v.asInstanceOf[Rep[String]]))
-            )
+          // case TypeString =>
+          //   val agg: IR.Var[String] = IR.__newVar[String](IR.unit(""))
+          //   expr(e,
+          //     (v: Rep[_]) => IR.__assign[String](agg.asInstanceOf[IR.Var[String]], IR.string$plus(IR.readVar[String](agg.asInstanceOf[IR.Var[String]]), v.asInstanceOf[Rep[String]]))
+          //   )
 
-            cx.load(cur)
-            co(IR.readVar(agg))
+          //   cx.load(cur)
+          //   co(IR.readVar(agg))
           case _ => sys.error("Unsupported type " + ex.tp)
         }
       } else am match {
@@ -371,7 +373,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
   def mul(l: Rep[_], r: Rep[_], tp: Type) = {
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
+      case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
         IR.m3apply("mul", List(l, r), tp)
       case _ => sys.error("Mul(l,r) only allowed on numeric types")
     }
@@ -380,7 +382,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def add(l: Rep[_], r: Rep[_], tp: Type) = {
     @inline def plus[T: TypeRep]() = IR.numeric_plus[T](l.asInstanceOf[Rep[T]], r.asInstanceOf[Rep[T]])
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => plus[Long]()
+      case TypeByte | TypeShort | TypeInt | TypeLong => plus[Long]()
       case TypeFloat | TypeDouble => plus[Double]()
       case _ => sys.error("Add(l,r) only allowed on numeric types")
     }
@@ -397,8 +399,9 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       }
     }
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
+      case TypeByte | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
       case TypeFloat | TypeDouble => cmp2[Double](l, r)
+      case TypeChar => cmp2[Char](l, r)
       case TypeString => cmp2[String](l, r)
       case TypeDate => cmp2[Long](l, r)
       // case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
@@ -442,8 +445,9 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val (mm, mmtp) = m.tp match {
-              case TypeChar | TypeShort | TypeInt | TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
+              case TypeByte | TypeShort | TypeInt | TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
               case TypeFloat | TypeDouble => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Double]]]) -> DoubleType
+              case TypeChar => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Char]]]) -> CharType
               case TypeString => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[String]]]) -> StringType
               case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> LongType
               // case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType

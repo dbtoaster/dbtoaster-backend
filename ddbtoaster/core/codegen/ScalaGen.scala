@@ -143,7 +143,7 @@ trait IScalaGen extends CodeGen {
         "  var h: Int = " + types.length + "\n" +
         (1 to types.length).map { i =>
         "  h = h * 41 + " + (types(i - 1) match {
-            case TypeChar | TypeShort | TypeInt | TypeLong => "_" + i + ".toInt"
+            case TypeByte | TypeShort | TypeInt | TypeLong => "_" + i + ".toInt"
             case TypeFloat | TypeDouble => "_" + i + ".toInt"
             case _ => "_" + i + ".hashCode"
           }) + "\n"
@@ -212,6 +212,7 @@ trait IScalaGen extends CodeGen {
     case Ref(n) => co(rn(n))
     case Const(tp, v) => tp match {
       case TypeLong => co(v + "L")
+      case TypeChar => co("'" + v + "'")
       case TypeString => co("\"" + v + "\"")
       case _ => co(v)
     }
