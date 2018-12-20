@@ -63,8 +63,6 @@ object Utils {
     System.err.println(sb.toString)
   }
 
-  private val defaultPathDBTBin = "./bin/dbtoaster_frontend"
-
   private val prop_ = new java.util.Properties
 
   try { 

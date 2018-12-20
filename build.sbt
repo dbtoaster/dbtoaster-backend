@@ -154,10 +154,9 @@ commands += Command.command("release")((state: State) => {
   write(compilerFilePath, compilerClassContent.replace("= DEPLOYMENT_STATUS_DEVELOPMENT", "= DEPLOYMENT_STATUS_RELEASE"))
   Project.runTask(compile, state)
 
-
   val propertiesFilePath = (baseDir/"conf"/"ddbt.properties").getAbsolutePath
   val propertiesFileContent = read(propertiesFilePath)
-  write(propertiesFilePath, "# Release properties file is empty")
+  write(propertiesFilePath, "ddbt.base_repo=.")
   println("execute pack task")
   Project.runTask(pack, state)
   write(propertiesFilePath, propertiesFileContent)
