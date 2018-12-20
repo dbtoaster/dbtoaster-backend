@@ -525,8 +525,6 @@ object M3 {
       }
     }
 
-    def prodList: List[Expr] = List(this)
-
     def toDecoratedString: String
   }
 
@@ -626,7 +624,6 @@ object M3 {
       case (None, None) => None
       case _ => sys.error("Merging incompatible expression types in Mul: l = " + l + " r = " + r)
     }
-    override def prodList: List[Expr] = l.prodList ++ r.prodList
     override def toString = "(" + l + " * " + r + ")"
     def toDecoratedString = "(" + l.toDecoratedString + " * " + r.toDecoratedString + ")"
   }
