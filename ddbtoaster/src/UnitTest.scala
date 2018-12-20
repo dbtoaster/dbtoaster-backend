@@ -437,14 +437,12 @@ object UnitTest {
             }
           }
         case None =>
-          warning("Verification failed, test result missing for " + queryFile + " and " + dataset + " dataset")
-          val e = new Exception
+          val e = new Exception("Test result missing for " + queryFile + " and " + dataset + " dataset")
           e.setStackTrace(Array[StackTraceElement]())
           throw e
       }
       case None =>
-        warning("Verification failed, test result missing for " + queryFile)
-        val e = new Exception
+        val e = new Exception("Test result missing for " + queryFile)
         e.setStackTrace(Array[StackTraceElement]())
         throw e
     }
@@ -524,9 +522,9 @@ object UnitTest {
               }
               catch {
                 case ex: Exception =>
-                  print(langID + " verification", "%7s".format("FAILED"))
-                  ex.printStackTrace()
-                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
+                  print(langID + " verification", 
+                        "%8s".format(scala.Console.RED + "FAILED") + " - " + ex.getMessage)
+                  if (sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
               warning("Verification failed, result missing")
@@ -634,9 +632,9 @@ object UnitTest {
               }
               catch {
                 case ex: Exception =>
-                  print(langID + " verification", "%7s".format("FAILED"))
-                  ex.printStackTrace()
-                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
+                  print(langID + " verification", 
+                        "%8s".format(scala.Console.RED + "FAILED") + " - " + ex.getMessage)
+                  if (sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
               warning("Verification failed, result missing")
