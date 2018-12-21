@@ -1251,7 +1251,7 @@ class MultiHashMap {
     }
 
     void delSlice(const T &key, int idx = 0) {
-      slice(idx, key, [](const T &e) { del(e); });
+      slice(idx, key, [&](const T &e) { del(e); });
     }
 
     FORCE_INLINE void del(T *elem) { // assume the element is already in the map

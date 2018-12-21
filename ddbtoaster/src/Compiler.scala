@@ -96,6 +96,10 @@ object Compiler {
   private var execTimeoutMilli = 0L            // execution timeout in milliseconds
   private var execRuntimeLibs = List[String]() // runtime libraries (defaults to lib/ddbt.jar for scala)
 
+  // Experimental features
+  private var useExperimentalCppHashMap = false
+  private var useExperimentalCppRuntimeLibrary = false    
+
   private var useExternalScalac = false        // compile using fsc / external scalac
   private var useExternalJVM = false           // execute in a fresh JVM
 
@@ -158,6 +162,10 @@ object Compiler {
     error("  -t <n>        execution timeout in seconds")
     error("  -xbs <n>      execute with batches of certain size")
     error("  -xa <arg>     pass an argument to generated program")
+    error("Experimental features:")
+    error("  -xhashmap     use experimental C++ hash map implementation")
+    error("  -xruntime     use experimental C++ runtime library")
+    
     error("", true)     // exit here
   }
 
@@ -214,6 +222,9 @@ object Compiler {
     execTimeoutMilli = 0L
     execRuntimeLibs = Nil
 
+    useExperimentalCppHashMap = false
+    useExperimentalCppRuntimeLibrary = false
+
     useExternalScalac = false
     useExternalJVM = false
   }
@@ -257,6 +268,8 @@ object Compiler {
         case "-d" => eat(s => datasetName = s)
         case "--del" => datasetWithDeletions = true
         case "-L" => eat(s => execRuntimeLibs = s :: execRuntimeLibs)
+        case "-xhashmap" => useExperimentalCppHashMap = true
+        case "-xruntime" => useExperimentalCppRuntimeLibrary = true
         // case "-wa" => watch = true;
         // case "-ni" => ni = true; frontendIvmDepth = 0; frontendDebugFlags = Nil
         case "-x" => execOutput = true
@@ -541,7 +554,8 @@ object Compiler {
     val codegenOpts =
       new CodeGenOptions(
         className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli, 
-        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, execPrintProgress)
+        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, 
+        execPrintProgress, useExperimentalCppHashMap, useExperimentalCppRuntimeLibrary)
 
     val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
 
