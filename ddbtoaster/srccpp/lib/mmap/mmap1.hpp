@@ -597,7 +597,8 @@ class MultiHashMap {
 
     FORCE_INLINE const V& getValueOrDefault(const T& key) const {
         T* elem = primary_index->get(key);
-        return (elem != nullptr ? elem->__av : Zero);
+        if (elem != nullptr) return elem->__av;
+        return Zero;
     }
 
     FORCE_INLINE const SecondaryIdxNode<T>* slice(const T& k, size_t idx) {
