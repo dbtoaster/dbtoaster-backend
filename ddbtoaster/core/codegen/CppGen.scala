@@ -387,10 +387,11 @@ trait ICppGen extends CodeGen {
       val fields = s.schema.fields
       val params = fields.map { case (n, t) => "const " + typeToString(t) + " " + n }.mkString(", ")
       val args = emitFieldNames(fields)
+      val entry = fresh("entry")
 
       s"""|void on_insert_${name}(${params}) {
-          |  ${name}_entry e(${args}, 1);
-          |  ${emitInsertToMapFunc(name, "e")}
+          |  ${name}_entry ${entry}(${args}, 1);
+          |  ${emitInsertToMapFunc(name, s"${entry}")}
           |}
           |""".stripMargin +
       //
@@ -629,7 +630,7 @@ trait ICppGen extends CodeGen {
 
     val sStringInit = 
       keys.zipWithIndex.map { case ((n, tp), i) => tp match {
-          case TypeByte   => n + " = (byte) std::stoi(f[" + i + "]);"
+          case TypeByte   => n + " = (signed char) std::stoi(f[" + i + "]);"
           case TypeShort  => n + " = (short) std::stoi(f[" + i + "]);"
           case TypeInt    => n + " = std::stoi(f[" + i + "]);"
           case TypeLong   => n + " = std::stol(f[" + i + "]);"

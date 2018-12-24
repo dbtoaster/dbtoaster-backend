@@ -11,7 +11,7 @@ object TypeHelper {
   object Cpp {
 
     def typeToString(t: Type): String = t match {
-      case TypeByte   => "byte"
+      case TypeByte   => "signed char"
       case TypeShort  => "short"
       case TypeInt    => "int"
       case TypeLong   => "long"      
@@ -33,7 +33,7 @@ object TypeHelper {
     }
 
     def refTypeToString(t: Type): String = t match {
-      case TypeByte   => "byte"
+      case TypeByte   => "signed char"
       case TypeShort  => "short"
       case TypeInt    => "int"
       case TypeLong   => "long"
