@@ -929,6 +929,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
   }
 }
 class PardisScala2Gen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
+  override val additionalImports: String = "import ddbt.lib.storeScala._\n"
 
 }
 class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
@@ -991,20 +992,29 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |  def main(args: Array[String]): Unit = {
         |
         |    var res:List[scala.collection.immutable.Map[_ <: Any, Any]]=List()
+        |    var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L
+        |    var timeout= 1000l
+        |    var timeoutReached=false
         |
         |${ind(sStreams, 3)}
         |
         |  def execute1(streams: Streams, list: List[ArrayBufferInputStream]) = {
         |      loadTables(list);
         |      onSystemReady();
+        |      t0 = System.nanoTime;
+        |      if (timeout > 0) t1 = t0 + timeout * 1000000L
         |      goThroughStreams(streams, dispatchFnNoActor _)
         |        println("<snap>")
         |${ind(sResults, 4)}
         |        println("</snap>")
+        |        println("t1: "+ (t1 - t0))
+        |        println("t2:" +tN)
+        |        println("t3: "+ tS)
         |        }
         |  def dispatchFnNoActor(e: StreamEvent) = e match {
         |${ind(str, 2)}
         |    case EndOfStream | GetSnapshot(_) =>
+        |    t1 = System.nanoTime;
         |      ${onEndStream} res=res:::(${snap})
         |  }
         |def loadTables(list: List[ArrayBufferInputStream]) {
@@ -1110,7 +1120,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
   }
 
 
-  override def genInternals(s0: System, nextSkip: String = "context.become(receive_skip)"): (String, String, String) = {
+  override def genInternals(s0: System, nextSkip: String = "timeoutReached=true"): (String, String, String) = {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s: Schema, short: Boolean = true): (String, String, String, List[(String, Type)]) = {
       val fs =
@@ -1124,7 +1134,10 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         fs)
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
-    val skip =""
+    val skip =
+      "if (timeoutReached){ if (t1 > 0 && (tN & " + (step - 1) + ") == 0) { " +
+        "val t = System.nanoTime; if (t > t1) { t1 = t; tS = 1L; " + nextSkip +
+        " } }; tN += 1L; "
     val pp = "" //if (cgOpts.printProgress > 0L) "printProgress(); " else ""
 
     val (systemEvent, others) = s0.triggers.partition(_.event match {
@@ -1136,15 +1149,16 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
       case EventInsert(_) | EventDelete(_) => true
       case _ => sys.error("Unexpected trigger event")
     })
+    val skipIfTimeout= "}else  tS += 1L;"
     val singleStr = singleEvents.map(_.event match {
       case EventInsert(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleInsert, \"" + s.name +
-          "\", List(" + i + ")) => " + skip + pp + "onAdd" + s.name + o + "\n"
+          "\", List(" + i + ")) => " + skip + pp + "onAdd" + s.name + o + skipIfTimeout+"\n"
       case EventDelete(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleDelete, \"" + s.name +
-          "\", List(" + i + ")) => " + skip + pp + "onDel" + s.name + o + "\n"
+          "\", List(" + i + ")) => " + skip + pp + "onDel" + s.name + o + skipIfTimeout+"\n"
       case _ => ""
     }).mkString
 
