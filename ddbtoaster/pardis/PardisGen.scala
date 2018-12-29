@@ -993,7 +993,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |
         |    var res:List[scala.collection.immutable.Map[_ <: Any, Any]]=List()
         |    var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L
-        |    var timeout= 1000l
+        |    var timeout= 0
         |    var timeoutReached=false
         |
         |${ind(sStreams, 3)}
@@ -1004,12 +1004,10 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |      t0 = System.nanoTime;
         |      if (timeout > 0) t1 = t0 + timeout * 1000000L
         |      goThroughStreams(streams, dispatchFnNoActor _)
+        |       println("SAMPLE = "  + ", " + Math.round((t1 - t0) / 1000000.0) + ", " + tN + ", " + tS)
         |        println("<snap>")
         |${ind(sResults, 4)}
         |        println("</snap>")
-        |        println("t1: "+ (t1 - t0))
-        |        println("t2:" +tN)
-        |        println("t3: "+ tS)
         |        }
         |  def dispatchFnNoActor(e: StreamEvent) = e match {
         |${ind(str, 2)}
