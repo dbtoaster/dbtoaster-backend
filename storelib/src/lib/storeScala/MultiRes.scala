@@ -1,4 +1,4 @@
-package lib.storeScala
+package ddbt.lib.storeScala
 
 abstract class MultiRes {
   def isEmpty(): Boolean

@@ -1,4 +1,4 @@
-package lib.storeScala
+package ddbt.lib.storeScala
 
 abstract class Entry(n: Int) {
   val data = new Array[Any](n)
