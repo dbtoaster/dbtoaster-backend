@@ -977,7 +977,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
     val sStreams = streams(sources)
     s"""|package ${cgOpts.packageName}
         |
-        |import lib.storeScala{Entry, EntryIdx, IHash, Store}
+        |import lib.storeScala.{Entry, EntryIdx, IHash, Store}
         |import Helper._
         |
         |import scala.collection.mutable
@@ -1209,7 +1209,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
 
     (singleStr + batchStr, tableInitialization, consts)
   }
-  override val additionalImports: String = "import HelperGS._\nimport Messages._\nimport Functions._\nimport lib.Entry"
+  override val additionalImports: String = "import HelperGS._\nimport Messages._\nimport Functions._"
 
 
 
