@@ -993,7 +993,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |
         |    var res:List[scala.collection.immutable.Map[_ <: Any, Any]]=List()
         |    var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L
-        |    var timeout= 60
+        |    var timeout= 60000
         |    var timeoutReached=false
         |
         |${ind(sStreams, 3)}
