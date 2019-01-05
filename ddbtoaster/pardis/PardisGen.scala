@@ -1147,7 +1147,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
       case EventInsert(_) | EventDelete(_) => true
       case _ => sys.error("Unexpected trigger event")
     })
-    val skipIfTimeout= "}else  tS += 1L;"
+    val skipIfTimeout= "}else  {tS += 1L;}"
     val singleStr = singleEvents.map(_.event match {
       case EventInsert(s) =>
         val (i, _, o, pl) = ev(s)
