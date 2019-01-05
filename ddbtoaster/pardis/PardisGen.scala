@@ -993,7 +993,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |
         |    var res:List[scala.collection.immutable.Map[_ <: Any, Any]]=List()
         |    var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L
-        |    var timeout= 0
+        |    var timeout= 60
         |    var timeoutReached=false
         |
         |${ind(sStreams, 3)}
@@ -1133,7 +1133,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip =
-      "if (timeoutReached){ if (t1 > 0 && (tN & " + (step - 1) + ") == 0) { " +
+      "if (!timeoutReached){ if (t1 > 0 && (tN & " + (step - 1) + ") == 0) { " +
         "val t = System.nanoTime; if (t > t1) { t1 = t; tS = 1L; " + nextSkip +
         " } }; tN += 1L; "
     val pp = "" //if (cgOpts.printProgress > 0L) "printProgress(); " else ""
