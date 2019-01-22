@@ -502,7 +502,6 @@ object Compiler {
         // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = false
-        packageName = "tutorial.webapp" //TODO change later
         new PardisScalaJSGen(codegenOpts) //DSL
       case LANG_SPARK_LMS =>
         new LMSSparkGen(codegenOpts)

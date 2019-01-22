@@ -978,6 +978,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
     s"""|package ${cgOpts.packageName}
         |
         |import lib.storeScala.{Entry, EntryIdx, IHash, Store}
+        |import ddbt.gen._
         |import Helper._
         |
         |import scala.collection.mutable
