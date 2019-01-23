@@ -1005,7 +1005,9 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |      t0 = System.nanoTime;
         |      if (timeout > 0) t1 = t0 + timeout * 1000000L
         |      goThroughStreams(streams, dispatchFnNoActor _)
-        |       println("SAMPLE = "  + ", " + Math.round((t1 - t0) / 1000000.0) + ", " + tN + ", " + tS)
+        |        val te = (t1 - t0) / 1000000.0
+        |        val thr = tN / te * 1000
+        |        println("SAMPLE = " + Math.round(te) + ", " + tN + ", " + tS + ", " + Math.round(thr))
         |        println("<snap>")
         |${ind(sResults, 4)}
         |        println("</snap>")
