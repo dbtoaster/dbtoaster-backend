@@ -1,4 +1,4 @@
-jsProjectPath="/home/gerald/Downloads/dbtoaster.js"
+jsProjectPath="/home/amir/dbtoaster.js"
 jsfile=$jsProjectPath/target/scala-2.12/scalajs-bundler/main/dbtoaster-js-fastopt.js
 scalaOutputPath="."
 queryName=$1
