@@ -529,11 +529,12 @@ object Compiler {
     }
 
     lang match {
-      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS | LANG_SCALAJS_PARDIS | LANG_AKKA =>
+      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS | LANG_AKKA =>
         Utils.scalaCompiler(outputDir,
           runtimeLibs.mkString(":"),
           useExternalScalac)(List(inputFile))
-
+      case LANG_SCALAJS_PARDIS =>
+        Utils.scalaJSCompiler(inputFile)
       case LANG_SPARK_LMS =>
         Utils.sparkCompiler(outputDir,
           runtimeLibs.mkString(":"),
@@ -582,6 +583,16 @@ object Compiler {
     Utils.scalaExec(dir :: runtimeLibs.map(new File(_)),
       packageName + "." + className,
       execArgs.toArray, useExternalJVM)
+  }
+
+  //TODO: SBJ:  Fix options and arguments
+  def runJS(dir: File, runtimeLibs: List[String], useExternalJVM: Boolean,
+            packageName: String, className: String, args: List[String], batchSize: Int, dataset: String): (String, String) = {
+    val execArgs = ("-d" + dataset) :: args ++
+      (if (batchSize > 0) List("-b" + batchSize) else Nil) ++
+      (if (timeoutMilli > 0) List("-t" + timeoutMilli) else Nil)
+    Utils.jsExec(className, execArgs.toArray)
+
   }
 
   def runSpark(packageName: String, className: String, args: List[String], batchSize: Int, dataset: String): (String, String) = {
@@ -639,8 +650,10 @@ object Compiler {
         lang match {
           case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
             runCpp(outputExeFile, execArgs, execBatchSize)
-          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS | LANG_SCALAJS_PARDIS | LANG_AKKA =>
+          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS  | LANG_AKKA =>
             runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
+          case LANG_SCALAJS_PARDIS =>
+            runJS(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
           case LANG_SPARK_LMS =>
             runSpark(packageName, className, execArgs, execBatchSize, dataset)
           case _ => error("Running " + lang + " programs is not supported", true)

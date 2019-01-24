@@ -1007,7 +1007,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |      goThroughStreams(streams, dispatchFnNoActor _)
         |        val te = (t1 - t0) / 1000000.0
         |        val thr = tN / te * 1000
-        |        println("SAMPLE = " + Math.round(te) + ", " + tN + ", " + tS + ", " + Math.round(thr))
+        |        println("SAMPLE = " + "unknown" + ", " + Math.round(te) + ", " + tN + ", " + tS)
         |        println("<snap>")
         |${ind(sResults, 4)}
         |        println("</snap>")
