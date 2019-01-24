@@ -1,1 +1,2 @@
-cp ddbtoaster/target/tmp/*ScalaJS.scala ../dbtoaster.js/
+queryName="ddbtoaster/target/tmp/Tpch$1""ScalaJS.scala"
+cp $queryName ../dbtoaster.js/Main.scala
