@@ -737,7 +737,7 @@ trait ICppGen extends CodeGen {
 
     s"""|/* Defines top-level materialized views */
         |struct tlq_t {
-        |  struct timeval t0, t; long tT, tN, tS;
+        |  struct timeval t0, t; long long tT, tN, tS;
         |  tlq_t(): tN(0), tS(0) ${sTLQMapInitializer} { 
         |    gettimeofday(&t0, NULL); 
         |  }
@@ -927,7 +927,7 @@ trait ICppGen extends CodeGen {
         |tlq_t* d = new tlq_t((tlq_t&) data);
         |${stringIf(cgOpts.isReleaseMode, "// ")}gettimeofday(&(d->t), NULL);
         |${stringIf(cgOpts.isReleaseMode, "// ")}d->tT = ((d->t).tv_sec - (d->t0).tv_sec) * 1000000L + ((d->t).tv_usec - (d->t0).tv_usec);
-        |${stringIf(cgOpts.isReleaseMode, "// ")}printf(\"SAMPLE = ${cgOpts.dataset}, %ld, %ld, %ld\\n\", d->tT, d->tN, d->tS);
+        |${stringIf(cgOpts.isReleaseMode, "// ")}printf(\"SAMPLE = ${cgOpts.dataset}, %lld, %lld, %lld\\n\", d->tT, d->tN, d->tS);
         |""".stripMargin
 
   private def emitSourceDefinition(s: Source): String = {

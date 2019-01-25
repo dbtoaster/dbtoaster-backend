@@ -91,8 +91,8 @@ int main(int argc, char* argv[]) {
     }
 
     // if(!no_output) cout << "Printing final result:" << endl;
+    snap = p.get_snapshot();
     if (!no_output) {
-        snap = p.get_snapshot();
         DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
         cout << std::endl;
     }

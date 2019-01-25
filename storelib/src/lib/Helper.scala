@@ -44,26 +44,26 @@ object Helper {
     Await.result(akka.pattern.ask(actor, msg)(to), to.duration).asInstanceOf[T]
   }
 
-  def mux(actor: ActorRef, streams: Streams, parallel: Int = 0, timeout: Long = 0L, batchSize: Int = 0) = {
+  def mux(actor: ActorRef, streams: Streams, parallel: Int = 0, timeoutMilli: Long = 0L, batchSize: Int = 0) = {
     val mux = SourceMux(
       (ev: InputEvent) => { actor ! ev }, 
       streams,
-      timeoutMilli = timeout * 1000,
+      timeoutMilli,
       parallel = parallel,
       batchSize = batchSize)
     mux.init()
     System.gc
-    actor ! StreamInit(timeout)
+    actor ! StreamInit(timeoutMilli)
     mux.read()
-    askWait[(StreamStat, List[Any])](actor, EndOfStream, timeout)
+    askWait[(StreamStat, List[Any])](actor, EndOfStream, timeoutMilli/1000)
   }
 
-  def run[Q <: akka.actor.Actor](streams: Streams, parallel: Int = 0, 
-                                 timeout: Long = 0L, batchSize: Int = 0)
+  def run[Q <: akka.actor.Actor](streams: Streams, parallel: Int = 0,
+                                 timeoutMilli: Long = 0L, batchSize: Int = 0)
                                 (implicit cq: ClassTag[Q]) = {
     val system = actorSys()
     val query = system.actorOf(Props[Q] /* .withDispatcher("bounded-mailbox") */, "Query")
-    try { mux(query, streams, parallel, timeout, batchSize) } 
+    try { mux(query, streams, parallel, timeoutMilli, batchSize) }
     finally { system.terminate() }
   }
 
@@ -74,7 +74,7 @@ object Helper {
   //      -H<host:port> -W<total_expected_workers>                [master]
   private var runMaster:ActorRef = null
   private var runCount = 0
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Int=0,timeout:Long=0L)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams, parallel:Int=0, timeoutMilli:Long=0L)(implicit cm:ClassTag[M], cw:ClassTag[W]) : (StreamStat,List[Any]) = {
     def ad[T](s:String,d:T,f:Array[String]=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length).split(":"))).getOrElse(d)
     val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
     else { runCount=ad("-n",0,x=>math.max(0,x(0).toInt-1))
@@ -106,7 +106,7 @@ object Helper {
       //try mux(master,streams,parallel,timeout) finally { master ! ClusterShutdown; Thread.sleep(100); System.gc; Thread.sleep(100) }
       master
     }
-    try mux(master,streams,parallel,timeout) finally {
+    try mux(master,streams,parallel,timeoutMilli) finally {
       if (runCount>0) { runMaster=master; master ! Reset } else { runMaster=null; master ! Shutdown }
       Thread.sleep(100); System.gc; Thread.sleep(100)
     }
@@ -126,24 +126,24 @@ object Helper {
       args.filter(_.startsWith(s)).lastOption.map(x => f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n", 1, x => math.max(0, x.toInt))
     val mode = ad("-m", 0, x => x.toInt)
-    val timeout = ad("-t", 0L, x => x.toLong)
+    val timeoutMilli = ad("-t", 0L, x => x.toLong)
     val parallel = ad("-p", 2, x => x.toInt)
     val batchSize = ad("-b", 0, x => x.toInt)
     var datasets = args.filter(_.startsWith("-d")).map(_.substring(2))
     if (datasets.isEmpty) datasets = Array("standard")
     val noOutput = args.exists(_ == "--no-output")
-    (num, mode, timeout, parallel, datasets, batchSize, noOutput)
+    (num, mode, timeoutMilli, parallel, datasets, batchSize, noOutput)
   }
 
   def bench(args: Array[String], run: (String, Int, Long, Int) => (StreamStat, List[Any]), op: List[Any] => Unit = null) {
-    val (num, mode, timeout, parallel, datasets, batchSize, noOutput) = extractExecArgs(args)
+    val (num, mode, timeoutMilli, parallel, datasets, batchSize, noOutput) = extractExecArgs(args)
     if (mode < 0) println("Java " + System.getProperty("java.version") + ", Scala " + util.Properties.versionString.replaceAll(".* ",""))
-    datasets.foreach { dataset => 
+    datasets.foreach { dataset =>
       var res0: List[Any] = null
-      var i = 0 
-      while (i < num) { 
+      var i = 0
+      while (i < num) {
         i += 1
-        val (t, res) = run(dataset, parallel, timeout, batchSize)
+        val (t, res) = run(dataset, parallel, timeoutMilli, batchSize)
         if (t.skip == 0) {
           if (res0 == null) res0 = res
           else assert(res0 == res, s"Inconsistent results: $res0 != $res")

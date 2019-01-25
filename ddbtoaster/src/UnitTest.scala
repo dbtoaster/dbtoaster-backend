@@ -465,6 +465,7 @@ object UnitTest {
                       "-o", exeFile + "." + Compiler.backendFileExtensions(lang),
                       "-d", dataset,
                       "-xa", "-p" + readMode) ++
+                (if(!verifyOutput) List("-xa", "--no-output") else Nil)++  //SBJ: Skip printing output if not verifying
                 (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (runBenchmark) List("-x", "-c", exeFile) else Nil)
 
@@ -580,9 +581,10 @@ object UnitTest {
                       "-n", "ddbt.test.gen." + className,
                       "-d", dataset,
                       "-xa", "-n" + (numRuns + numWarmups),
+                      "-xa", "-m1",  //SBJ: Print sampling info always like C++
                       "-xa", "-p" + readMode) ++
                 (if (runBenchmark) List("-x") else Nil) ++
-                //(if (verifyOutput) List("-xa", "-m1") else Nil) ++  //SBJ: Print sampling info always like C++
+                (if(!verifyOutput) List("-xa", "--no-output") else Nil)++  //SBJ: Skip printing output if not verifying
                 (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
 
