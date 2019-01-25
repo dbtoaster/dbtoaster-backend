@@ -582,7 +582,7 @@ object UnitTest {
                       "-xa", "-n" + (numRuns + numWarmups),
                       "-xa", "-p" + readMode) ++
                 (if (runBenchmark) List("-x") else Nil) ++
-                (if (verifyOutput) List("-xa", "-m1") else Nil) ++
+                //(if (verifyOutput) List("-xa", "-m1") else Nil) ++  //SBJ: Print sampling info always like C++
                 (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
 
