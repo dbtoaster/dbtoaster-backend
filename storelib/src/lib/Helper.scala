@@ -144,11 +144,12 @@ object Helper {
       while (i < num) {
         i += 1
         val (t, res) = run(dataset, parallel, timeoutMilli, batchSize)
+        if (mode == 1) println("SAMPLE = " + dataset + ", " + Math.round(t.ns / 1000000.0) + ", " + t.count + ", " + t.skip)
         if (t.skip == 0) {
           if (res0 == null) res0 = res
           else assert(res0 == res, s"Inconsistent results: $res0 != $res")
-        }
-        if (mode == 1) println("SAMPLE = " + dataset + ", " + Math.round(t.ns / 1000000.0) + ", " + t.count + ", " + t.skip)
+        } else
+          println("Query timed out. Result disabled")
       }
       if (res0 != null && op != null) op(res0)
     }

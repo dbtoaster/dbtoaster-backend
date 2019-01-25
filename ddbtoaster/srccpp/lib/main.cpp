@@ -92,9 +92,13 @@ int main(int argc, char* argv[]) {
 
     // if(!no_output) cout << "Printing final result:" << endl;
     snap = p.get_snapshot();
-    if (!no_output) {
-        DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
-        cout << std::endl;
+    if(snap->tS != 0)
+      cout << "Query timed out. Result disabled" <<std::endl;
+    else {
+        if (!no_output) {
+            DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
+           cout << std::endl;
+        }
     }
     return 0;
 }

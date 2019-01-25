@@ -861,7 +861,7 @@ trait IScalaGen extends CodeGen {
         |
         |  def receive_skip: Receive = { 
         |    case EndOfStream | GetSnapshot(_) => 
-        |      ${onEndStream} sender ! (StreamStat(t1 - t0, tN, tS), ${snap})
+        |      ${onEndStream} sender ! (StreamStat(t1 - t0, tN, tS), null)
         |    case _ => tS += 1L
         |  }
         |
