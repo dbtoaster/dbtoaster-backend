@@ -73,15 +73,16 @@ std::string csv_adaptor::parse_schema(std::string s)
         iter temp = std::find(beg, end, ',');
         if(beg != end) {
 			std::string ty(beg, temp);
-			if ( ty == "event" )              r += "e";
-			else if ( ty == "order" )         r += "o";
-			else if ( ty == "int" )           r += "l";
-			else if ( ty == "long" )          r += "l";
-			else if ( ty == "float" )         r += "f";
-			else if ( ty == "double" )        r += "f";
-			else if ( ty == "date" )          r += "d";
-			else if ( ty == "hash" )          r += "h";
-			else if ( ty == "string" ) r += "s";          
+			if ( ty == "event" )       r += "e";
+			else if ( ty == "order" )  r += "o";
+			else if ( ty == "int" )    r += "l";
+			else if ( ty == "long" )   r += "l";
+			else if ( ty == "float" )  r += "f";
+			else if ( ty == "double" ) r += "f";
+			else if ( ty == "date" )   r += "d";
+			else if ( ty == "hash" )   r += "h";
+			else if ( ty == "char" )   r += "c";
+			else if ( ty == "string" ) r += "s";
 			else {
 				std::cerr << "invalid csv schema type " << ty << std::endl;
 				r = "";
@@ -109,6 +110,7 @@ void csv_adaptor::validate_schema() {
 		case 'f':
 		case 'd':
 		case 'h':
+		case 'c':
 		case 's':
 				  schema_size++;
 				  break;
@@ -172,13 +174,16 @@ csv_adaptor::interpret_event(char* data)
 						} else valid = false;
 					} else valid = false;
 				} else valid = false;
-			  break;
+			    break;
 			case 'o':
 				event_order=atoi(field_start);
 				break;
+			case 'c':
+  				tuple[tupleIdx++]=std::shared_ptr<char>(new char(field_start[0])); 
+  				break;
 			case 's': 
-			  tuple[tupleIdx++]=std::shared_ptr<STRING_TYPE>(new STRING_TYPE(field_start)); 
-			  break;
+			    tuple[tupleIdx++]=std::shared_ptr<STRING_TYPE>(new STRING_TYPE(field_start)); 
+			    break;
 			default: valid = false; break;
 		}
 
