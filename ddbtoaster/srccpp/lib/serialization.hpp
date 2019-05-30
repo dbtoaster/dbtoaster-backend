@@ -51,6 +51,12 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const size_
 }
 
 template<class Archive>
+inline Archive & serialize(Archive & ar, const unsigned int version, const char & t){
+    ar << t;
+    return ar;
+}
+
+template<class Archive>
 inline Archive & serialize(Archive & ar, const unsigned int version, const STRING_TYPE & t){
     ar << t.c_str();
     return ar;

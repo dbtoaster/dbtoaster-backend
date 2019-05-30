@@ -92,4 +92,11 @@ namespace dbtoaster {
   }
 
 #endif
+
+  template <>
+  FORCE_INLINE void hash_combine(std::size_t& seed, const char& v)
+  {
+      seed ^= v + 0x9e3779b9 + (seed<<6) + (seed>>2);
+  }
+
 }
