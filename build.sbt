@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   // --------- Project information
   organization := "ch.epfl.data",
-  version := "3.0",
+  version := "2.3",
 
   // --------- Compilation options
   scalaVersion := "2.11.11",    // LMS requires 2.11.2 --> root uses the same
