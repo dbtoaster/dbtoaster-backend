@@ -25,9 +25,9 @@ object Compiler {
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
   val LANG_DIST_M3 = "annotm3"
-  val LANG_CPP_VANILLA = "vcpp"
+  val LANG_CPP_VANILLA = "cpp"
   val LANG_CPP_LMS = "lmscpp"
-  val LANG_CPP_PARDIS = "cpp"
+  val LANG_CPP_PARDIS = "pcpp"
   val LANG_SCALA_VANILLA = "vscala"
   val LANG_SCALA_LMS = "lmsscala"
   val LANG_SCALA_PARDIS = "scala"
@@ -65,7 +65,7 @@ object Compiler {
   val M3_FILE_SUFFIX = ("""\.(""" + frontendFileExtensions(LANG_M3) + "|" + 
                                     frontendFileExtensions(LANG_DIST_M3) + ")").r
   
-  val DEFAULT_LANG_CPP = LANG_CPP_PARDIS
+  val DEFAULT_LANG_CPP = LANG_CPP_VANILLA
   val DEFAULT_LANG_SCALA = LANG_SCALA_PARDIS
   val DEFAULT_PACKAGE_NAME = "ddbt.gen"
   val DEFAULT_DATASET_NAME = "standard"
@@ -301,6 +301,15 @@ object Compiler {
         lang = DEFAULT_LANG_SCALA
     }
 
+    if (batchingEnabled) {
+      if (lang == LANG_SCALA_PARDIS) {
+        error(s"Pardis Scala code generator does not support batching. Use '-l ${LANG_SCALA_LMS}' or '-l ${LANG_SCALA_VANILLA}' instead.", true)
+      }
+      else if (lang == LANG_CPP_PARDIS) {
+       error(s"Pardis C++ code generator does not support batching. Use '-l ${LANG_CPP_VANILLA}' instead.", true) 
+      }
+    }
+
     if (outputSrcFile == null && outputExeFile != null) {
       outputSrcFile = backendFileExtensions.get(lang).map(outputExeFile + "." + _).getOrElse(null)
     }
@@ -389,29 +398,30 @@ object Compiler {
       //   new LMSCppGen(codegenOpts)
       case LANG_CPP_PARDIS => 
         // Set Pardis optimizer options
-        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
-        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
-        Optimizer.fixedRange = (frontendOptLevel == "-O3")
-        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
-        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
-        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
-        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
-        Optimizer.indexInline = (frontendOptLevel == "-O3")
-        Optimizer.sliceInline = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
-        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
-        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        val optOn = (frontendOptLevel == "-O2") || (frontendOptLevel == "-O3")
+        Optimizer.analyzeEntry = optOn
+        Optimizer.secondaryIndex = optOn
+        Optimizer.fixedRange = optOn
+        Optimizer.onlineOpts = optOn
+        Optimizer.m3CompareMultiply = optOn
+        Optimizer.tmpVarHoist = optOn
+        Optimizer.tmpMapHoist = optOn
+        Optimizer.indexInline = optOn
+        Optimizer.sliceInline = optOn
+        Optimizer.indexLookupFusion = optOn
+        Optimizer.indexLookupPartialFusion = optOn
+        Optimizer.deadIndexUpdate = optOn
+        Optimizer.codeMotion = optOn
         Optimizer.refCounter = true
-        Optimizer.regexHoister = (frontendOptLevel == "-O3")
-        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
-        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
-        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
-        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
-        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
-        Optimizer.medIdx = (frontendOptLevel == "-O3")
-        Optimizer.coldMotion = (frontendOptLevel == "-O3")
-        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.regexHoister = optOn
+        Optimizer.multiResSplitter = optOn
+        // Optimizer.initialStoreSize = optOn
+        Optimizer.sliceNoUpd = optOn
+        Optimizer.splSecondaryIdx = optOn
+        Optimizer.minMaxIdx = optOn
+        Optimizer.medIdx = optOn
+        Optimizer.coldMotion = optOn
+        // Optimizer.profileStoreOperations = optOn
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = true 
         new PardisCppGen(codegenOpts)
@@ -421,29 +431,30 @@ object Compiler {
         LMSScalaGen(codegenOpts /*, watch */)
       case LANG_SCALA_PARDIS => 
         // Set Pardis optimizer options
-        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
-        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
-        Optimizer.fixedRange = (frontendOptLevel == "-O3")
-        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
-        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
-        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
-        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
-        Optimizer.indexInline = (frontendOptLevel == "-O3")
-        Optimizer.sliceInline = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
-        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
-        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        val optOn = (frontendOptLevel == "-O2") || (frontendOptLevel == "-O3")
+        Optimizer.analyzeEntry = optOn
+        Optimizer.secondaryIndex = optOn
+        Optimizer.fixedRange = optOn
+        Optimizer.onlineOpts = optOn
+        Optimizer.m3CompareMultiply = optOn
+        Optimizer.tmpVarHoist = optOn
+        Optimizer.tmpMapHoist = optOn
+        Optimizer.indexInline = optOn
+        Optimizer.sliceInline = optOn
+        Optimizer.indexLookupFusion = optOn
+        Optimizer.indexLookupPartialFusion = optOn
+        Optimizer.deadIndexUpdate = optOn
+        Optimizer.codeMotion = optOn
         Optimizer.refCounter = true
-        Optimizer.regexHoister = (frontendOptLevel == "-O3")
-        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
-        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
-        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
-        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
-        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
-        Optimizer.medIdx = (frontendOptLevel == "-O3")
-        Optimizer.coldMotion = (frontendOptLevel == "-O3")
-        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.regexHoister = optOn
+        Optimizer.multiResSplitter = optOn
+        // Optimizer.initialStoreSize = optOn
+        Optimizer.sliceNoUpd = optOn
+        Optimizer.splSecondaryIdx = optOn
+        Optimizer.minMaxIdx = optOn
+        Optimizer.medIdx = optOn
+        Optimizer.coldMotion = optOn
+        // Optimizer.profileStoreOperations = optOn
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = false
         new PardisScalaGen(codegenOpts) //DSL

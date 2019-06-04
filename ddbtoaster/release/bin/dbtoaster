@@ -152,7 +152,7 @@ done
 if [ $out_bin_file != "-" ]; then
    src_extension="hpp"
    if [ $out_src_lang != "-" ]; then
-      [ $out_src_lang != "cpp" -a $out_src_lang != "vcpp" -a $out_src_lang != "vscala" -a $out_src_lang != "lmsscala" -a $out_src_lang != "scala" ] && \
+      [ $out_src_lang != "cpp" -a $out_src_lang != "pcpp" -a $out_src_lang != "vscala" -a $out_src_lang != "lmsscala" -a $out_src_lang != "scala" ] && \
          { echo "$0: Binaries can be created only for C++ and Scala languages, exiting..." ; exit 1; }
       [ $out_src_lang == "vscala" ] && { src_extension="scala"; }
       [ $out_src_lang == "lmsscala" ] && { src_extension="scala"; }
