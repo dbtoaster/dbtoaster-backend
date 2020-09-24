@@ -195,7 +195,7 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"${tag.typeName}* copy() const { return new ${tag.typeName}(" :: fields.map(x => {
           if (x.tpe == StringType)
-            doc"*${x.name}.copy()"
+            doc"${x.name}.copy()"
           else
             doc"${x.name}"
         }).mkDocument(", ") :: "); }"

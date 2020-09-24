@@ -9,6 +9,9 @@
 #include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
 #include <vector>
+
+typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
+
 #ifdef PARTITIONED
 thread_local std::vector<void*> tempMem;
 #else

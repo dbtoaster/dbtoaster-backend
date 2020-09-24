@@ -160,7 +160,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
@@ -200,20 +200,28 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |
        |#define CORE_FOR_W(x) (x%numThreads)
        |
-       |#define setAffinity(thread_id)\\
+       |#ifndef __APPLE__
+       |  #define setAffinity(thread_id)\\
        |    cpu_set_t cpuset;\\
        |    CPU_ZERO(&cpuset);\\
        |    CPU_SET(thread_id+1, &cpuset);\\
        |    auto s = sched_setaffinity(0, sizeof (cpu_set_t), &cpuset);\\
        |    if (s != 0)\\
        |        throw std::runtime_error("Cannot set affinity");
+       |#else
+       |  #define setAffinity(thread_id)
+       |#endif
        |
-       |#define setSched(type)\\
+       |#ifndef __APPLE__
+       |  #define setSched(type)\\
        |    sched_param param;\\
        |    param.__sched_priority =  sched_get_priority_max(type);\\
        |    s = sched_setscheduler(0, type, &param);\\
        |    if (s != 0)\\
        |        cerr << "Cannot set scheduler" << endl;
+       |#else
+       |  #define setSched(type)
+       |#endif
        |
        |uint failedOS = 0;
        |uint failedDel = 0;
@@ -695,7 +703,7 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
@@ -1961,7 +1969,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>

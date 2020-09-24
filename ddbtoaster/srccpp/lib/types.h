@@ -2,6 +2,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stdlib.h>
+
+typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
+
 #define ALIGN alignas(64)
 
 struct ALIGN Transaction;
@@ -56,20 +60,28 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
     return op == WW_ABORT ? WW_VALUE : NO_KEY;
 }
 
-#define setAffinity(thread_id)\
+#ifndef __APPLE__
+  #define setAffinity(thread_id)\
     cpu_set_t cpuset;\
     CPU_ZERO(&cpuset);\
     CPU_SET(thread_id+1, &cpuset);\
     auto s = sched_setaffinity(0, sizeof (cpu_set_t), &cpuset);\
     if (s != 0)\
         throw std::runtime_error("Cannot set affinity");
+#else
+  #define setAffinity(thread_id)
+#endif
 
-#define setSched(type)\
+#ifndef __APPLE__
+  #define setSched(type)\
     sched_param param;\
     param.__sched_priority =  sched_get_priority_max(type);\
     s = sched_setscheduler(0, type, &param);\
     if (s != 0)\
         cerr << "Cannot set scheduler" << endl;
+#else
+  #define setSched(type)
+#endif
 
 #ifndef NUMTHREADS
 #define NUMTHREADS 5

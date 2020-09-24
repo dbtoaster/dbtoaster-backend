@@ -18,8 +18,9 @@
 #include "SpinLock.h"
 std::vector<void*> tempMem;
 
-#define DEFAULT_CHUNK_SIZE 32
+using namespace libcuckoo;
 
+#define DEFAULT_CHUNK_SIZE 32
 
 #ifndef DEFAULT_HEAP_SIZE
 #define DEFAULT_HEAP_SIZE 16

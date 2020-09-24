@@ -146,12 +146,12 @@ public:
 //        }
     }
 
-//    PString copy() const {
-//        if (data_)
-//            return PString(data_, size_ - 1);
-//        else
-//            return PString();
-//    }
+    PString copy() const {
+        if (data_)
+           return PString(data_, size_ - 1);
+        else
+           return PString();
+    }
 
     void recomputeSize() {
         if (!ptr_count_)
