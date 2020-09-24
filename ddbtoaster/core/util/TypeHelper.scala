@@ -11,7 +11,7 @@ object TypeHelper {
   object Cpp {
 
     def typeToString(t: Type): String = t match {
-      case TypeByte   => "signed char"
+      case TypeByte   => "int8_t"
       case TypeShort  => "short"
       case TypeInt    => "int"
       case TypeLong   => "long"      
@@ -33,7 +33,7 @@ object TypeHelper {
     }
 
     def refTypeToString(t: Type): String = t match {
-      case TypeByte   => "signed char"
+      case TypeByte   => "int8_t"
       case TypeShort  => "short"
       case TypeInt    => "int"
       case TypeLong   => "long"
@@ -44,6 +44,19 @@ object TypeHelper {
       case TypeString => "STRING_TYPE&"
       case TypeCustom(_, _) => typeToString(t) + "&"
     }
+
+    def constRefTypeToString(t: Type): String = t match {
+      case TypeByte   => "int8_t"
+      case TypeShort  => "short"
+      case TypeInt    => "int"
+      case TypeLong   => "long"
+      case TypeFloat  => "float"
+      case TypeDouble => "DOUBLE_TYPE"
+      case TypeDate   => "date"
+      case TypeChar   => "char"
+      case TypeString => "const STRING_TYPE&"
+      case TypeCustom(_, _) => "const " + typeToString(t) + "&"
+    }    
 
     def typeToChar(t: Type): String = t match {
       case TypeByte   => "b"
