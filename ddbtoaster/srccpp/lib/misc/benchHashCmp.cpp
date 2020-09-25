@@ -3,7 +3,6 @@
 #include <fstream>
 #include <vector>
 #include <climits>
-#include "program_base.hpp"
 #include "hpds/KDouble.hpp"
 #include "hash.hpp"
 #include "hpds/pstring.hpp"
