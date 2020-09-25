@@ -889,12 +889,12 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
         |#include "program_base.hpp"
         |#include "hpds/KDouble.hpp"
         |#include "hash.hpp"
-        |#include "mmap/mmap.hpp"
+        |#include "sc/mmap.hpp"
         |#include "hpds/pstring.hpp"
         |#include "hpds/pstringops.hpp"
         |""".stripMargin +    
     stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
-    "#include \"ExecutionProfiler.h\"\n"
+    "#include \"sc/ExecutionProfiler.h\"\n"
 
   override protected def emitMapTypes(s0: System) = mapTypes  // genPardis._2
 

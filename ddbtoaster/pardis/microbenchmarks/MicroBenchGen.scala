@@ -105,12 +105,12 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
-       |#include "ExecutionProfiler.h"
+       |#include "sc/mmap.hpp"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
        |#include "hpds/pstring.hpp"
@@ -243,7 +243,7 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
          | }
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"MB1.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"sc/MB1.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

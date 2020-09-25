@@ -2,13 +2,13 @@
 #define MMAP2_H
 
 #include <iostream>
-#include <assert.h>
 #include <functional>
-#include <string.h>
-#include "../serialization.hpp"
-#include "../hpds/pstring.hpp"
-#include "../hpds/macro.hpp"
 #include <vector>
+#include <cassert>
+#include <string>
+#include "serialization.hpp"
+#include "hpds/pstring.hpp"
+#include "hpds/macro.hpp"
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 

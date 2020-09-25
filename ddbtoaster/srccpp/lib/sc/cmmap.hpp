@@ -2,20 +2,21 @@
 #define CMMAP_H
 
 #include <iostream>
-#include <assert.h>
 #include <functional>
-#include <string.h>
-#include <libcuckoo/cuckoohash_map.hh>
-#include "types.h"
-#include "Version.h"
-#include "../serialization.hpp"
-#include "../hpds/pstring.hpp"
-#include "../hpds/macro.hpp"
 #include <vector>
-#include "Predicate.h"
 #include <atomic>
 #include <type_traits>
+#include <cassert>
+#include <string>
+#include <libcuckoo/cuckoohash_map.hh>
+#include "serialization.hpp"
+#include "hpds/pstring.hpp"
+#include "hpds/macro.hpp"
+#include "types.h"
+#include "Version.h"
+#include "Predicate.h"
 #include "SpinLock.h"
+
 std::vector<void*> tempMem;
 
 using namespace libcuckoo;

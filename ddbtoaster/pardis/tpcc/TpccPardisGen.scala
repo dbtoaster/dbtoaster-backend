@@ -159,7 +159,6 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
        |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
@@ -169,8 +168,9 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <sched.h>
        |#include <pthread.h>
        |
+       |#include "sc/mmap.hpp"
        |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
        |#include "hpds/pstring.hpp"
@@ -676,7 +676,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        """.stripMargin :\\: execProfile :\\: blocks) :\\:
       "};" :\\:
       "Partition partitions[numThreads];" :\\:
-      "#include \"TPCC.h\"\n" :\\:
+      "#include \"sc/TPCC.h\"\n" :\\:
       "TPCCDataGen tpcc;" :\\:
       threadFn :\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")
@@ -702,16 +702,15 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
        |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
-       |#include "TransactionManager.h"
-       |
+       |#include "sc/mmap.hpp"
+       |#include "sc/TransactionManager.h"
        |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
        |#include "hpds/pstring.hpp"
@@ -1944,7 +1943,7 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
       """.stripMargin
     file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:
-    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\:
+    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"sc/TPCC.h\"\n"  :\\: runPrgFn :\\:
       threadFn:\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
@@ -1968,14 +1967,14 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
        |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
+       |#include "sc/mmap.hpp"
        |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
        |#include "hpds/pstring.hpp"
@@ -2319,7 +2318,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    val txns = new PrintWriter("TpccTxns.hpp")
     //    txns.print(blocks)
     //    txns.close()
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"sc/TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

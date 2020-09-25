@@ -1,12 +1,12 @@
 #ifndef TRANSACTIONMANAGER_H
 #define TRANSACTIONMANAGER_H
 #include <atomic>
+#include <type_traits>
 #include "types.h"
 #include "Transaction.h"
 #include "Predicate.h"
 #include "Version.h"
 #include "SpinLock.h"
-#include <type_traits>
 
 struct ALIGN TransactionManager {
     std::atomic<timestamp> timestampGen;

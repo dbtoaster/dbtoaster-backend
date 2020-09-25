@@ -14,7 +14,7 @@
 #include <cassert>
 #include <string>
 
-#include "mmap/mmap.hpp"
+#include "mmap.hpp"
 #ifdef CONCURRENT
 #include "types.h"
 #include "Transaction.h"

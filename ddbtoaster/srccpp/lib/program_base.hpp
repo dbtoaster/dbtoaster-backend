@@ -11,24 +11,19 @@
 #define FUSION_MAX_VECTOR_SIZE 50
 
 #include <map>
-
-#include "filepath.hpp"
-
 #include <functional>
 #include <iostream>
 #include <fstream>
+#include <limits>
 
+#include "filepath.hpp"
 #include "runtime.hpp"
 #include "iprogram.hpp"
 #include "util.hpp"
 #include "streams.hpp"
 #include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
-
-#include "mmap/mmap.hpp"
 #include "hpds/macro.hpp"
-
-#include <limits.h>
 
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
