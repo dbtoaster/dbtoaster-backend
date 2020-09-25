@@ -1,10 +1,12 @@
 #ifndef GENTRY_HPP
 #define GENTRY_HPP
-#include<unordered_map>
+#include <unordered_map>
+#include <cmath>
+#include <type_traits>
 #include "hpds/pstring.hpp"
-#include "program_base.hpp"
-#define ELEM_SEPARATOR "\n\t\t\t"
-using dbtoaster::date;
+#include "serialization.hpp"
+
+using namespace std;
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 

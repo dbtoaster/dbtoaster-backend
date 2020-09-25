@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <cassert>
 #ifdef CONCURRENT
 #include "Version.h"
 #else

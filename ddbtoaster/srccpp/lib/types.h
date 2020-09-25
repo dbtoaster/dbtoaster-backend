@@ -3,6 +3,7 @@
 #define TYPES_H
 
 #include <stdlib.h>
+#include <bitset>
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 

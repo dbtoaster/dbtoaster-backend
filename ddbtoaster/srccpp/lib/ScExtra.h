@@ -5,15 +5,17 @@
 #include <cstring>
 #include <cctype>
 #include "hpds/pstring.hpp"
-#include "program_base.hpp"
+#include "event.hpp"
 #include "GenericEntry.hpp"
 #include "Aggregator.hpp"
 #ifdef CONCURRENT
 #include "types.h"
 #include "Version.h"
 #endif
+
 using namespace std;
 using namespace dbtoaster;
+
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
 #define CHECK_STAT(x) cerr << STRINGIFY(x) << " -> "; x.getBucketStats()
