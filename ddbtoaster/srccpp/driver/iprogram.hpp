@@ -14,7 +14,6 @@
 #include <future>
 #include <functional>
 #include <cassert>
-#include "serialization.hpp"
 
 namespace dbtoaster {
 

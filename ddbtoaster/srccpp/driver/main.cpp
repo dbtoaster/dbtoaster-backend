@@ -3,11 +3,13 @@
 #include "Tpch.hpp"
 //#include "Tpch18-V.hpp"
 #endif
+
 #ifdef EXEC_PROFILE
 std::unordered_map<std::string, Timepoint> startTimes;
 std::unordered_map<std::string, size_t> durations;
 std::unordered_map<std::string, size_t> counters;
 #endif
+
 namespace dbtoaster {
 
     class CustomProgram_1 : public Program {

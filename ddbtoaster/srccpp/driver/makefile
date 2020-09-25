@@ -1,13 +1,13 @@
 G++ := g++
-LIB_OBJ := libdbtoaster.a
+LIB_OBJ := libdriver.a
 TARGET:=$(shell which $(G++) &>/dev/null && echo $(LIB_OBJ) || echo warn)
 	
-SRC_FILES := hash.cpp \
-	smhasher/MurmurHash2.cpp \
-	hpds/pstring.cpp \
-	hpds/pstringops.cpp \
-	hpds/KDouble.cpp \
-	standard_functions.cpp	
+SRC_FILES := event.cpp \
+	iprogram.cpp \
+	program_base.cpp \
+	runtime.cpp \
+	standard_adaptors.cpp \
+	streams.cpp
 	
 OBJ_FILES := $(patsubst %.cpp,bin/%.o,$(SRC_FILES))
 
@@ -25,12 +25,10 @@ $(LIB_OBJ) : $(OBJ_FILES)
 	@echo "Linking $@"
 	@ar cr $@ $^
 	
-$(OBJ_FILES) : bin/%.o : %.cpp
+$(OBJ_FILES) : bin/%.o : %.cpp $(HDR_FILES)
 	@mkdir -p ./bin
-	@mkdir -p ./bin/hpds
-	@mkdir -p ./bin/smhasher
 	@echo Compiling $<
-	@$(G++) -Wall -std=c++17 $(CPP_FLAGS) -I . -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
+	@$(G++) -Wall -std=c++17 $(CPP_FLAGS) -I ../lib -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
 
 clean: 
 	rm -rf bin $(LIB_OBJ)

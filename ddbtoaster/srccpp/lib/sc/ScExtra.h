@@ -5,7 +5,7 @@
 #include <cstring>
 #include <cctype>
 #include "hpds/pstring.hpp"
-#include "event.hpp"
+#include "types.hpp"
 #include "GenericEntry.hpp"
 #include "Aggregator.hpp"
 #ifdef CONCURRENT

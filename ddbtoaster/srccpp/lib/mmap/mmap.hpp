@@ -6,10 +6,12 @@
 #include <string>
 
 #include <string.h>
-#include "pool.hpp"
+#include "hpds/macro.hpp"
 #include "serialization.hpp"
 #include "hpds/pstring.hpp"
-#include "hpds/macro.hpp"
+#include "pool.hpp"
+
+using namespace dbtoaster;
 
 namespace dbtoaster {
 

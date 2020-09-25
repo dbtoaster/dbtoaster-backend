@@ -1,11 +1,10 @@
 #include <tuple>
 #include <algorithm>
-
-#include "smhasher/MurmurHash2.hpp"
 #include "standard_adaptors.hpp"
+#include "runtime.hpp"
+#include "smhasher/MurmurHash2.hpp"
 #include "hpds/KDouble.hpp"
 
-#include "runtime.hpp"
 using namespace ::dbtoaster::runtime;
 
 namespace dbtoaster {

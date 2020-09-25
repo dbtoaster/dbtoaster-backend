@@ -28,7 +28,7 @@
 #include <string>
 #include <iostream>
 #include <cstring>
-#include "../smhasher/MurmurHash2.hpp"
+#include "smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
 #define STRING_TYPE PString

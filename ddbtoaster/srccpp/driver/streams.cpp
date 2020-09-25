@@ -1,7 +1,5 @@
 #include "streams.hpp"
-
 #include "runtime.hpp"
-
 #include "filepath.hpp"
 
 using namespace ::dbtoaster::runtime;

@@ -3,12 +3,12 @@
 
 #include <cstdlib>
 #include <string>
-using namespace std;
+#include <regex.h>
+#include "types.hpp"
 #include "hpds/pstring.hpp"
 #include "hpds/KDouble.hpp"
 
-#include "event.hpp"
-#include <regex.h>
+using namespace std;
 
 namespace dbtoaster {
 

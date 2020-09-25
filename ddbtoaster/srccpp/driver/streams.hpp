@@ -11,12 +11,9 @@
 #include <fstream>
 #include <streambuf>
 #include <sys/time.h>
-
 #include <functional>
-
 #include "runtime.hpp"
 #include "event.hpp"
-
 
 namespace dbtoaster {
 namespace streams {

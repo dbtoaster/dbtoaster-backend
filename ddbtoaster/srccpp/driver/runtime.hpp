@@ -2,17 +2,13 @@
 #define DBTOASTER_RUNTIME_H
 
 #include <iostream>
-
 #include <string>
 #include <vector>
 #include <set>
-
 #include <unordered_set>
 #include "filepath.hpp"
 #include "optionparser.hpp"
-
 #include "event.hpp"
-
 #include "hpds/pstring.hpp"
 #include "hpds/KDouble.hpp"
 

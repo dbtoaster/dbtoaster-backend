@@ -19,17 +19,16 @@
 #include "filepath.hpp"
 #include "runtime.hpp"
 #include "iprogram.hpp"
-#include "util.hpp"
 #include "streams.hpp"
 #include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
 #include "hpds/macro.hpp"
+#include "serialization.hpp"
 
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
 using namespace ::dbtoaster::datasets;
 using namespace ::dbtoaster::streams;
-using namespace ::dbtoaster::util;
 
 #ifdef DBT_PROFILE
 #include "statistics.hpp"

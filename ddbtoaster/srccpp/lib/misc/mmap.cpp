@@ -1,5 +1,7 @@
-#include "mmap.hpp"
-#include "../smhasher/PMurHash.hpp"
+#define USE_OLD_MAP
+
+#include "mmap/mmap.hpp"
+#include "smhasher/PMurHash.hpp"
 
 struct rec {
   rec():_1(0),_3(""),_2(0),__av(0),nxt(nullptr){}
@@ -72,7 +74,7 @@ void test_index() {
 
 void test_map() {
   std::cout << "- hmap1" << std::endl;
-  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2,false>> hmap1;
+  MultiHashMap<rec,int,HashIndex<rec,int,IndexFn1>,HashIndex<rec,int,IndexFn2,false>> hmap1;
   hmap1.add(rec(1,2,11));
   hmap1.add(rec(2,3,13));
   hmap1.add(rec(5,6,14));

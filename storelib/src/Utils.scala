@@ -189,19 +189,23 @@ object Utils {
 
   // C++ compiler wrapper
   def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
+    val cppDriverDir = cppLibDir + "/../driver"
     val as = 
-      ( List(prop("gpp", "g++"), cppLibDir + "/main.cpp", "-Wno-maybe-uninitialized",
-          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
-          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
-          "-I" + cppLibDir, "-L" + cppLibDir) :::
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
+          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++17",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", "-ldriver", //"-ljemalloc",
+          "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir, "-L" + cppDriverDir
+        ) :::
         (if (boost == null) Nil else 
           List("program_options", "serialization", "system", "filesystem",
                "chrono", "thread").map("-lboost_" + _ + Utils.prop("lib_boost_thread", "")) ::: 
-          List("-I" + boost + "/include", "-L" + boost + "/lib")) ::: 
+          List("-I" + boost + "/include", "-L" + boost + "/lib")
+        ) ::: 
         cppOpts
       ).filter(_ != "")
     //make DBT c++ library
     Utils.exec(Array("make", "-C", cppLibDir))
+    Utils.exec(Array("make", "-C", cppDriverDir))
     Utils.exec(as.toArray)
   }
 

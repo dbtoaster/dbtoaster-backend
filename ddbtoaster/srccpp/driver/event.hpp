@@ -14,8 +14,6 @@
 
 namespace dbtoaster {
 
-typedef int date;
-
 /**
  * Type definitions of data-structures used for representing events.
  */

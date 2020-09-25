@@ -4,9 +4,8 @@
 #include <string>
 #include <list>
 #include <map>
-
 #include <tuple>
-
+#include "types.hpp"
 #include "streams.hpp"
 
 namespace dbtoaster {
