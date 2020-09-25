@@ -28,7 +28,7 @@ $(LIB_OBJ) : $(OBJ_FILES)
 $(OBJ_FILES) : bin/%.o : %.cpp $(HDR_FILES)
 	@mkdir -p ./bin
 	@echo Compiling $<
-	@$(G++) -Wall -std=c++17 $(CPP_FLAGS) -I ../lib -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
+	@$(G++) -Wall -std=c++11 $(CPP_FLAGS) -I ../lib -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
 
 clean: 
 	rm -rf bin $(LIB_OBJ)

@@ -30,7 +30,7 @@ $(OBJ_FILES) : bin/%.o : %.cpp
 	@mkdir -p ./bin/hpds
 	@mkdir -p ./bin/smhasher
 	@echo Compiling $<
-	@$(G++) -Wall -std=c++17 $(CPP_FLAGS) -I . -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
+	@$(G++) -Wall -std=c++11 $(CPP_FLAGS) -I . -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
 
 clean: 
 	rm -rf bin $(LIB_OBJ)

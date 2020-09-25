@@ -192,7 +192,7 @@ object Utils {
     val cppDriverDir = cppLibDir + "/../driver"
     val as = 
       ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
-          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++17",
+          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", "-ldriver", //"-ljemalloc",
           "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir, "-L" + cppDriverDir
         ) :::
