@@ -115,7 +115,6 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
      """.stripMargin
 

@@ -175,7 +175,6 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -715,7 +714,6 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -1979,7 +1977,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
