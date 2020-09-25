@@ -9,6 +9,7 @@
 #include <fstream>
 #include <vector>
 #include "ScExtra.h"
+#include "ExecutionProfiler.h"
 using namespace std;
 std::unordered_map<std::string, Timepoint> startTimes;
 std::unordered_map<std::string, size_t> durations;
