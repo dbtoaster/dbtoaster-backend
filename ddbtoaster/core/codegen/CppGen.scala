@@ -109,7 +109,11 @@ trait ICppGen extends CodeGen {
       val sModFnParams = ksTpIdx.map { case (t, i) => "const " + refTypeToString(t) + " c" + (i + 1) }.mkString(", ")
       val sModFnBody = ksTpIdx.map { case (_, i) => "_" + (i + 1) + " = c" + (i + 1) + ";"}.mkString(" ")
       val sEqualFnBody = ksTpIdx.map { case (_, i) => "(x._" + (i + 1) + " == y._" + (i + 1) + ")" }.mkString(" && ")
-      val sHashFnBody = ksTpIdx.map { case (_, i) => "hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")
+      val sHashFnBody = 
+        // if (ksTp.forall(isPrimitiveType))
+        //   s"h = MurmurHash64A(&e, sizeof(${name}) - sizeof(e.${VALUE_NAME}) - sizeof(e.nxt) - sizeof(e.prv), 0);"
+        // else
+          ksTpIdx.map { case (_, i) => "hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")
 
       s"""|struct ${name} {
           |  ${sKeyDefs} ${sValueDef} ${name}* nxt; ${name}* prv;
@@ -552,9 +556,13 @@ trait ICppGen extends CodeGen {
     val sIndexOpsType = indices.map { case (is, unique) =>
       val name = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
 
-      val sCombinators = is.map { idx =>
-        "hash_combine(h, e." + fields(idx)._1 + ");"
-      }.mkString("\n")
+      val sCombinators = 
+        // if (unique && m.keys.forall(x => isPrimitiveType(x._2)))
+        //   s"h = MurmurHash64A(&e, sizeof(${mapEntryType}) - sizeof(e.${VALUE_NAME}) - sizeof(e.nxt) - sizeof(e.prv), 0);"
+        // else 
+          is.map { idx =>
+            "hash_combine(h, e." + fields(idx)._1 + ");"
+          }.mkString("\n")
 
       val sCmpExpr = is.map { idx =>
         val (n, tp) = fields(idx)

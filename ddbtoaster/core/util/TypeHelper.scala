@@ -92,6 +92,12 @@ object TypeHelper {
       case TypeString => "\"\""
       case TypeCustom(_, _) => typeToString(t) + "()"
     }
+
+    def isPrimitiveType(t: Type): Boolean = t match {
+      case TypeByte | TypeShort | TypeInt | TypeLong | 
+           TypeFloat | TypeDouble | TypeDate | TypeChar => true
+      case TypeString | _: TypeCustom => false
+    }
   }
 
   // C++-type specific string functions
