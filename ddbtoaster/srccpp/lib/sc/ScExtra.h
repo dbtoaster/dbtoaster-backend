@@ -4,7 +4,6 @@
 #include <cinttypes>
 #include <cstring>
 #include <cctype>
-#include "hpds/pstring.hpp"
 #include "types.hpp"
 #include "GenericEntry.hpp"
 #include "Aggregator.hpp"

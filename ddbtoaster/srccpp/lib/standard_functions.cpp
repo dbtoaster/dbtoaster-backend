@@ -104,6 +104,15 @@ DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian) {
 DOUBLE_TYPE Upow(DOUBLE_TYPE a, DOUBLE_TYPE b) {
   return pow(a, b);
 }
+
+DOUBLE_TYPE Ucos(DOUBLE_TYPE a) { 
+  return cos(a); 
+}
+
+DOUBLE_TYPE Usin(DOUBLE_TYPE a) { 
+  return sin(a);
+}
+
 /*DOUBLE_TYPE pow(DOUBLE_TYPE a, int b) {
   return ::pow(a, (DOUBLE_TYPE)b);
 }

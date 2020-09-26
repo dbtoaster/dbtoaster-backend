@@ -1467,10 +1467,8 @@ trait ICppGen extends CodeGen {
           |#include "serialization.hpp"
           |""".stripMargin,
       s"""|#include "program_base.hpp"
-          |#include "hpds/KDouble.hpp"
+          |#include "types.hpp"
           |#include "hash.hpp"
           |#include "mmap/mmap.hpp"
-          |#include "hpds/pstring.hpp"
-          |#include "hpds/pstringops.hpp"
           |""".stripMargin)
 }

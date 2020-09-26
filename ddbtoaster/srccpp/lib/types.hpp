@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "hpds/pstring.hpp"
+#include "hpds/pstringops.hpp"
 #include "hpds/KDouble.hpp"
 
 namespace dbtoaster {

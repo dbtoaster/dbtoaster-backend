@@ -173,8 +173,6 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -706,14 +704,13 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <fstream>
        |#include <locale>
        |
+       |#include "types.hpp"
        |#include "sc/mmap.hpp"
        |#include "sc/TransactionManager.h"
        |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
        |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -1975,8 +1972,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
