@@ -1,6 +1,20 @@
-#ifndef DBTOASTER_TYPE_H
-#define DBTOASTER_TYPE_H
+#ifndef DBTOASTER_TYPES_H
+#define DBTOASTER_TYPES_H
 
-typedef int date;
+#include <cstdint>
 
-#endif //DBTOASTER_TYPE_H
+#include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
+
+namespace dbtoaster {
+    typedef int date;
+
+    typedef double DOUBLE_TYPE;
+
+    typedef size_t HASH_RES_t;
+
+    typedef PString STRING_TYPE;
+
+}
+
+#endif /* DBTOASTER_TYPES_HPP */

@@ -7,8 +7,8 @@
 #include <cassert>
 #include <string>
 #include "serialization.hpp"
+#include "macro.hpp"
 #include "hpds/pstring.hpp"
-#include "hpds/macro.hpp"
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 

@@ -10,8 +10,8 @@
 #include <string>
 #include <libcuckoo/cuckoohash_map.hh>
 #include "serialization.hpp"
+#include "macro.hpp"
 #include "hpds/pstring.hpp"
-#include "hpds/macro.hpp"
 #include "types.h"
 #include "Version.h"
 #include "Predicate.h"

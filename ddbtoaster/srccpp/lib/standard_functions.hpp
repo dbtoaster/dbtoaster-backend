@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <string>
+#include <cmath>
 #include <regex.h>
 #include "types.hpp"
 #include "hpds/pstring.hpp"
@@ -41,6 +42,9 @@ namespace dbtoaster {
   DOUBLE_TYPE Uradians(DOUBLE_TYPE degree);
   DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian);
   DOUBLE_TYPE Upow(DOUBLE_TYPE a, DOUBLE_TYPE b);
+  DOUBLE_TYPE Ucos(DOUBLE_TYPE a) { return cos(a); }
+  DOUBLE_TYPE Usin(DOUBLE_TYPE a) { return sin(a); }
+
 /*  DOUBLE_TYPE pow(DOUBLE_TYPE a, int b);
   DOUBLE_TYPE pow(int a, DOUBLE_TYPE b);
   DOUBLE_TYPE pow(int a, int b);
@@ -82,7 +86,7 @@ namespace dbtoaster {
   inline date Udate(const STRING_TYPE &s) { 
     return Udate(s.c_str()); 
   }
-  
+
 }
 
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H

@@ -25,6 +25,8 @@ benchmarks-*.csv
 tmp/*
 srccpp/lib/*.o
 srccpp/lib/*.a
+srccpp/driver/*.o
+srccpp/driver/*.a
 release/examples
 release/lib
 dbtoaster_release

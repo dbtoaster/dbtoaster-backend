@@ -887,9 +887,9 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
   override def emitIncludeHeaders = 
     s"""|#define SC_GENERATED 1
         |#include "program_base.hpp"
-        |#include "hpds/KDouble.hpp"
         |#include "hash.hpp"
         |#include "sc/mmap.hpp"
+        |#include "hpds/KDouble.hpp"
         |#include "hpds/pstring.hpp"
         |#include "hpds/pstringops.hpp"
         |""".stripMargin +    

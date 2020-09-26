@@ -1,14 +1,13 @@
-#ifndef DBTOASTER_MMAP1_HPP
-#define DBTOASTER_MMAP1_HPP
+#ifndef DBTOASTER_MULTIMAP_HPP
+#define DBTOASTER_MULTIMAP_HPP
 
 #include <iostream>
 #include <functional>
 #include <string>
 
-#include <string.h>
-#include "hpds/macro.hpp"
+#include "macro.hpp"
+#include "types.hpp"
 #include "serialization.hpp"
-#include "hpds/pstring.hpp"
 #include "pool.hpp"
 
 using namespace dbtoaster;
@@ -17,7 +16,7 @@ namespace dbtoaster {
 
 #define DEFAULT_CHUNK_SIZE 32   // 2^N
 
-#define HASH_RES_t size_t
+// #define HASH_RES_t size_t
 
 // #define DOUBLE_ZERO_APPROXIMATED
 // #define DOUBLE_ZERO_THRESHOLD 1e-8
@@ -1375,4 +1374,4 @@ FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V> >& m, T& k,
 
 }
 
-#endif /* DBTOASTER_MMAP1_HPP */
+#endif /* DBTOASTER_MULTIMAP_HPP */

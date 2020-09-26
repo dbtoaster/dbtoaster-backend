@@ -22,7 +22,6 @@
 #include "streams.hpp"
 #include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
-#include "hpds/macro.hpp"
 #include "serialization.hpp"
 
 using namespace ::dbtoaster;
@@ -205,7 +204,7 @@ public:
 
 };
 
-FORCE_INLINE void voidFunc() { }
+inline void voidFunc() { }
 
 }
 
