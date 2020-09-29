@@ -11,14 +11,51 @@ namespace dbtoaster {
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
 int Udate_year(date d) { 
-	return (d / 10000) % 10000;
+  return d.get_year();
+	// return (d / 10000) % 10000;
 }
 int Udate_month(date d) { 
-	return (d / 100) % 100;
+  return d.get_month();
+	// return (d / 100) % 100;
 }
 int Udate_day(date d) { 
-	return d % 100;
+  return d.get_day();
+	// return d % 100;
 }
+
+date Udate(const char *c) { //cast_date_from_string
+  unsigned int y = 0, m = 0, d = 0;
+  if (sscanf(c, "%u-%u-%u", &y, &m, &d) < 3 || m > 12 || d > 31) {
+    throw std::invalid_argument("invalid date string " + string(c) + " (expected format YYYY-MM-DD)");
+  }
+  return dbtoaster::DateType(y, m, d);
+}
+
+STRING_TYPE cast_string_from_date(date d) { 
+  std::stringstream ss;
+  ss << d.get_year() << d.get_month() << d.get_day();
+  return STRING_TYPE(ss.str().c_str());
+}
+
+// STRING_TYPE cast_string_from_date(date ymd)   { 
+//   std::stringstream ss;
+//   ss << ((ymd / 10000) % 10000)
+//      << ((ymd / 100  ) % 100)
+//      << ((ymd        ) % 100);
+//   return STRING_TYPE(ss.str().c_str());
+// }
+
+// date Udate(const char *c) { //cast_date_from_string
+//   unsigned int y, m, d;
+//   if(sscanf(c, "%u-%u-%u", &y, &m, &d) < 3){
+//     cerr << "Invalid date string: "<< c << endl;
+//   }
+//   if((m > 12) || (d > 31)){ 
+//     cerr << "Invalid date string: "<< c << endl;
+//   }
+//   return (y%10000) * 10000 + (m%100) * 100 + (d%100);
+// }
+
 
 // String functions
 STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len){
@@ -180,23 +217,6 @@ STRING_TYPE cast_string(const T &t) {
 	std::stringstream ss;
 	ss << t;
 	return STRING_TYPE(ss.str().c_str());
-}
-STRING_TYPE cast_string_from_date(date ymd)   { 
-	std::stringstream ss;
-	ss << ((ymd / 10000) % 10000)
-	   << ((ymd / 100  ) % 100)
-	   << ((ymd        ) % 100);
-  return STRING_TYPE(ss.str().c_str());
-}
-date Udate(const char *c) { //cast_date_from_string
-	unsigned int y, m, d;
-	if(sscanf(c, "%u-%u-%u", &y, &m, &d) < 3){
-	  cerr << "Invalid date string: "<< c << endl;
-	}
-	if((m > 12) || (d > 31)){ 
-	  cerr << "Invalid date string: "<< c << endl;
-	}
-	return (y%10000) * 10000 + (m%100) * 100 + (d%100);
 }
 
 }

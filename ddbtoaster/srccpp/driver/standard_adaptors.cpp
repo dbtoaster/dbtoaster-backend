@@ -167,7 +167,8 @@ csv_adaptor::interpret_event(char* data)
 							m = atoi(date_m_field);
 							d = atoi(date_d_field);
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-								tuple[tupleIdx++]=std::shared_ptr<date>(new date(y*10000+m*100+d));
+								// tuple[tupleIdx++]=std::shared_ptr<date>(new date(y*10000+m*100+d));
+								tuple[tupleIdx++]=std::shared_ptr<date>(new date(y, m, d));
 							}
         					// std::cout << "  date is => " << date(y*10000+m*100+d) << std::endl;
 						} else valid = false;

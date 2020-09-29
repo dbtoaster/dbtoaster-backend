@@ -2,7 +2,7 @@
 #define DBTOASTER_HASH_HPP
 
 #include "macro.hpp"
-#include "hpds/KDouble.hpp"
+#include "types.hpp"
 
 extern std::hash<double> double_hasher;
 extern std::hash<std::string> string_hasher;
@@ -107,6 +107,11 @@ namespace dbtoaster {
       seed ^= v + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 
+  template <>
+  FORCE_INLINE void hash_combine(std::size_t& seed, const DateType& v)
+  {
+      seed ^= v.get_numeric() + 0x9e3779b9 + (seed<<6) + (seed>>2);
+  }
 }
 
 #endif /* DBTOASTER_HASH_HPP */

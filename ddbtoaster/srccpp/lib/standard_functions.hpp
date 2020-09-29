@@ -18,6 +18,12 @@ namespace dbtoaster {
   int Udate_month(date d);
   int Udate_day(date d);
   
+  STRING_TYPE cast_string_from_date(date ymd);
+  date Udate(const char *c);
+  inline date Udate(const STRING_TYPE &s) { 
+    return Udate(s.c_str()); 
+  }
+
   // String functions
   STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len);
   int Uregexp_match(const char *regex, const STRING_TYPE &s);
@@ -78,13 +84,7 @@ namespace dbtoaster {
   STRING_TYPE cast_string(const T &t);
   
   inline STRING_TYPE cast_string_from_int(long      i) { return cast_string(i); }
-  inline STRING_TYPE cast_string_from_double(double d) { return cast_string(d); }
-  STRING_TYPE cast_string_from_date(date ymd);
-  date Udate(const char *c);
-  inline date Udate(const STRING_TYPE &s) { 
-    return Udate(s.c_str()); 
-  }
-
+  inline STRING_TYPE cast_string_from_double(double d) { return cast_string(d); }  
 }
 
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H
