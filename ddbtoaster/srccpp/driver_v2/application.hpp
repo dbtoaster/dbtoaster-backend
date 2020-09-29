@@ -154,6 +154,12 @@ void Application::run() {
                   << "-------------"
                   << std::endl;
 
+        std::cout << "SAMPLE = "
+                  << run << ", " 
+                  << total_time.elapsed_time_ms() * 1000 << ", " 
+                  << data.tN << ", " 
+                  << data.tS << std::endl;
+
         close_multiplexers();
     }
 }

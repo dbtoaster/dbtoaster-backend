@@ -5,6 +5,7 @@
 #include <tuple>
 #include <type_traits>
 #include <string>
+#include "compatibility.hpp"
 #include "types.hpp"
 
 using namespace std;
@@ -59,7 +60,7 @@ template<std::size_t> struct int_{};
 
 template <class Tuple, size_t N>
 constexpr auto build_tuple(const string& line, char delimiter, size_t start, int_<N>) {
-  typedef typename tuple_element<tuple_size<Tuple>::value-N, Tuple>::type FieldTp;   
+  typedef typename tuple_element<tuple_size<Tuple>::value-N, Tuple>::type FieldTp;
   size_t found = line.find(delimiter, start);
   return tuple_cat(
     make_tuple(convert<FieldTp>(line.substr(start, found - start))),
@@ -75,7 +76,7 @@ constexpr auto build_tuple(const string& line, char delimiter, size_t start, int
 }
 
 template <class Tuple>
-constexpr auto build_tuple(const string& line, char delimiter) {
+constexpr Tuple build_tuple(const string& line, char delimiter) {
   return build_tuple<Tuple, tuple_size<Tuple>::value>(line, delimiter, 0, int_<tuple_size<Tuple>::value>());
 }
 

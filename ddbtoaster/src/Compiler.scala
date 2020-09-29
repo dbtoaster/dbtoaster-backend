@@ -95,6 +95,7 @@ object Compiler {
   private var execBatchSize = 0                // execute as batches of certain size
   private var execTimeoutMilli = 0L            // execution timeout in milliseconds
   private var execRuntimeLibs = List[String]() // runtime libraries (defaults to lib/ddbt.jar for scala)
+  private var execPreloadInput = false         // preload input dataset  
 
   // Experimental features
   private var useExperimentalCppHashMap = false
@@ -161,10 +162,11 @@ object Compiler {
     error("  -xvm          execute in a new JVM instance (Scala)")
     error("  -t <n>        execution timeout in seconds")
     error("  -xbs <n>      execute with batches of certain size")
-    error("  -xa <arg>     pass an argument to generated program")
+    error("  -xa <arg>     pass an argument to generated program")    
     error("Experimental features:")
     error("  -xhashmap     use experimental C++ hash map implementation")
     error("  -xruntime     use experimental C++ runtime library")
+    error("  -preload      preload input datasets")
     
     error("", true)     // exit here
   }
@@ -221,6 +223,7 @@ object Compiler {
     execBatchSize = 0
     execTimeoutMilli = 0L
     execRuntimeLibs = Nil
+    execPreloadInput = false
 
     useExperimentalCppHashMap = false
     useExperimentalCppRuntimeLibrary = false
@@ -270,6 +273,7 @@ object Compiler {
         case "-L" => eat(s => execRuntimeLibs = s :: execRuntimeLibs)
         case "-xhashmap" => useExperimentalCppHashMap = true
         case "-xruntime" => useExperimentalCppRuntimeLibrary = true
+        case "-preload" => execPreloadInput = true
         // case "-wa" => watch = true;
         // case "-ni" => ni = true; frontendIvmDepth = 0; frontendDebugFlags = Nil
         case "-x" => execOutput = true
@@ -519,11 +523,13 @@ object Compiler {
     }    
   }
 
-  def runCpp(file: String, args: List[String], batchSize: Int): (String, String) = {
+  def runCpp(file: String, args: List[String], batchSize: Int, preloadInput: Boolean): (String, String) = {
     if (file == null) {
       error("Execution failed, executable file missing", true)
     }
-    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    val execArgs = args ++ 
+      (if (batchSize > 0) List("-b" + batchSize) else Nil) ++
+      (if (preloadInput && useExperimentalCppRuntimeLibrary) List("--preload") else Nil) 
     Utils.cppExec(file, execArgs)
   }
 
@@ -595,7 +601,7 @@ object Compiler {
       val (tRun, (out, err)) = Utils.ns(() =>
         lang match {
           case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
-            runCpp(outputExeFile, execArgs, execBatchSize)
+            runCpp(outputExeFile, execArgs, execBatchSize, execPreloadInput)
           case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
             runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
           case LANG_SPARK_LMS =>

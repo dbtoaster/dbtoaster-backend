@@ -1,9 +1,9 @@
 #include "standard_functions.hpp"
 
-#include <stdio.h>
 #include <iostream>
 #include <sstream>
-#include <math.h>
+#include <cmath>
+#include <stdexcept>
 
 namespace dbtoaster {
 
@@ -12,15 +12,15 @@ namespace dbtoaster {
 // date_part
 int Udate_year(date d) { 
   return d.get_year();
-	// return (d / 10000) % 10000;
+    // return (d / 10000) % 10000;
 }
 int Udate_month(date d) { 
   return d.get_month();
-	// return (d / 100) % 100;
+    // return (d / 100) % 100;
 }
 int Udate_day(date d) { 
   return d.get_day();
-	// return d % 100;
+    // return d % 100;
 }
 
 date Udate(const char *c) { //cast_date_from_string
@@ -59,7 +59,7 @@ STRING_TYPE cast_string_from_date(date d) {
 
 // String functions
 STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len){
-	return s.substr(start, len);
+    return s.substr(start, len);
 }
 
 DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x, DOUBLE_TYPE y, DOUBLE_TYPE z){
@@ -214,9 +214,9 @@ DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
 // Type conversion functions
 template <class T> 
 STRING_TYPE cast_string(const T &t) {
-	std::stringstream ss;
-	ss << t;
-	return STRING_TYPE(ss.str().c_str());
+    std::stringstream ss;
+    ss << t;
+    return STRING_TYPE(ss.str().c_str());
 }
 
 }

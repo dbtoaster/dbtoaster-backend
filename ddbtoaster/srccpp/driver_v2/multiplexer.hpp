@@ -45,7 +45,7 @@ class RoundRobinMultiplexer {
         current++;
         return true;
       }
-      active_dispatchers.erase(active_dispatchers.cbegin() + current);
+      active_dispatchers.erase(active_dispatchers.begin() + current);
       return next();
     }
 
