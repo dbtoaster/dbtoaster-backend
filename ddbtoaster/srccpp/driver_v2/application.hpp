@@ -20,11 +20,11 @@ class Application {
     void run();
     
   protected:
-    using Multiplexer = std::conditional<data_sources_t::ordered,
+    using Multiplexer = std::conditional<data_sources_t::ordered_dataset,
                                          OrderedMultiplexer,
                                          RoundRobinMultiplexer>::type;
 
-    using MultiplexerFactory = std::conditional<data_sources_t::ordered,
+    using MultiplexerFactory = std::conditional<data_sources_t::ordered_dataset,
                                                 OrderedMultiplexerFactory,
                                                 RoundRobinMultiplexerFactory>::type;
 
@@ -87,7 +87,9 @@ class Application {
 
     void on_end_processing(dbtoaster::data_t& data, bool print_result) {
         if (print_result) {
+            cout << "<snap>\n";
             data.serialize(std::cout, 0);
+            cout << "\n</snap>" << endl;
         }    
     }
 

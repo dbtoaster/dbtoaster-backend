@@ -510,7 +510,10 @@ object Compiler {
         if (outputFile == null) {
           error("Compilation failed, output file name missing", true)
         }
-        Utils.cppCompiler(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")
+        if (useExperimentalCppRuntimeLibrary) 
+          Utils.cppCompilerNewDriver(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")  
+        else
+          Utils.cppCompiler(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")
 
       case _ => error("Source compilation for " + lang + " is not supported", true)
     }    

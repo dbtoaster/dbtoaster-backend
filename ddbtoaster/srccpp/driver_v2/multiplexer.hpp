@@ -11,7 +11,7 @@ using namespace std;
 class RoundRobinMultiplexer {
   public: 
     RoundRobinMultiplexer(vector<unique_ptr<Dispatcher>> d)
-        : current(0), dispatchers(std::move(d)) { 
+        : current(0), dispatchers(std::move(d)) {
       active_dispatchers.reserve(dispatchers.size());
     }
 

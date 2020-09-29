@@ -354,15 +354,15 @@ trait ICppGen extends CodeGen {
           |  ++tN;
           |${ind(body)}
           |}
-          |""".stripMargin +
+          |""".stripMargin // +
       // TODO: Perhaps this could be kept together with struct definitions for each relation
-      stringIf(cgOpts.useExperimentalRuntimeLibrary, {
-        val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
-        s"""|void ${sName}(${s.name}_entry &e) {
-            |  ${sName}(${sArgs});
-            |}
-            |""".stripMargin
-      })
+      // stringIf(cgOpts.useExperimentalRuntimeLibrary, {
+      //   val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
+      //   s"""|void ${sName}(${s.name}_entry &e) {
+      //       |  ${sName}(${sArgs});
+      //       |}
+      //       |""".stripMargin
+      // })
     }
 
     def emitReadyTrigger(body: String) = {
@@ -401,11 +401,12 @@ trait ICppGen extends CodeGen {
       //
       // TODO: perhaps enable in all cases
       (if (cgOpts.useExperimentalRuntimeLibrary) {
-         s"""|void on_insert_${name}(${name}_entry &e) {
-             |  e.${VALUE_NAME} = 1;
-             |  ${name}.addOrDelOnZero(e, 1);
-             |}
-             |""".stripMargin
+        ""
+         // s"""|void on_insert_${name}(${name}_entry &e) {
+         //     |  e.${VALUE_NAME} = 1;
+         //     |  ${name}.addOrDelOnZero(e, 1);
+         //     |}
+         //     |""".stripMargin
       }
       else {
         val castArgs = fields.zipWithIndex.map { case ((_, tp), i) => 
@@ -755,6 +756,67 @@ trait ICppGen extends CodeGen {
         |};
         |
         |""".stripMargin
+  }
+
+  private def emitDataSourceStructure(s0: System) = {
+    val mixedDataset = cgOpts.datasetWithDeletions
+    val orderedDataset = mixedDataset
+    def sourceId(s: Source) = s.schema.name.toUpperCase
+    def sourceName(s: Source) = s.schema.name.toLowerCase + "_source"
+    def sourceType(s: Source) = 
+      if (s.isStream) "SourceType::kStream" else "SourceType::kTable"
+    def sourceSchemaName(s: Source) = sourceName(s) + "_schema"
+    def sourceSchema(s: Source) = 
+      ( (if (orderedDataset) List("size_t") else Nil) ++
+        (if (mixedDataset) List("int") else Nil) ++
+        s.schema.fields.map { case (_, tp) => typeToString(tp) } 
+      ).mkString(", ")
+    def sourcePath(s: Source) = s.in match {
+      case SourceFile(path) => path
+    }
+    def sourceDelimiter(s: Source) = s.adaptor.options("delimiter")
+    val sSources = s0.sources.map { s =>          
+        s"""|static constexpr CSVFileSource ${sourceName(s)} =
+            |  CSVFileSource("${sourceId(s)}", ${sourceType(s)}, "${sourcePath(s)}", '${sourceDelimiter(s)}');
+            | 
+            |static constexpr auto ${sourceSchemaName(s)} =
+            |  Schema<${sourceSchema(s)}>();
+            |""".stripMargin
+      }.mkString("\n")
+    val sVisitTriggerBody = s0.sources.map { s =>
+        if (mixedDataset)
+          s"""|visitor.dispatch(
+              |  ${sourceName(s)},
+              |  ${sourceSchemaName{s}},
+              |  &data_t::on_insert_${sourceId(s)},
+              |  &data_t::on_delete_${sourceId(s)}
+              |);""".stripMargin
+        else
+          s"""|visitor.dispatch(
+              |  ${sourceName(s)},
+              |  ${sourceSchemaName{s}},
+              |  &data_t::on_insert_${sourceId(s)}
+              |);""".stripMargin
+      }.mkString("\n")
+    val sStaticInitializers = s0.sources.map { s =>
+        s"constexpr CSVFileSource data_sources_t::${sourceName(s)};"
+      }.mkString("\n")
+
+    s"""|/* Information on data sources */
+        |struct data_sources_t {
+        |  static constexpr bool mixed_dataset = ${mixedDataset};
+        |  static constexpr bool ordered_dataset = ${orderedDataset};
+        |
+        |${ind(sSources)}
+        |
+        |  template <class Visitor>
+        |  static void visit_triggers(Visitor& visitor) {
+        |${ind(sVisitTriggerBody, 2)}
+        |  }
+        |};
+        |
+        |${sStaticInitializers}
+        |""".stripMargin    
   }
 
   protected def emitTLQMapInitializer(maps: List[MapDef], queries: List[Query]) = {
@@ -1457,6 +1519,8 @@ trait ICppGen extends CodeGen {
         |
         |${ind(emitMainClass(s0))}
         |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitDataSourceStructure(s0)))}
+        |
         |}""".stripMargin    
   }
 
@@ -1467,12 +1531,11 @@ trait ICppGen extends CodeGen {
     stringIf(cgOpts.useExperimentalRuntimeLibrary,
       s"""|#include <sys/time.h>
           |#include <vector>
-          |#include "macro.hpp"
           |#include "types.hpp"
-          |#include "functions.hpp"
           |#include "hash.hpp"
-          |#include "mmap.hpp"
-          |#include "serialization.hpp"
+          |#include "mmap/mmap.hpp"
+          |#include "standard_functions.hpp"
+          |#include "source.hpp"
           |""".stripMargin,
       s"""|#include "program_base.hpp"
           |#include "types.hpp"

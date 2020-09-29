@@ -188,6 +188,21 @@ object Utils {
   }
 
   // C++ compiler wrapper
+  def cppCompilerNewDriver(out: String, cPath: String, boost: String, cppLibDir: String) = {
+    val cppDriverDir = cppLibDir + "/../driver_v2"
+    val as = 
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
+          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++14",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
+          "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir
+        ) :::
+        cppOpts
+      ).filter(_ != "")
+    //make DBT c++ library
+    Utils.exec(Array("make", "-C", cppLibDir))
+    Utils.exec(as.toArray)
+  }
+
   def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
     val cppDriverDir = cppLibDir + "/../driver"
     val as = 
