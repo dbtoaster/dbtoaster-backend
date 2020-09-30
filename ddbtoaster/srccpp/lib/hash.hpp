@@ -1,5 +1,6 @@
 #include "hpds/macro.hpp"
 #include "hpds/KDouble.hpp"
+#include "hpds/string.hpp"
 
 namespace dbtoaster {
   template <class T>
@@ -97,6 +98,11 @@ namespace dbtoaster {
   FORCE_INLINE void hash_combine(std::size_t& seed, const char& v)
   {
       seed ^= v + 0x9e3779b9 + (seed<<6) + (seed>>2);
+  }
+
+  template<>
+  FORCE_INLINE void hash_combine(size_t& seed, const PooledRefCountedString& v) {
+    seed ^= MurmurHash2(v.data_, sizeof(char) * (v.size_ - 1), 0) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
   }
 
 }

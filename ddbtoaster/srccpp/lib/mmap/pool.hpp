@@ -42,7 +42,7 @@ namespace dbtoaster
     };
 
     template<typename T>
-    class Pool 
+    class MemoryPool 
     {
         private:
             Elem<T>* free_;
@@ -66,12 +66,12 @@ namespace dbtoaster
             }
 
         public:
-            Pool(size_t chunk_size = DEFAULT_POOL_CHUNK_SIZE) : free_(nullptr), data_(nullptr) 
+            MemoryPool(size_t chunk_size = DEFAULT_POOL_CHUNK_SIZE) : free_(nullptr), data_(nullptr) 
             {
                 add_chunk(chunk_size);
             }
 
-            ~Pool() {
+            ~MemoryPool() {
                 size_t sz = size_;
                 while (data_ != nullptr) 
                 {

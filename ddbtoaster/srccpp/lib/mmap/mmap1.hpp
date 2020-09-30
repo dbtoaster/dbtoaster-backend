@@ -511,7 +511,7 @@ public:
 template <typename T, typename V, typename PRIMARY_INDEX, typename... SECONDARY_INDEXES> 
 class MultiHashMap {
   private:
-    Pool<T> pool;
+    MemoryPool<T> pool;
     PRIMARY_INDEX* primary_index;
     SecondaryIndex<T>** secondary_indexes;
 
@@ -749,7 +749,7 @@ class HashIndex : public Index<T, V>
     size_t mask_;
 
   private:
-    Pool<IdxNode> nodes_;
+    MemoryPool<IdxNode> nodes_;
     bool allocated_from_pool_;
     size_t count_, threshold_;
     double load_factor_;
@@ -1146,7 +1146,7 @@ class HashIndex : public Index<T, V>
 template <typename T, typename V, typename... INDEXES> 
 class MultiHashMap {
   private:
-    Pool<T> pool;
+    MemoryPool<T> pool;
 
   public:
     Index<T, V> **index;

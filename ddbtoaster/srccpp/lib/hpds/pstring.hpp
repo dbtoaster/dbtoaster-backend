@@ -29,10 +29,13 @@
 #include <iostream>
 #include <cstring>
 #include "../smhasher/MurmurHash2.hpp"
+#include "string.hpp"
 
 #ifndef STRING_TYPE
-#define STRING_TYPE PString
+  //#define STRING_TYPE PString
+  #define STRING_TYPE PooledRefCountedString
 #endif //STRING_TYPE
+
 
 // #define USE_POOL
 

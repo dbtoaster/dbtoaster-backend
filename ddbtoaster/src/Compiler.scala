@@ -310,6 +310,10 @@ object Compiler {
       }
     }
 
+    if (lang == LANG_CPP_PARDIS) {
+       error(s"Pardis C++ code generator is currently disabled. Use '-l ${LANG_CPP_VANILLA}' instead.", true) 
+    }
+
     if (outputSrcFile == null && outputExeFile != null) {
       outputSrcFile = backendFileExtensions.get(lang).map(outputExeFile + "." + _).getOrElse(null)
     }
