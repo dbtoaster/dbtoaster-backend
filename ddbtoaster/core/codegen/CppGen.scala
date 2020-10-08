@@ -118,7 +118,7 @@ trait ICppGen extends CodeGen {
       s"""|struct ${name} {
           |  ${sKeyDefs} ${sValueDef} ${name}* nxt; ${name}* prv;
           |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
-          |  FORCE_INLINE ${name}& modify(${sModFnParams}) { ${sModFnBody} return *this; }
+          |  ${name}& modify(${sModFnParams}) { ${sModFnBody} return *this; }
           |  static bool equals(const ${name} &x, const ${name} &y) {
           |    return (${sEqualFnBody});
           |  }
@@ -354,7 +354,8 @@ trait ICppGen extends CodeGen {
           |  ++tN;
           |${ind(body)}
           |}
-          |""".stripMargin // +
+          |""".stripMargin 
+      // +
       // TODO: Perhaps this could be kept together with struct definitions for each relation
       // stringIf(cgOpts.useExperimentalRuntimeLibrary, {
       //   val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
@@ -512,10 +513,21 @@ trait ICppGen extends CodeGen {
   protected def emitMapTypes(s0: System) = {
     "/* Definitions of maps used for storing materialized views. */\n" + 
     stringIf(cgOpts.useExperimentalRuntimeLibrary, {
-      // 1. Entry type definitions for all streams
-      s0.sources.filter(_.isStream).map { s =>
-        emitEntryType(s.schema.name + "_entry", s.schema.fields, (VALUE_NAME, TypeLong))("")
-      }.mkString("\n") 
+      // 1. Source type definitions
+      s0.sources.map { s =>
+        val name = s.schema.name.toLowerCase.capitalize
+        val types = s.schema.fields.map { case (_, t) => typeToString(t) }.mkString(", ")
+        s"""|using ${name}Tuple = tuple<${types}>;
+            |struct Message${name} : MessageBase {
+            |  ${name}Tuple tpl;
+            |};
+            |""".stripMargin
+      }.mkString("\n") + "\n"
+
+      // // 1. Entry type definitions for all streams
+      // s0.sources.filter(_.isStream).map { s =>
+      //   emitEntryType(s.schema.name + "_entry", s.schema.fields, (VALUE_NAME, TypeLong))("")
+      // }.mkString("\n") 
     }) +
     {
       // 2. Maps (declared maps + tables + batch updates)
@@ -658,12 +670,12 @@ trait ICppGen extends CodeGen {
             |""".stripMargin
       }.mkString
 
-    val sConstructorFromStrings = 
-      stringIf(cgOpts.useExperimentalRuntimeLibrary, 
-        s"""|${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
-            |    /* if (f.size() < ${keys.size}) return; */
-            |    ${sStringInit}
-            |}""".stripMargin)
+    val sConstructorFromStrings = ""
+      // stringIf(cgOpts.useExperimentalRuntimeLibrary, 
+      //   s"""|${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
+      //       |    /* if (f.size() < ${keys.size}) return; */
+      //       |    ${sStringInit}
+      //       |}""".stripMargin)
 
     s =>
       s"""|struct ${name} {
@@ -755,6 +767,130 @@ trait ICppGen extends CodeGen {
         |${ind(sDataDefinitions)}
         |};
         |
+        |""".stripMargin
+  }
+
+  private def emitSourceInitializers(s0: System) = {
+    val streamInits = s0.sources.zipWithIndex.filter(_._1.isStream).map { case (s, i) =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val hasDeletions = (s.adaptor.options.get("deletions").exists(_ == "true") || cgOpts.datasetWithDeletions)
+      val eventInits = 
+        s0.triggers.map { _.event match {
+          case EventInsert(schema) if schema.name == s.schema.name =>
+            s"static constexpr uint64_t k${name}Insert = Event::getId(k${name}, EventType::kInsertTuple);\n"
+          case EventDelete(schema) if schema.name == s.schema.name =>
+            s"static constexpr uint64_t k${name}Delete = Event::getId(k${name}, EventType::kDeleteTuple);\n"
+          case EventBatchUpdate(schema) if schema.name == s.schema.name =>
+            s"static constexpr uint64_t k${name}BatchUpdate = Event::getId(k${name}, EventType::kBatchUpdate);\n"
+          case _ => ""
+        }}.mkString
+      s"""|static constexpr SourceId k${name} = ${i + 1};
+          |static constexpr bool k${name}HasDeletions = ${hasDeletions};
+          |${eventInits}""".stripMargin
+    }.mkString("\n")
+    val tableInits = s0.sources.zipWithIndex.filterNot(_._1.isStream).map { case (s, i) =>
+      val name = s.schema.name.toLowerCase.capitalize      
+      val hasDeletions = (s.adaptor.options.get("deletions").exists(_ == "true") || cgOpts.datasetWithDeletions)
+      s"""|static constexpr SourceId k${name} = ${i + 1};
+          |static constexpr bool k${name}HasDeletions = ${hasDeletions};
+          |static constexpr uint64_t k${name}Insert = Event::getId(k${name}, EventType::kInsertTuple);
+          |""".stripMargin
+    }.mkString("\n")
+    s"""|static constexpr bool kOrderedDataset = ${cgOpts.datasetWithDeletions};
+        |
+        |${streamInits}
+        |${tableInits}
+        |""".stripMargin
+  }
+
+  private def emitRegisterMapsFn(s0: System) = {
+    val body = s0.maps.map { m =>
+        val toplevel = s0.queries.exists(_.name == m.name)
+        s"""visitor.template addMap<${mapTypeToString(m)}>("${m.name}", ${m.name}, ${toplevel});"""
+      }.mkString("\n")
+    s"""|template <class Visitor>
+        |void registerMaps(Visitor& visitor) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitRegisterSourcesFn(s0: System) = {
+    val body = s0.sources.map { s =>
+        val name = s.schema.name.toLowerCase.capitalize
+        val tp = if (s.isStream) "SourceType::kStream" else "SourceType::kTable"
+        s.in match {
+          case SourceFile(path) =>
+            val sOptions = 
+              s.adaptor.options.map { x => s"""{ "${x._1}", "${x._2}" }"""}.mkString(", ")
+            s"""|visitor.template addSource<Message${name}, k${name}HasDeletions>(
+                |  FileSource(k${name}, "${name.toUpperCase}", ${tp}, 
+                |             "${path}"),
+                |  SourceFormat("${s.adaptor.name}", { ${sOptions} })
+                |);""".stripMargin
+          case _ =>
+            sys.error("Unsupported source type: " + s)
+        }
+      }.mkString("\n")
+    s"""|template <class Visitor>
+        |static void registerSources(Visitor& visitor) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitProcessStreamEventFn(s0: System) = {
+    val body = s0.sources.flatMap { s =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val args = 
+        (0 until s.schema.fields.size).map { i => 
+          s"get<${i}>(tpl)" }.mkString(", ")
+      s0.triggers.flatMap { _.event match {
+        case EventInsert(schema) if schema.name == s.schema.name =>
+            List(
+              s"""|if (e.id == k${name}Insert) {
+                  |  auto& tpl = static_cast<Message${name}*>(e.message.get())->tpl;
+                  |  on_insert_${name.toUpperCase}(
+                  |${ind(args, 2)}
+                  |  );
+                  |}
+                  |""".stripMargin)
+          case EventDelete(schema) if schema.name == s.schema.name =>
+            List(
+              s"""|if (e.id == k${name}Delete) {
+                  |  auto& tpl = static_cast<Message${name}*>(e.message.get())->tpl;
+                  |  on_delete_${name.toUpperCase}(
+                  |${ind(args, 2)}
+                  |  );
+                  |}
+                  |""".stripMargin)
+          case EventBatchUpdate(schema) if schema.name == s.schema.name =>
+            sys.error("Not implemented")
+          case _ => Nil
+      }}
+    }.mkString("else ")
+    s"""|void process_stream_event(const Event& e) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitProcessTableEventFn(s0: System) = {
+    val body = s0.sources.filterNot(_.isStream).map { s =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val args =
+        (0 until s.schema.fields.size).map { i => s"get<${i}>(tpl)" }.mkString(", ")
+      s"""|if (e.id == k${name}Insert) {
+          |  auto& tpl = static_cast<Message${name}*>(e.message.get())->tpl;
+          |  on_insert_${name.toUpperCase}(
+          |${ind(args, 2)}
+          |  );
+          |}
+          |""".stripMargin
+    }.mkString("else ")
+    s"""|void process_table_event(const Event& e) {
+        |${ind(body)}
+        |}
         |""".stripMargin
   }
 
@@ -919,6 +1055,16 @@ trait ICppGen extends CodeGen {
         |${ind(sRegisterData)}
         |
         |${ind(sTriggerFunctions)}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitSourceInitializers(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitRegisterMapsFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitRegisterSourcesFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitProcessStreamEventFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitProcessTableEventFn(s0)))}
         |
         |private:
         |${ind(sDataDefinitions)}
@@ -1490,13 +1636,13 @@ trait ICppGen extends CodeGen {
 
     val sIncludeHeaders = emitIncludeHeaders
 
-    val sRelationTypeDirectives = 
-      s0.sources.map { s => 
-        if (s.isStream)
-          s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
-        else 
-          s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
-      }.mkString("\n")
+    val sRelationTypeDirectives = ""
+      // s0.sources.map { s => 
+      //   if (s.isStream)
+      //     s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
+      //   else 
+      //     s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
+      // }.mkString("\n")
 
     val sIncludeTypeDefs =
       s0.typeDefs.map(_.file.path).distinct
@@ -1506,6 +1652,8 @@ trait ICppGen extends CodeGen {
     s"""|${sIncludeHeaders}
         |${sIncludeTypeDefs}
         |${sRelationTypeDirectives}
+        |
+        |using namespace std;
         |
         |namespace dbtoaster {
         |
@@ -1519,8 +1667,6 @@ trait ICppGen extends CodeGen {
         |
         |${ind(emitMainClass(s0))}
         |
-        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitDataSourceStructure(s0)))}
-        |
         |}""".stripMargin    
   }
 
@@ -1530,12 +1676,14 @@ trait ICppGen extends CodeGen {
     stringIf(!cgOpts.useExperimentalHashMap, "#define USE_OLD_MAP\n") +
     stringIf(cgOpts.useExperimentalRuntimeLibrary,
       s"""|#include <sys/time.h>
+          |#include <cstring>
           |#include <vector>
+          |#include <tuple>
           |#include "types.hpp"
           |#include "hash.hpp"
           |#include "mmap/mmap.hpp"
           |#include "standard_functions.hpp"
-          |#include "source.hpp"
+          |#include "event.hpp"
           |""".stripMargin,
       s"""|#include "program_base.hpp"
           |#include "types.hpp"

@@ -189,12 +189,17 @@ object Utils {
 
   // C++ compiler wrapper
   def cppCompilerNewDriver(out: String, cPath: String, boost: String, cppLibDir: String) = {
-    val cppDriverDir = cppLibDir + "/../driver_v2"
+    val cppDriverDir = cppLibDir + "/../new_driver"
+    val cppLibDir2 = cppLibDir + "/../new_lib" 
+    val cppTmpDir = cppLibDir + "/../new_tmp"
     val as = 
-      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
-          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++14",
-          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
-          "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", 
+          cppTmpDir + "/standard_functions.cpp", 
+          cppTmpDir + "/hash.cpp", 
+          "-Wno-maybe-uninitialized",
+          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", //"-ljemalloc",
+          "-I" + cppLibDir2, "-I" + cppDriverDir, "-I" + cppTmpDir
         ) :::
         cppOpts
       ).filter(_ != "")
