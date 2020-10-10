@@ -579,13 +579,15 @@ class MultiHashMap {
             delete primary_index;
             primary_index = nullptr;    
         }
-        for (size_t i = 0; i < sizeof...(SECONDARY_INDEXES); i++) {
-            if (secondary_indexes[i] != nullptr) {
-                delete secondary_indexes[i];
-            }            
+        if (secondary_indexes != nullptr) {
+            for (size_t i = 0; i < sizeof...(SECONDARY_INDEXES); i++) {
+                if (secondary_indexes[i] != nullptr) {
+                    delete secondary_indexes[i];
+                }            
+            }
+            delete[] secondary_indexes;
+            secondary_indexes = nullptr;
         }
-        delete[] secondary_indexes;
-        secondary_indexes = nullptr;
     }
 
     FORCE_INLINE size_t count() const {

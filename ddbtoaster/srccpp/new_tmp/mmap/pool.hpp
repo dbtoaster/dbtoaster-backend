@@ -137,6 +137,7 @@ namespace dbtoaster
                         chunk[i].deactivate();
                         chunk[i].next = &chunk[i + 1];
                     }
+                    chunk[sz - 1].deactivate();
                     chunk[sz - 1].next = nullptr;                    
                     prevChunk = chunk;
                     chunk = chunk[sz].next;
