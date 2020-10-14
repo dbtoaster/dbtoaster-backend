@@ -1330,9 +1330,9 @@ trait ICppGen extends CodeGen {
             }
             else {
               ki.map { case ((k, ktp), i) =>
-                typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDefs(mapName).keys(i)._1 + ";\n"
-              }.mkString + 
-              refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
+                s"const ${refTypeToString(ktp)} ${rn(k)} = ${e0}->${mapDefs(mapName).keys(i)._1};\n"
+              }.mkString +
+              s"const ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME};\n" +
               co(v0)
             }
 
@@ -1412,14 +1412,14 @@ trait ICppGen extends CodeGen {
         else { // only foreach for Temp map
           val localVars = 
             ki.map { case ((k, tp), i) => 
-              s"${typeToString(tp)} ${rn(k)} = ${e0}->_${i + 1};"
+              s"const ${refTypeToString(tp)} ${rn(k)} = ${e0}->_${i + 1};"
             }.mkString("\n") 
 
           s"""|{ // temp foreach
               |  ${tempEntryTypeName(ks.map(_._2), tp)}* ${e0} = ${mapName}.head;
               |  while(${e0}) {
               |${ind(localVars, 2)} 
-              |    ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
+              |    const ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
               |
               |${ind(co(v0), 2)}
               |
