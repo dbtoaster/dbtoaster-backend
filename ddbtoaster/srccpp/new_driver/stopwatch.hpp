@@ -10,13 +10,13 @@ class Stopwatch {
 
     void restart() {
       timeval curr_time;
-      gettimeofday(&curr_time, NULL);
+      gettimeofday(&curr_time, nullptr);
       start_time = curr_time.tv_sec * 1000 + curr_time.tv_usec / 1000;
     }
 
     void stop() {
       timeval curr_time;
-      gettimeofday(&curr_time, NULL);
+      gettimeofday(&curr_time, nullptr);
       end_time = curr_time.tv_sec * 1000 + curr_time.tv_usec / 1000;
     }
 

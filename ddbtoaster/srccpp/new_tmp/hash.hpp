@@ -110,7 +110,7 @@ namespace dbtoaster {
   template <>
   FORCE_INLINE void hash_combine(std::size_t& seed, const DateType& v)
   {
-      seed ^= v.get_numeric() + 0x9e3779b9 + (seed<<6) + (seed>>2);
+      seed ^= v.getNumeric() + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 }
 

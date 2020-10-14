@@ -2,9 +2,11 @@
 #define DRIVER_APPLICATION_HPP
 
 #include <iostream>
+#include <string>
 #include <vector>
 #include <memory>
 #include <type_traits>
+#include <sys/time.h>
 #include "compatibility.hpp"
 #include "runtime_opts.hpp"
 #include "stopwatch.hpp"
@@ -17,7 +19,7 @@ class Application {
  public:
   Application(const RuntimeOpts& _opts) : opts(_opts) {
     if (dbtoaster::data_t::kBatchModeActive && opts.batch_size == 0) {
-      cerr << "Use -b <arg> to specify the batch size." << endl;
+      std::cerr << "Use -b <arg> to specify a valid batch size." << std::endl;
       exit(1);
     }
   }
@@ -34,7 +36,7 @@ class Application {
    public:
     template <class T>
     void addMap(string name, const T& map, bool isTopLevel) {
-      cout << "Registered: " << name << " " << isTopLevel << endl;
+      std::cout << "Registered: " << name << " " << isTopLevel << std::endl;
     }
 
     template <class Message, bool HasDeletions>
@@ -61,7 +63,7 @@ class Application {
         }
       }
       else {
-        cerr << "Adaptor type not supported: " << format.name << endl;
+        std::cerr << "Adaptor type not supported: " << format.name << std::endl;
         exit(1);
       }
     }
@@ -100,6 +102,22 @@ class Application {
     dynamic_buffer.clear();
   }
 
+  void preloadInput(dbtoaster::data_t& data) {
+    static_buffer.clear();
+    Event e = static_multiplexer->next();
+    while (!e.isEmpty()) {
+      static_buffer.push_back(std::move(e));
+      e = static_multiplexer->next();
+    }
+
+    dynamic_buffer.clear();
+    e = dynamic_multiplexer->next();
+    while (!e.isEmpty()) {
+      dynamic_buffer.push_back(std::move(e));
+      e = dynamic_multiplexer->next();
+    }
+  }
+
   void processTables(dbtoaster::data_t& data) {
     if (opts.preload_input) {
       for (auto& e : static_buffer) {
@@ -120,39 +138,6 @@ class Application {
   }
 
   void processStreams(dbtoaster::data_t& data) {
-    if (opts.snapshot_interval > 0)
-      processStreamsSnapshot(data, opts.snapshot_interval);
-    else
-      processStreamsNoSnapshot(data);
-  }
-
-  void processStreamsSnapshot(dbtoaster::data_t& data, long snapshot_interval) {
-    long next_snapshot = 0;
-    if (opts.preload_input) {
-      for (auto& e : dynamic_buffer) {
-        data.process_stream_event(e);
-
-        if (data.tN >= next_snapshot) {
-          onSnapshot(data);
-          next_snapshot = data.tN + snapshot_interval;
-        }
-      }
-    }
-    else {
-      Event e = dynamic_multiplexer->next();
-      while (!e.isEmpty()) {
-        data.process_stream_event(std::move(e));
-        e = dynamic_multiplexer->next();
-
-        if (data.tN >= next_snapshot) {
-          onSnapshot(data);
-          next_snapshot = data.tN + snapshot_interval;
-        }
-      }
-    }
-  }
-
-  void processStreamsNoSnapshot(dbtoaster::data_t& data) {
     if (opts.preload_input) {
       for (auto& e : dynamic_buffer) {
         data.process_stream_event(e);
@@ -167,34 +152,43 @@ class Application {
     }
   }
 
-  void onSnapshot(dbtoaster::data_t& data) {
-    onEndProcessing(data, false);
-  }
-
-  void onBeginProcessing(dbtoaster::data_t& data) {
+  void processStreamsLogCount(dbtoaster::data_t& data) {
+    size_t next_log_count = 0;
     if (opts.preload_input) {
-      static_buffer.clear();
-      Event e = static_multiplexer->next();
-      while (!e.isEmpty()) {
-        static_buffer.push_back(std::move(e));
-        e = static_multiplexer->next();
+      for (auto& e : dynamic_buffer) {
+        logCount(data, next_log_count);       
+        data.process_stream_event(e);
       }
-
-      dynamic_buffer.clear();
-      e = dynamic_multiplexer->next();
+      next_log_count = data.tN;
+      logCount(data, next_log_count);
+    }
+    else {
+      Event e = dynamic_multiplexer->next();
       while (!e.isEmpty()) {
-        dynamic_buffer.push_back(std::move(e));
+        logCount(data, next_log_count);
+        data.process_stream_event(std::move(e));
         e = dynamic_multiplexer->next();
       }
+      next_log_count = data.tN;
+      logCount(data, next_log_count);
     }
   }
 
-  void onEndProcessing(dbtoaster::data_t& data, bool print_result) {
-    if (print_result) {
-      cout << "<snap>\n";
-      data.serialize(std::cout, 0);
-      cout << "\n</snap>" << endl;
+  void logCount(dbtoaster::data_t& data, size_t& next_log_count) {
+    if (data.tN >= next_log_count) {
+      struct timeval tp;
+      gettimeofday(&tp, nullptr);
+      std::cout << data.tN << " tuples processed at " 
+                << tp.tv_sec << "s+"
+                << tp.tv_usec << "us" << std::endl;
+      next_log_count = data.tN + opts.log_count;
     }
+  }
+
+  void printResult(dbtoaster::data_t& data) {
+    std::cout << "<snap>\n";
+    data.serialize(std::cout, 0);
+    std::cout << "\n</snap>" << std::endl;
   }
 
   RuntimeOpts opts;
@@ -210,55 +204,68 @@ void Application::run() {
   for (size_t run = 0; run < opts.num_runs; run++) {
 
     dbtoaster::data_t data;
-    std::cout << "-------------" << std::endl;
 
     init();
 
-    std::cout << "1. On begin of processing... " << std::flush;
-    local_time.restart();
-    onBeginProcessing(data);
-    local_time.stop();
-    std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
+    std::cout << "-------------" << std::endl;
 
-    std::cout << "2. Processing tables... " << std::flush;
+    if (opts.preload_input) {
+      std::cout << "Preloading input datasets... " << std::flush;
+      local_time.restart();
+      preloadInput(data);
+      local_time.stop();
+      std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
+    }
+
+    total_time.restart();
+
+    std::cout << "Processing tables... " << std::flush;
     local_time.restart();
     processTables(data);
     local_time.stop();
     std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
     
-    total_time.restart();
-
-    std::cout << "3. On system ready... " << std::flush;
+    std::cout << "Executing on_system_ready trigger... " << std::flush;
     local_time.restart();
     processOnSystemReady(data);
     local_time.stop();
     std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
 
-    std::cout << "4. Processing streams... " << std::flush;;
-    local_time.restart();
-    processStreams(data);
-    local_time.stop();
-    std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
-
-    std::cout << "5. On end of processing... " << std::flush;
-    local_time.restart();
-    onEndProcessing(data, opts.print_result);
-    local_time.stop();
-    std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
-
+    if (opts.log_count == 0) {
+      std::cout << "Processing streams... " << std::flush;
+      local_time.restart();
+      processStreams(data);
+      local_time.stop();
+      std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
+    }
+    else {
+      std::cout << "Logging tuple count every "
+                << opts.log_count << " updates:" << std::endl;
+      local_time.restart();
+      processStreamsLogCount(data);
+      local_time.stop();
+      std::cout << "Processing streams with logging... " 
+                << local_time.elapsedMilliSec() << " ms" << std::endl;
+    }
+   
     total_time.stop();
 
+    if (opts.print_result) {
+      std::cout << "Final result: " << std::endl;
+      printResult(data);
+    }
+
+    // Print summary
     std::cout << "    Run: " << run
               << "    Processed: " << data.tN
               << "    Skipped: " << data.tS
               << "    Execution time: " << total_time.elapsedMilliSec() << " ms"
-#ifdef BATCH_SIZE
-              << "    Batch size: " << BATCH_SIZE
-#endif
-              << std::endl
-              << "-------------"
+              << (dbtoaster::data_t::kBatchModeActive ? 
+                    "    Batch size: " + std::to_string(opts.batch_size) : "")
+              << "\n-------------"
               << std::endl;
 
+    // Print statistics for the DBToaster test suite
     std::cout << "SAMPLE = "
               << run << ", " 
               << total_time.elapsedMilliSec() * 1000 << ", " 

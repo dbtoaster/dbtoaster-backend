@@ -62,7 +62,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const STRIN
 
 template<class Archive>
 inline Archive & serialize(Archive & ar, const unsigned int version, const DateType & t){
-    ar << 10000 * t.get_year() + 100 * t.get_month() + t.get_day();
+    ar << 10000 * t.getYear() + 100 * t.getMonth() + t.getDay();
     return ar;
 }
 

@@ -11,15 +11,15 @@ namespace dbtoaster {
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
 int Udate_year(date d) { 
-  return d.get_year();
+  return d.getYear();
     // return (d / 10000) % 10000;
 }
 int Udate_month(date d) { 
-  return d.get_month();
+  return d.getMonth();
     // return (d / 100) % 100;
 }
 int Udate_day(date d) { 
-  return d.get_day();
+  return d.getDay();
     // return d % 100;
 }
 
@@ -28,12 +28,12 @@ date Udate(const char *c) { //cast_date_from_string
   if (sscanf(c, "%u-%u-%u", &y, &m, &d) < 3 || m > 12 || d > 31) {
     throw std::invalid_argument("invalid date string " + string(c) + " (expected format YYYY-MM-DD)");
   }
-  return dbtoaster::DateType(y, m, d);
+  return date(y, m, d);
 }
 
 STRING_TYPE cast_string_from_date(date d) { 
   std::stringstream ss;
-  ss << d.get_year() << d.get_month() << d.get_day();
+  ss << d.getYear() << d.getMonth() << d.getDay();
   return STRING_TYPE(ss.str().c_str());
 }
 
