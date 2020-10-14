@@ -15,10 +15,15 @@ using namespace std;
 
 class Application {
  public:
-  Application(const RuntimeOpts& _opts) : opts(_opts) { }
+  Application(const RuntimeOpts& _opts) : opts(_opts) {
+    if (dbtoaster::data_t::kBatchModeActive && opts.batch_size == 0) {
+      cerr << "Use -b <arg> to specify the batch size." << endl;
+      exit(1);
+    }
+  }
 
   void run();
-    
+
  protected:  
   using Multiplexer = std::conditional<data_t::kOrderedDataset,
                                        OrderedMultiplexer,
@@ -27,9 +32,6 @@ class Application {
 
   class Visitor {
    public:
-    template <class Message, bool HasDeletions>
-    using CSVIterator = CSVFileIterator<Message, data_t::kOrderedDataset, HasDeletions>;
-
     template <class T>
     void addMap(string name, const T& map, bool isTopLevel) {
       cout << "Registered: " << name << " " << isTopLevel << endl;
@@ -43,13 +45,19 @@ class Application {
         if (it != format.params.end()) {
           delimiter = (it->second)[0];
         }
-        if (source.isTable()) {
+        if (source.isTable()) {          
           table_iterators.push_back(
-            make_unique<CSVIterator<Message, HasDeletions>>(source, delimiter));
+            make_unique<CSVFileIterator<Message, 
+                                        data_t::kOrderedDataset,
+                                        HasDeletions,
+                                        false>>(source, delimiter));
         }
         else {
           stream_iterators.push_back(
-            make_unique<CSVIterator<Message, HasDeletions>>(source, delimiter));
+            make_unique<CSVFileIterator<Message,
+                                        data_t::kOrderedDataset,
+                                        HasDeletions,
+                                        data_t::kBatchModeActive>>(source, delimiter));
         }
       }
       else {
@@ -58,11 +66,14 @@ class Application {
       }
     }
 
-    MultiplexerPtr getTableMultiplexer() {
+    MultiplexerPtr getTableMultiplexer(size_t batch_size) {
       return make_unique<Multiplexer>(std::move(table_iterators));
     }
 
-    MultiplexerPtr getStreamMultiplexer() {
+    MultiplexerPtr getStreamMultiplexer(size_t batch_size) {
+      for (auto& it : stream_iterators) {
+        it->setBatchSize(batch_size);
+      }
       return make_unique<Multiplexer>(std::move(stream_iterators));
     }
 
@@ -74,8 +85,8 @@ class Application {
   void init() {
     Visitor visitor;
     dbtoaster::data_t::registerSources(visitor);
-    static_multiplexer = visitor.getTableMultiplexer();
-    dynamic_multiplexer = visitor.getStreamMultiplexer();
+    static_multiplexer = visitor.getTableMultiplexer(opts.batch_size);
+    dynamic_multiplexer = visitor.getStreamMultiplexer(opts.batch_size);
     static_multiplexer->open();
     dynamic_multiplexer->open();
     static_buffer.clear();
@@ -225,7 +236,7 @@ void Application::run() {
 
     std::cout << "4. Processing streams... " << std::flush;;
     local_time.restart();
-    processStreams(data);  
+    processStreams(data);
     local_time.stop();
     std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
 

@@ -317,11 +317,11 @@ trait ICppGen extends CodeGen {
             |tT = (t.tv_sec - t0.tv_sec) * 1000L;
             |if (tT > ${cgOpts.timeoutMilli}) { tS = batchSize; return; }
             |""".stripMargin)
-        if (cgOpts.useExperimentalRuntimeLibrary) {
-        s"""|void on_batch_update_${s.name}(const std::vector<${delta(s.name)}_entry>::iterator &begin, const std::vector<${delta(s.name)}_entry>::iterator &end) {
-            |  long batchSize = std::distance(begin, end);
+      val name = s.name.toLowerCase.capitalize
+      if (cgOpts.useExperimentalRuntimeLibrary) {
+        s"""|void on_batch_update_${s.name}(const vector<BatchMessage<Message${name}, int>::KVpair>& batch) {
             |${ind(sTimeout)}
-            |  tN += batchSize;
+            |  tN += batch.size();
             |${ind(body)}
             |}
             |""".stripMargin
@@ -797,6 +797,7 @@ trait ICppGen extends CodeGen {
           |""".stripMargin
     }.mkString("\n")
     s"""|static constexpr bool kOrderedDataset = ${cgOpts.datasetWithDeletions};
+        |static constexpr bool kBatchModeActive = ${isBatchModeActive};
         |
         |${streamInits}
         |${tableInits}
@@ -865,7 +866,12 @@ trait ICppGen extends CodeGen {
                   |}
                   |""".stripMargin)
           case EventBatchUpdate(schema) if schema.name == s.schema.name =>
-            sys.error("Not implemented")
+            List(
+              s"""|if (e.id == k${name}BatchUpdate) {
+                  |  auto* msg = static_cast<BatchMessage<Message${name}, int>*>(e.message.get());
+                  |  on_batch_update_${name.toUpperCase}(msg->batch);
+                  |}
+                  |""".stripMargin)
           case _ => Nil
       }}
     }.mkString("else ")
@@ -888,71 +894,11 @@ trait ICppGen extends CodeGen {
           |}
           |""".stripMargin
     }.mkString("else ")
+
     s"""|void process_table_event(const Event& e) {
         |${ind(body)}
         |}
         |""".stripMargin
-  }
-
-  private def emitDataSourceStructure(s0: System) = {
-    val mixedDataset = cgOpts.datasetWithDeletions
-    val orderedDataset = mixedDataset
-    def sourceId(s: Source) = s.schema.name.toUpperCase
-    def sourceName(s: Source) = s.schema.name.toLowerCase + "_source"
-    def sourceType(s: Source) = 
-      if (s.isStream) "SourceType::kStream" else "SourceType::kTable"
-    def sourceSchemaName(s: Source) = sourceName(s) + "_schema"
-    def sourceSchema(s: Source) = 
-      ( (if (orderedDataset) List("size_t") else Nil) ++
-        (if (mixedDataset) List("int") else Nil) ++
-        s.schema.fields.map { case (_, tp) => typeToString(tp) } 
-      ).mkString(", ")
-    def sourcePath(s: Source) = s.in match {
-      case SourceFile(path) => path
-    }
-    def sourceDelimiter(s: Source) = s.adaptor.options("delimiter")
-    val sSources = s0.sources.map { s =>          
-        s"""|static constexpr CSVFileSource ${sourceName(s)} =
-            |  CSVFileSource("${sourceId(s)}", ${sourceType(s)}, "${sourcePath(s)}", '${sourceDelimiter(s)}');
-            | 
-            |static constexpr auto ${sourceSchemaName(s)} =
-            |  Schema<${sourceSchema(s)}>();
-            |""".stripMargin
-      }.mkString("\n")
-    val sVisitTriggerBody = s0.sources.map { s =>
-        if (mixedDataset)
-          s"""|visitor.dispatch(
-              |  ${sourceName(s)},
-              |  ${sourceSchemaName{s}},
-              |  &data_t::on_insert_${sourceId(s)},
-              |  &data_t::on_delete_${sourceId(s)}
-              |);""".stripMargin
-        else
-          s"""|visitor.dispatch(
-              |  ${sourceName(s)},
-              |  ${sourceSchemaName{s}},
-              |  &data_t::on_insert_${sourceId(s)}
-              |);""".stripMargin
-      }.mkString("\n")
-    val sStaticInitializers = s0.sources.map { s =>
-        s"constexpr CSVFileSource data_sources_t::${sourceName(s)};"
-      }.mkString("\n")
-
-    s"""|/* Information on data sources */
-        |struct data_sources_t {
-        |  static constexpr bool mixed_dataset = ${mixedDataset};
-        |  static constexpr bool ordered_dataset = ${orderedDataset};
-        |
-        |${ind(sSources)}
-        |
-        |  template <class Visitor>
-        |  static void visit_triggers(Visitor& visitor) {
-        |${ind(sVisitTriggerBody, 2)}
-        |  }
-        |};
-        |
-        |${sStaticInitializers}
-        |""".stripMargin    
   }
 
   protected def emitTLQMapInitializer(maps: List[MapDef], queries: List[Query]) = {
@@ -1375,11 +1321,20 @@ trait ICppGen extends CodeGen {
 
         if (!isTemp) { // slice or foreach
           val body = 
-            ki.map { case ((k, ktp), i) => 
-              typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDefs(mapName).keys(i)._1 + ";\n"
-            }.mkString + 
-            refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
-            co(v0)
+            if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
+              ki.map { case ((k, ktp), i) => 
+                s"const ${refTypeToString(ktp)} ${rn(k)} = get<${i}>(${e0}.key.tpl);\n"
+              }.mkString + 
+              s"const ${refTypeToString(tp)} ${v0} = ${e0}.value;\n" +
+              co(v0)              
+            }
+            else {
+              ki.map { case ((k, ktp), i) =>
+                typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDefs(mapName).keys(i)._1 + ";\n"
+              }.mkString + 
+              refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
+              co(v0)
+            }
 
           if (ko.nonEmpty) { //slice
             if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
@@ -1436,11 +1391,11 @@ trait ICppGen extends CodeGen {
           else { //foreach
             if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
               s"""|{ //foreach
-                  |  for (std::vector<${mapEntryType}>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
+                  |  for (auto& ${e0} : batch) {  
                   |${ind(body, 2)}
                   |  }
                   |}
-                  |""".stripMargin                
+                  |""".stripMargin
             }
             else {
               s"""|{ //foreach

@@ -528,7 +528,8 @@ object Compiler {
       error("Execution failed, executable file missing", true)
     }
     val execArgs = args ++ 
-      (if (batchSize > 0) List("-b" + batchSize) else Nil) ++
+      (if (batchSize > 0 && !useExperimentalCppRuntimeLibrary) List("-b" + batchSize) else Nil) ++
+      (if (batchSize > 0 && useExperimentalCppRuntimeLibrary) List("-b", batchSize.toString) else Nil) ++
       (if (preloadInput && useExperimentalCppRuntimeLibrary) List("--preload") else Nil) 
     Utils.cppExec(file, execArgs)
   }

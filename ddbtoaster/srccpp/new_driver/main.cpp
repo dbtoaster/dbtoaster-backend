@@ -9,7 +9,8 @@ void showHelp() {
   cout << "\nRuntime options:\n";
   cout << "---------------\n";
   cout << "  --help | -h \t\t show help message\n"; 
-  cout << "  --num-runs <arg> \t number of runs (short -r)\n"; 
+  cout << "  --num-runs <arg> \t number of runs (short -r)\n";
+  cout << "  --batch-size <arg> \t update batch size (short -b)\n";
   cout << "  --no-output \t\t omit printing final result\n";
   cout << "  --preload \t\t preload input into memory before streaming\n";
   cout << "  --snapshot-interval <arg> \t snapshot frequency\n";
@@ -28,6 +29,10 @@ int main(int argc, char** argv) {
     else if ((strcmp(argv[i], "--num-runs") == 0 ||
               strcmp(argv[i], "-r") == 0) && i + 1 < argc) {
       opts.num_runs = atoi(argv[++i]);
+    }
+    else if ((strcmp(argv[i], "--batch-size") == 0 ||
+              strcmp(argv[i], "-b") == 0) && i + 1 < argc) {
+      opts.batch_size = atoi(argv[++i]);
     }
     else if (strcmp(argv[i], "--no-output") == 0) {
       opts.print_result = false;
