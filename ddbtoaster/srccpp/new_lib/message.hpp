@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <utility>
 
 namespace dbtoaster {
 
@@ -10,17 +11,19 @@ struct MessageBase {
   virtual ~MessageBase() = default;
 };
 
-typedef std::unique_ptr<MessageBase> MessageBasePtr;
+template <class T>
+struct Message : MessageBase {
+  T content;
+};
 
 template <class Key, class Value>
 struct BatchMessage : MessageBase {
-  typedef struct {
-      Key key;
-      Value value;
-  } KVpair;
-  std::vector<KVpair> batch;
+  using KVpair = std::pair<Key, Value>;
+  std::vector<KVpair> content;
 };
 
-};
+typedef std::unique_ptr<MessageBase> MessageBasePtr;
+
+}
 
 #endif /* DBTOASTER_MESSAGE_HPP */

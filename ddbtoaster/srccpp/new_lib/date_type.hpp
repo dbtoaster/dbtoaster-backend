@@ -7,7 +7,8 @@ namespace dbtoaster {
 
 struct DateType {
  public:
-  constexpr DateType(uint16_t y, uint8_t m, uint8_t d) : day(d), month(m), year(y) { }
+  constexpr DateType(uint16_t t_year, uint8_t t_month, uint8_t t_day)
+      : day(t_day), month(t_month), year(t_year) { }
 
   DateType() : day(0), month(0), year(0) { }
 

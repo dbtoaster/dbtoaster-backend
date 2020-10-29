@@ -9,7 +9,7 @@
 #include <memory>
 
 template <std::size_t I, class T>
-using tuple_element_t = typename tuple_element<I, T>::type;
+using tuple_element_t = typename std::tuple_element<I, T>::type;
 
 template<typename T, T... Ints>
 struct integer_sequence {

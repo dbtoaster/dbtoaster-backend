@@ -4,15 +4,21 @@
 #include <limits>
 #include "event.hpp"
 
+using namespace dbtoaster;
+
 typedef size_t OrderType;
 
 constexpr OrderType kInvalidOrder = std::numeric_limits<OrderType>::max();
 
 struct OrderedEvent : Event {
-  OrderedEvent() : order(kInvalidOrder) { }
+  OrderedEvent() : Event(), order(kInvalidOrder) { }
 
-  OrderedEvent(OrderType o, SourceId r, EventType t, MessageBasePtr m)
-      : Event(r, t, std::move(m)), order(o) { }
+  OrderedEvent(OrderType o, RelationId id, EventType tp, MessageBasePtr msg)
+      : Event(id, tp, std::move(msg)), order(o) { }
+
+  bool operator<(const OrderedEvent& other) const {
+    return this->order > other.order;   // higher order, lower priority
+  }
 
   OrderType order;
 };

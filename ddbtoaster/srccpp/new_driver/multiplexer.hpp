@@ -5,11 +5,11 @@
 #include <queue>
 #include <memory>
 #include "event.hpp"
-#include "source_iterator.hpp"
+#include "relation_iterator.hpp"
 
 using namespace std;
 
-typedef SourceIterator<OrderedEvent> EventIterator;
+typedef RelationIterator<OrderedEvent> EventIterator;
 typedef unique_ptr<EventIterator> EventIteratorPtr;
 
 class RoundRobinMultiplexer {
@@ -60,18 +60,18 @@ class RoundRobinMultiplexer {
   size_t current;
 };
 
+struct ActiveEvent : OrderedEvent {
+  ActiveEvent(OrderedEvent e, EventIterator* it)
+      : OrderedEvent(std::move(e)), iterator(it) { }
+  EventIterator* iterator;
+
+  bool operator<(const ActiveEvent& other) const {
+    return this->order > other.order;     // min priority queue
+  }
+};
+
 class OrderedMultiplexer {
  private:
-  struct ActiveEvent : OrderedEvent {
-    ActiveEvent(OrderedEvent e, EventIterator* it)
-        : OrderedEvent(std::move(e)), iterator(it) { }
-    EventIterator* iterator;
-
-    bool operator<(const ActiveEvent& other) const {
-      return this->order > other.order;     // min priority queue
-    }
-  };
-
   using Queue = priority_queue<ActiveEvent>;
 
 public:

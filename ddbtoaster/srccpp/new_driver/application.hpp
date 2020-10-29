@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <memory>
 #include <type_traits>
@@ -39,31 +40,28 @@ class Application {
       std::cout << "Registered: " << name << " " << isTopLevel << std::endl;
     }
 
-    template <class Message, bool HasDeletions>
-    void addSource(FileSource source, SourceFormat format) {
-      if (format.name == "CSV") {
-        char delimiter = ',';
-        auto it = format.params.find("delimiter");
-        if (it != format.params.end()) {
-          delimiter = (it->second)[0];
-        }
-        if (source.isTable()) {          
-          table_iterators.push_back(
-            make_unique<CSVFileIterator<Message, 
-                                        data_t::kOrderedDataset,
-                                        HasDeletions,
-                                        false>>(source, delimiter));
-        }
-        else {
-          stream_iterators.push_back(
-            make_unique<CSVFileIterator<Message,
-                                        data_t::kOrderedDataset,
-                                        HasDeletions,
-                                        data_t::kBatchModeActive>>(source, delimiter));
-        }
+    template <class Adaptor>
+    void addSource(string type, FileSource source, Adaptor adaptor) {
+      if (type == "CSV") {
+        addCSVSource(source, adaptor);
+      }
+      else if (type == "ORDERBOOK") {
+        addOrderbookSource(source, adaptor, adaptor);
       }
       else {
-        std::cerr << "Adaptor type not supported: " << format.name << std::endl;
+        std::cerr << "Adaptor type not supported: " << type << std::endl;
+        exit(1);
+      }
+    }
+
+
+    template <class Adaptor1, class Adaptor2>
+    void addSource(string type, FileSource source, Adaptor1 adaptor1, Adaptor2 adaptor2) {
+      if (type == "ORDERBOOK") {
+        addOrderbookSource(source, adaptor1, adaptor2);
+      }
+      else {
+        std::cerr << "Adaptor type not supported: " << type << std::endl;
         exit(1);
       }
     }
@@ -80,6 +78,72 @@ class Application {
     }
 
    private:
+    template <class Adaptor>
+    void addCSVSource(FileSource source, Adaptor adaptor) {
+      constexpr bool has_deletions = Adaptor::params().exists("deletions", "true");
+      constexpr auto delimiter = Adaptor::params().getOrElse("delimiter", ",");
+      static_assert(strlen(delimiter) == 1, "Unexpected delimiter size");
+      
+      if (Adaptor::relation().isTable()) {
+        table_iterators.push_back(
+          make_unique<CSVFileIterator<typename Adaptor::MessageType, 
+                                      data_t::kOrderedDataset, has_deletions,
+                                      false>>(Adaptor::relation().id, source, delimiter[0]));
+      }
+      else {
+        stream_iterators.push_back(
+          make_unique<CSVFileIterator<typename Adaptor::MessageType,
+                                      data_t::kOrderedDataset, has_deletions,
+                                      data_t::kBatchModeActive>>(Adaptor::relation().id, source, delimiter[0]));
+      }
+    }
+
+    template <class Adaptor1, class Adaptor2>
+    void addOrderbookSource(FileSource source, Adaptor1 adaptor1, Adaptor2 adaptor2) {
+      static_assert(std::is_same<typename Adaptor1::MessageType, typename Adaptor2::MessageType>::value);
+      static_assert(Adaptor1::relation().type == Adaptor2::relation().type);
+
+      static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("brokers", "10"),
+                                     Adaptor2::params().getOrElse("brokers", "10")));
+      size_t num_brokers = std::atoi(Adaptor1::params().getOrElse("brokers", "10"));
+
+      static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("deterministic", "yes"),
+                                     Adaptor2::params().getOrElse("deterministic", "yes")));
+      bool deterministic = Adaptor1::params().exists("deterministic", "yes");
+
+      bool has_bids =
+        Adaptor1::params().exists("book", "bids") || Adaptor2::params().exists("book", "bids");
+      bool has_asks =
+        Adaptor1::params().exists("book", "asks") || Adaptor2::params().exists("book", "asks");
+      assert(has_bids || has_asks);
+      OrderbookType tp =
+        (has_bids && has_asks) ? OrderbookType::kBoth :
+          (has_bids ? OrderbookType::kBids : OrderbookType::kAsks);
+
+      static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("insert_only", "false"),
+                                     Adaptor2::params().getOrElse("insert_only", "false")));
+      bool insert_only = Adaptor1::params().exists("insert_only", "true");
+
+      static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("delimiter", ","),
+                                     Adaptor2::params().getOrElse("delimiter", ",")));
+      constexpr auto delimiter =
+        Adaptor1::params().getOrElse("delimiter", ",");
+      static_assert(strlen(delimiter) == 1, "Unexpected delimiter size");
+
+      if (Adaptor1::relation().isTable()) {
+        table_iterators.push_back(
+          make_unique<OrderbookFileIterator<false>>(
+            Adaptor1::relation().id, Adaptor2::relation().id,
+            source, delimiter[0], num_brokers, deterministic, tp, insert_only));
+      }
+      else {
+        stream_iterators.push_back(
+          make_unique<OrderbookFileIterator<data_t::kBatchModeActive>>(
+            Adaptor1::relation().id, Adaptor2::relation().id,
+            source, delimiter[0], num_brokers, deterministic, tp, insert_only));
+      }
+    }
+
     vector<EventIteratorPtr> table_iterators;
     vector<EventIteratorPtr> stream_iterators;
   };

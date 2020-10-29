@@ -2,36 +2,36 @@
 #define DBTOASTER_EVENT_HPP
 
 #include <cstdint>
-#include "source.hpp"
+#include "relation.hpp"
 #include "message.hpp"
 
 namespace dbtoaster {
 
 enum class EventType : uint32_t {
-  kNotDefined  = 0,
-  kInsertTuple = 1,
-  kDeleteTuple = 2,
-  kBatchUpdate = 4
+  kNotDefined = 0,
+  kInsertTuple,
+  kDeleteTuple,
+  kBatchUpdate
 };
 
 struct Event {
-  Event() : source_id(kInvalidSourceId), event_type(EventType::kNotDefined) { }
+  Event() : relation_id(kInvalidRelationId), event_type(EventType::kNotDefined) { }
 
-  Event(SourceId sid, EventType tp, MessageBasePtr msg)
-      : source_id(sid), event_type(tp), message(std::move(msg)) { }
+  Event(RelationId rid, EventType tp, MessageBasePtr msg)
+      : relation_id(rid), event_type(tp), message(std::move(msg)) { }
 
   bool isEmpty() { return message == nullptr; }
 
   union {
     struct {
-      SourceId source_id;
+      RelationId relation_id;
       EventType event_type;
     };
     uint64_t id;
   };
   MessageBasePtr message;
 
-  static constexpr uint64_t getId(SourceId r, EventType t) {
+  static constexpr uint64_t getId(RelationId r, EventType t) {
     return (static_cast<uint64_t>(t) << 32) | r;
   }
 };
