@@ -7,6 +7,8 @@
 
 namespace dbtoaster {
 
+namespace standard_functions {
+
 // Date extraction functions
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
@@ -58,7 +60,7 @@ STRING_TYPE cast_string_from_date(date d) {
 
 
 // String functions
-STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len){
+STRING_TYPE Usubstring(const STRING_TYPE &s, size_t start, size_t len){
     return s.substr(start, len);
 }
 
@@ -217,6 +219,8 @@ STRING_TYPE cast_string(const T &t) {
     std::stringstream ss;
     ss << t;
     return STRING_TYPE(ss.str().c_str());
+}
+
 }
 
 }

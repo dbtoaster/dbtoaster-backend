@@ -88,7 +88,7 @@ class Application {
     void on_end_processing(dbtoaster::data_t& data, bool print_result) {
         if (print_result) {
             cout << "<snap>\n";
-            data.serialize(std::cout, 0);
+            data.serialize(std::cout);
             cout << "\n</snap>" << endl;
         }    
     }

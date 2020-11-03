@@ -1,9 +1,12 @@
 #include <iostream>
 #include <cstring>
+#include <string>
 #include "runtime_opts.hpp"
 #include "application.hpp"
 
 using namespace std;
+
+void showHelp();
 
 void showHelp() {
   cout << "\nRuntime options:\n";
@@ -28,11 +31,11 @@ int main(int argc, char** argv) {
     }
     else if ((strcmp(argv[i], "--num-runs") == 0 ||
               strcmp(argv[i], "-r") == 0) && i + 1 < argc) {
-      opts.num_runs = atoi(argv[++i]);
+      opts.num_runs = stoul(argv[++i]);
     }
     else if ((strcmp(argv[i], "--batch-size") == 0 ||
               strcmp(argv[i], "-b") == 0) && i + 1 < argc) {
-      opts.batch_size = atoi(argv[++i]);
+      opts.batch_size = stoul(argv[++i]);
     }
     else if (strcmp(argv[i], "--no-output") == 0) {
       opts.print_result = false;
@@ -41,7 +44,7 @@ int main(int argc, char** argv) {
       opts.preload_input = true;
     }
     else if (strcmp(argv[i], "--log-count") == 0 && i + 1 < argc) {
-      opts.log_count = atoi(argv[++i]);
+      opts.log_count = stoul(argv[++i]);
     }
   }
 

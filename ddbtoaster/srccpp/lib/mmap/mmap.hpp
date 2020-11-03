@@ -669,7 +669,7 @@ class MultiHashMap {
     }
 
     template <class Archive>
-    void serialize(Archive &ar, const unsigned int version) const {
+    void serialize(Archive &ar) const {
         ar << "\n\t\t";
         dbtoaster::serialize_nvp(ar, "count", count());
         T* elem = head;
@@ -1311,7 +1311,7 @@ class MultiHashMap {
     }
 
     template <class Archive>
-    void serialize(Archive &ar, const unsigned int version) const {
+    void serialize(Archive &ar) const {
       ar << "\n\t\t";
       dbtoaster::serialize_nvp(ar, "count", count());
       foreach ([&ar](const T &e) {

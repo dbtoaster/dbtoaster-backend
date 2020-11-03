@@ -129,10 +129,10 @@ class CSVFileIterator : public FileIterator<OrderedEvent> {
       if (HasOrder && order == kInvalidOrder) {
         order = event.order;
       }
-      msg->content.push_back({
-        .key = *static_cast<Message*>(event.message.get()),
-        .value = (!HasDeletions || event.event_type == EventType::kInsertTuple ? 1 : -1)
-      });
+      msg->append(
+        *static_cast<Message*>(event.message.get()),
+        (!HasDeletions || event.event_type == EventType::kInsertTuple ? 1 : -1)
+      );
     }
 
     if (msg->content.size() > 0) {
@@ -181,7 +181,7 @@ class OrderbookFileIterator : public FileIterator<OrderedEvent> {
 
   OrderbookFileIterator(RelationId bids_id, RelationId asks_id, 
                         FileSource source, char delim,
-                        size_t t_num_brokers, bool t_deterministic,
+                        long t_num_brokers, bool t_deterministic,
                         OrderbookType t_type, bool t_insert_only)
       : FileIterator<OrderedEvent>(source.filename, false),
         bids_relation_id(bids_id), asks_relation_id(asks_id),
@@ -321,7 +321,7 @@ class OrderbookFileIterator : public FileIterator<OrderedEvent> {
     if (queue.empty()) return OrderedEvent();
     OrderedEvent evt = std::move(const_cast<OrderedEvent&>(queue.top()));
     queue.pop();
-    return std::move(evt);
+    return evt;
   }
 
  protected:
@@ -344,19 +344,19 @@ class OrderbookFileIterator : public FileIterator<OrderedEvent> {
         if (bid_order == kInvalidOrder) {
           bid_order = event.order;
         }
-        bids_msg->content.push_back({
-          .key = *static_cast<OutputMessage*>(event.message.get()),
-          .value = (insert_only || event.event_type == EventType::kInsertTuple ? 1 : -1)
-        });
+        bids_msg->append(
+          *static_cast<OutputMessage*>(event.message.get()),
+          (insert_only || event.event_type == EventType::kInsertTuple ? 1 : -1)
+        );
       }
       else if (event.relation_id == asks_relation_id) {
         if (ask_order == kInvalidOrder) {
           ask_order = event.order;
         }
-        asks_msg->content.push_back({
-          .key = *static_cast<OutputMessage*>(event.message.get()),
-          .value = (insert_only || event.event_type == EventType::kInsertTuple ? 1 : -1)
-        });
+        asks_msg->append(
+          *static_cast<OutputMessage*>(event.message.get()),
+          (insert_only || event.event_type == EventType::kInsertTuple ? 1 : -1)
+        );
       }      
     }
     if (bids_msg->content.size() > 0) {
@@ -367,13 +367,13 @@ class OrderbookFileIterator : public FileIterator<OrderedEvent> {
     }
   }
 
+  const RelationId bids_relation_id;
+  const RelationId asks_relation_id;
   const char delimiter;
-  const size_t num_brokers;
+  const long num_brokers;
   const bool deterministic;
   const OrderbookType type;
   const bool insert_only;
-  const RelationId bids_relation_id;
-  const RelationId asks_relation_id;
 
   OrderBook bids_book;
   OrderBook asks_book;

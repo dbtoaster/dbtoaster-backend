@@ -50,7 +50,8 @@ class RoundRobinMultiplexer {
       current++;
       return std::move(evt);
     }
-    active_iterators.erase(active_iterators.begin() + current);
+    active_iterators.erase(active_iterators.begin() + 
+      static_cast<vector<EventIterator*>::difference_type>(current));
     return next();
   }
 

@@ -377,7 +377,7 @@ class sparse_hashtable {
   static const size_type HT_DEFAULT_STARTING_BUCKETS = 32;
 
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version)
+  void serialize(Archive& ar)
   {
   }
 

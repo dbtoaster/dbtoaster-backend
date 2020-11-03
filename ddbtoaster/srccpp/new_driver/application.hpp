@@ -32,6 +32,7 @@ class Application {
                                        OrderedMultiplexer,
                                        RoundRobinMultiplexer>::type;
   using MultiplexerPtr = unique_ptr<Multiplexer>;
+  using CStringEqualTo = EqualTo<const char*>;
 
   class Visitor {
    public:
@@ -66,7 +67,7 @@ class Application {
       }
     }
 
-    MultiplexerPtr getTableMultiplexer(size_t batch_size) {
+    MultiplexerPtr getTableMultiplexer(__attribute__((unused)) size_t batch_size) {
       return make_unique<Multiplexer>(std::move(table_iterators));
     }
 
@@ -99,16 +100,18 @@ class Application {
     }
 
     template <class Adaptor1, class Adaptor2>
-    void addOrderbookSource(FileSource source, Adaptor1 adaptor1, Adaptor2 adaptor2) {
-      static_assert(std::is_same<typename Adaptor1::MessageType, typename Adaptor2::MessageType>::value);
-      static_assert(Adaptor1::relation().type == Adaptor2::relation().type);
+    void addOrderbookSource(FileSource source, Adaptor1, Adaptor2) {
+      static_assert(Adaptor1::relation().type == Adaptor2::relation().type,
+                    "Different adaptor types for the same source");
 
       static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("brokers", "10"),
-                                     Adaptor2::params().getOrElse("brokers", "10")));
-      size_t num_brokers = std::atoi(Adaptor1::params().getOrElse("brokers", "10"));
+                                     Adaptor2::params().getOrElse("brokers", "10")),
+                    "Different numbers of brokers for the same source");
+      long num_brokers = std::stol(Adaptor1::params().getOrElse("brokers", "10"));
 
       static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("deterministic", "yes"),
-                                     Adaptor2::params().getOrElse("deterministic", "yes")));
+                                     Adaptor2::params().getOrElse("deterministic", "yes")),
+                    "Different deterministic parameters for the same source");
       bool deterministic = Adaptor1::params().exists("deterministic", "yes");
 
       bool has_bids =
@@ -121,11 +124,13 @@ class Application {
           (has_bids ? OrderbookType::kBids : OrderbookType::kAsks);
 
       static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("insert_only", "false"),
-                                     Adaptor2::params().getOrElse("insert_only", "false")));
+                                     Adaptor2::params().getOrElse("insert_only", "false")),
+                    "Different insert_only parameters for the same source");
       bool insert_only = Adaptor1::params().exists("insert_only", "true");
 
       static_assert(CStringEqualTo{}(Adaptor1::params().getOrElse("delimiter", ","),
-                                     Adaptor2::params().getOrElse("delimiter", ",")));
+                                     Adaptor2::params().getOrElse("delimiter", ",")),
+                    "Different delimiters for the same source");
       constexpr auto delimiter =
         Adaptor1::params().getOrElse("delimiter", ",");
       static_assert(strlen(delimiter) == 1, "Unexpected delimiter size");
@@ -166,7 +171,7 @@ class Application {
     dynamic_buffer.clear();
   }
 
-  void preloadInput(dbtoaster::data_t& data) {
+  void preloadInput() {
     static_buffer.clear();
     Event e = static_multiplexer->next();
     while (!e.isEmpty()) {
@@ -217,7 +222,7 @@ class Application {
   }
 
   void processStreamsLogCount(dbtoaster::data_t& data) {
-    size_t next_log_count = 0;
+    unsigned long next_log_count = 0;
     if (opts.preload_input) {
       for (auto& e : dynamic_buffer) {
         logCount(data, next_log_count);       
@@ -238,7 +243,7 @@ class Application {
     }
   }
 
-  void logCount(dbtoaster::data_t& data, size_t& next_log_count) {
+  void logCount(dbtoaster::data_t& data, unsigned long& next_log_count) {
     if (data.tN >= next_log_count) {
       struct timeval tp;
       gettimeofday(&tp, nullptr);
@@ -251,7 +256,7 @@ class Application {
 
   void printResult(dbtoaster::data_t& data) {
     std::cout << "<snap>\n";
-    data.serialize(std::cout, 0);
+    data.serialize(std::cout);
     std::cout << "\n</snap>" << std::endl;
   }
 
@@ -276,7 +281,7 @@ void Application::run() {
     if (opts.preload_input) {
       std::cout << "Preloading input datasets... " << std::flush;
       local_time.restart();
-      preloadInput(data);
+      preloadInput();
       local_time.stop();
       std::cout << local_time.elapsedMilliSec() << " ms" << std::endl;
     }

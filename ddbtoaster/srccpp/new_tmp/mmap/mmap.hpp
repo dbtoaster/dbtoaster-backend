@@ -82,7 +82,7 @@ class PrimaryHashIndex {
 private: 
     typedef PrimaryIdxNode<T> IdxNode;
     
-    ValuePool<IdxNode> pool_;
+    Pool<IdxNode> pool_;
     IdxNode* buckets_;
 
     size_t size_;
@@ -275,7 +275,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
 private:
     typedef SecondaryIdxNode<T> IdxNode;
 
-    ValuePool<IdxNode> pool_;
+    Pool<IdxNode> pool_;
     IdxNode* buckets_;
 
     size_t size_;
@@ -671,13 +671,13 @@ class MultiHashMap {
     }
 
     template <class Archive>
-    void serialize(Archive &ar, const unsigned int version) const {
+    void serialize(Archive &ar) const {
         ar << "\n\t\t";
-        dbtoaster::serialize_nvp(ar, "count", count());
+        dbtoaster::serialization::serialize(ar, count(),  "count");
         T* elem = head;
         while (elem) {
             ar << "\n";
-            dbtoaster::serialize_nvp_tabbed(ar, "item", *elem, "\t\t");
+            dbtoaster::serialization::serialize(ar, *elem, "item", "\t\t");
             elem = elem->nxt;
         }
     }
@@ -1241,19 +1241,19 @@ class MultiHashMap {
         index[i]->add(cur);
     }
 
-    FORCE_INLINE void del(const T &key /*, int idx=0*/) { // assume mainIdx=0
+    FORCE_INLINE void del(const T &key /*, size_t idx=0*/) { // assume mainIdx=0
       T *elem = get(key);
       if (elem != nullptr)
         del(elem);
     }
 
-    FORCE_INLINE void del(const T &key, HASH_RES_t h, int idx = 0) {
+    FORCE_INLINE void del(const T &key, HASH_RES_t h, size_t idx = 0) {
       T *elem = get(key, h, idx);
       if (elem != nullptr)
         del(elem, h);
     }
 
-    void delSlice(const T &key, int idx = 0) {
+    void delSlice(const T &key, size_t idx = 0) {
       slice(idx, key, [&](const T &e) { del(e); });
     }
 
@@ -1313,12 +1313,12 @@ class MultiHashMap {
     }
 
     template <class Archive>
-    void serialize(Archive &ar, const unsigned int version) const {
+    void serialize(Archive &ar) const {
       ar << "\n\t\t";
-      dbtoaster::serialize_nvp(ar, "count", count());
+      dbtoaster::serialization::serialize(ar, count(), "count");
       foreach ([&ar](const T &e) {
         ar << "\n";
-        dbtoaster::serialize_nvp_tabbed(ar, "item", e, "\t\t");
+        dbtoaster::serialization::serialize(ar, e, "item", "\t\t");
       });
     }
 

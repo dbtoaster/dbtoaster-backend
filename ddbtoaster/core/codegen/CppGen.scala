@@ -665,11 +665,19 @@ trait ICppGen extends CodeGen {
         }
       }.mkString(" ") + s" ${VALUE_NAME} = v; nxt = nullptr; prv = nullptr;" 
 
-    val sSerialization = fields.map { case (n, _) =>
-        s"""|ar << ELEM_SEPARATOR;
-            |DBT_SERIALIZATION_NVP(ar, ${n});
-            |""".stripMargin
-      }.mkString
+    val sSerialization = 
+      if (cgOpts.useExperimentalRuntimeLibrary)
+        fields.map { case (n, _) =>
+          s"""|ar << dbtoaster::serialization::kElemSeparator;
+              |dbtoaster::serialization::serialize(ar, ${n}, STRING(${n}));
+              |""".stripMargin
+        }.mkString
+      else 
+        fields.map { case (n, _) =>
+          s"""|ar << ELEM_SEPARATOR;
+              |dbtoaster::serialize_nvp(ar, STRING(${n}), ${n});
+              |""".stripMargin
+        }.mkString
 
     val sConstructorFromStrings = ""
       // stringIf(cgOpts.useExperimentalRuntimeLibrary, 
@@ -688,7 +696,7 @@ trait ICppGen extends CodeGen {
           |${ind(sConstructorFromStrings)}
           |${ind(s)}
           |  template<class Archive>
-          |  void serialize(Archive& ar, const unsigned int version) const {
+          |  void serialize(Archive& ar) const {
           |${ind(sSerialization, 2)}
           |  }
           |};
@@ -698,16 +706,26 @@ trait ICppGen extends CodeGen {
   private def emitTLQStructure(s0: System) = {  
     
     val sSerializeFn = {
-      val body = s0.queries.map { q =>
-        s"""|ar << "\\n";
-            |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
-            |dbtoaster::serialize_nvp_tabbed(ar, STRING(${q.name}), _${q.name}, "\\t");
-            |""".stripMargin
-      }.mkString("\n")
+      val body = 
+        if (cgOpts.useExperimentalRuntimeLibrary)
+          s0.queries.map { q =>
+            s"""|ar << "\\n";
+                |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
+                |dbtoaster::serialization::serialize(ar, _${q.name}, STRING(${q.name}), "\\t");
+                |""".stripMargin
+          }.mkString("\n")
+        else 
+          s0.queries.map { q =>
+            s"""|ar << "\\n";
+                |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
+                |dbtoaster::serialize_nvp_tabbed(ar, STRING(${q.name}), _${q.name}, "\\t");
+                |""".stripMargin
+          }.mkString("\n")
+
 
       s"""|/* Serialization code */
           |template<class Archive>
-          |void serialize(Archive& ar, const unsigned int version) const {
+          |void serialize(Archive& ar) const {
           |${ind(body)}
           |}
           |""".stripMargin
@@ -754,7 +772,7 @@ trait ICppGen extends CodeGen {
 
     s"""|/* Defines top-level materialized views */
         |struct tlq_t {
-        |  struct timeval t0, t; long tT, tN, tS;
+        |  struct timeval t0, t; unsigned long tT, tN, tS;
         |  tlq_t(): tN(0), tS(0) ${sTLQMapInitializer} { 
         |    gettimeofday(&t0, NULL); 
         |  }
@@ -1596,6 +1614,14 @@ trait ICppGen extends CodeGen {
       s0.typeDefs.map(_.file.path).distinct
                  .map(s => "#include \"" + s + "\"").mkString("\n") + "\n"
 
+    val sUsingNamespace =
+      if (cgOpts.useExperimentalRuntimeLibrary) 
+        s"""|using namespace standard_functions;
+            |using namespace hashing;
+            |using namespace serialization;""".stripMargin
+      else
+        s"""|using namespace standard_functions;""".stripMargin
+
     // Generating the entire file
     s"""|${sIncludeHeaders}
         |${sIncludeTypeDefs}
@@ -1604,6 +1630,8 @@ trait ICppGen extends CodeGen {
         |using namespace std;
         |
         |namespace dbtoaster {
+        |
+        |${ind(sUsingNamespace)}
         |
         |${ind(emitMapTypes(s0))}
         |

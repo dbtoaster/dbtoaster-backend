@@ -3734,7 +3734,7 @@ public:
     }
 
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const {
+    void serialize(Archive& ar) const {
         ar << "\n\t\t";
         dbtoaster::serialize_nvp(ar, "count", count());
         //SBJ: Hack! fix it!  Cannot use store.foreach directly , as the last index may not be ListIndex created

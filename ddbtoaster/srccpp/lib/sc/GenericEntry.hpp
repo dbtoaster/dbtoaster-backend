@@ -174,7 +174,7 @@ public:
 #endif
 
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const {
+    void serialize(Archive& ar) const {
         for (uint i = 1; i <= map.size(); ++i) {
             ar << ELEM_SEPARATOR;
             std::string name = "_" + std::to_string(i);

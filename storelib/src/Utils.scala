@@ -194,8 +194,6 @@ object Utils {
     val cppTmpDir = cppLibDir + "/../new_tmp"
     val as = 
       ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", 
-          cppTmpDir + "/standard_functions.cpp", 
-          cppTmpDir + "/hash.cpp", 
           "-Wno-maybe-uninitialized",
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", //"-ljemalloc",

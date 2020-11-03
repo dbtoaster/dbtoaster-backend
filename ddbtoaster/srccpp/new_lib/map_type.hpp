@@ -65,11 +65,6 @@ struct Map {
   }
 };
 
-template<std::size_t Size>
-using CStringMap = Map<const char*, const char*, Size>;
-
-using CStringEqualTo = EqualTo<const char*>;
-
 }
 
 #endif /* DBTOASTER_MAP_HPP */

@@ -20,6 +20,10 @@ template <class Key, class Value>
 struct BatchMessage : MessageBase {
   using KVpair = std::pair<Key, Value>;
   std::vector<KVpair> content;
+
+  void append(const Key& key, const Value& value) {
+    content.push_back(std::make_pair(key, value));
+  }
 };
 
 typedef std::unique_ptr<MessageBase> MessageBasePtr;

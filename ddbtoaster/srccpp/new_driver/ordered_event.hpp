@@ -13,8 +13,8 @@ constexpr OrderType kInvalidOrder = std::numeric_limits<OrderType>::max();
 struct OrderedEvent : Event {
   OrderedEvent() : Event(), order(kInvalidOrder) { }
 
-  OrderedEvent(OrderType o, RelationId id, EventType tp, MessageBasePtr msg)
-      : Event(id, tp, std::move(msg)), order(o) { }
+  OrderedEvent(OrderType t_order, RelationId t_id, EventType t_tp, MessageBasePtr t_msg)
+      : Event(t_id, t_tp, std::move(t_msg)), order(t_order) { }
 
   bool operator<(const OrderedEvent& other) const {
     return this->order > other.order;   // higher order, lower priority
