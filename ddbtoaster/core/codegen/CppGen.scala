@@ -10,7 +10,7 @@ object CppGen {
   val VALUE_NAME = "__av"
 }
 
-class CppGen(val cgOpts: CodeGenOptions) extends ICppGen
+class CppGen(val cgOpts: CodeGenOptions) extends ICppGen 
 
 trait ICppGen extends CodeGen {
 
@@ -20,6 +20,9 @@ trait ICppGen extends CodeGen {
   import ddbt.ast._
   import ddbt.ast.M3._ 
   import CppGen._
+
+  val useExperimentalHashMap: Boolean =
+    cgOpts.useExperimentalHashMap || cgOpts.useExperimentalRuntimeLibrary
 
   private var deltaRelationNames = Set[String]()
   
@@ -77,7 +80,7 @@ trait ICppGen extends CodeGen {
 
   protected def emitTempMapDefinitions = {
     val s = tempMapDefinitions.map { case (n, (ksTp, vTp)) =>
-      if (cgOpts.useExperimentalHashMap)
+      if (useExperimentalHashMap)
           "MultiHashMap<" + tempEntryTypeName(ksTp, vTp) + ", " + typeToString(vTp) + 
             ", PrimaryHashIndex<" + tempEntryTypeName(ksTp, vTp) + "> > " + n + ";"
       else 
@@ -485,7 +488,7 @@ trait ICppGen extends CodeGen {
         code = code +   "}\n\n"
 
         val deltaRel = delta(name)
-        val insertOp = stringIf(cgOpts.useExperimentalHashMap, "insert", "insert_nocheck")
+        val insertOp = stringIf(useExperimentalHashMap, "insert", "insert_nocheck")
         code +
         s"""|void unwrap_insert_${name}(const event_args_t& ea) {
             |  ${deltaRel}.clear(); 
@@ -598,7 +601,7 @@ trait ICppGen extends CodeGen {
     }.mkString("\n")
 
     val sMapTypedefs = {
-      if (cgOpts.useExperimentalHashMap) {
+      if (useExperimentalHashMap) {
         val sIndices = indices.map { case (is, unique) =>
             if (unique) "PrimaryHashIndex<" + mapEntryType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
             else "SecondaryHashIndex<" + mapEntryType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
@@ -1221,7 +1224,7 @@ trait ICppGen extends CodeGen {
       tempEntryTypes += ((ksTp, vsTp))
       localEntries += ((localEntry, tempEntryTypeName(ksTp, vsTp)))
 
-      if (cgOpts.useExperimentalHashMap) {
+      if (useExperimentalHashMap) {
         extractBooleanExp(vs) match {
           case Some((c, t)) =>
             s"(/*if */(" + c + ") ? " + name + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
@@ -1359,29 +1362,17 @@ trait ICppGen extends CodeGen {
             val sKeys = ko.map(x => rn(x._1._1)).mkString(", ")
             val n0 = fresh("n")
 
-            if (cgOpts.useExperimentalHashMap) {
+            if (useExperimentalHashMap) {
               s"""|{ //slice
-                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0}_head = static_cast<const SecondaryIdxNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
-                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0} = ${n0}_head;
+                  |  const LinkedNode* ${n0} = ${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1});
                   |  ${mapEntryType}* ${e0};
                   |  while (${n0}) {
-                  |    ${e0} = ${n0}->obj;
+                  |    ${e0} = reinterpret_cast<${mapEntryType}*>(${n0}->obj);
                   |${ind(body, 2)}
-                  |    ${n0} = (${n0} != ${n0}_head ? ${n0}->nxt : ${n0}->child);
+                  |    ${n0} = ${n0}->next;
                   |  }
                   |}
                   |""".stripMargin
-
-              // s"""|{ //slice
-              //     |  const LinkedNode<${mapEntryType}>* ${n0} = static_cast<const LinkedNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
-              //     |  ${mapEntryType}* ${e0};
-              //     |  while (${n0}) {
-              //     |    ${e0} = ${n0}->obj;
-              //     |${ind(body, 2)}
-              //     |    ${n0} = ${n0}->next;
-              //     |  }
-              //     |}
-              //     |""".stripMargin
             }
             else {
               val (h0, idx0) = (fresh("h"), fresh("i"))
@@ -1649,7 +1640,7 @@ trait ICppGen extends CodeGen {
   protected def prepareCodegen(s0: System): Unit = {}
 
   protected def emitIncludeHeaders = 
-    stringIf(!cgOpts.useExperimentalHashMap, "#define USE_OLD_MAP\n") +
+    stringIf(!useExperimentalHashMap, "#define USE_OLD_MAP\n") +
     stringIf(cgOpts.useExperimentalRuntimeLibrary,
       s"""|#include <sys/time.h>
           |#include <cstring>
@@ -1657,7 +1648,7 @@ trait ICppGen extends CodeGen {
           |#include <tuple>
           |#include "types.hpp"
           |#include "hash.hpp"
-          |#include "mmap/mmap.hpp"
+          |#include "multi_map.hpp"
           |#include "standard_functions.hpp"
           |#include "event.hpp"
           |#include "source.hpp"

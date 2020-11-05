@@ -56,7 +56,7 @@ class Pool {
 
   ~Pool();
 
-  T* add() {
+  T* acquire() {
     if (free_ == nullptr) {
       add_chunk(size_ << 1);
     }
@@ -68,7 +68,7 @@ class Pool {
     return &(el->obj);
   }
 
-  void del(T* obj) { 
+  void release(T* obj) { 
     if (obj == nullptr) { return; }
 
     Elem<T>* el = reinterpret_cast<Elem<T>*>(obj);
@@ -77,19 +77,19 @@ class Pool {
     free_ = el; 
   }
 
-  void delete_all(T* current_data) {
-    if (current_data == nullptr) { return; }
+  template <class NextFn>
+  void releaseChain(T* head, NextFn next_fn) {
+    if (head == nullptr) return;
 
-    T* tmp = current_data;
-    do 
-    {
-      T* tmpNext = tmp->nxt;
-      Elem<T>* tmpEl = reinterpret_cast<Elem<T>*>(tmp);
-      tmpEl->deactivate();
-      tmpEl->next = (tmpNext != nullptr ? reinterpret_cast<Elem<T>*>(tmpNext) : free_);
-      tmp = tmpNext;
-    } while (tmp != nullptr);
-    free_ = reinterpret_cast<Elem<T>*>(current_data);
+    T* node = head;
+    do {
+      T* next_node = next_fn(node);
+      Elem<T>* e = reinterpret_cast<Elem<T>*>(node);
+      e->deactivate();
+      e->next = (next_node != nullptr ? reinterpret_cast<Elem<T>*>(next_node) : free_);
+      node = next_node;
+    } while (node != nullptr);
+    free_ = reinterpret_cast<Elem<T>*>(head);
   }
 
   void clear();

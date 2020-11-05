@@ -14,6 +14,77 @@ namespace dbtoaster {
 
 namespace standard_functions {
 
+// unsigned int Udate_year(date d);
+// unsigned int Udate_month(date d);
+// unsigned int Udate_day(date d);
+// date Udate(const char *s);
+// date Udate(const STRING_TYPE &s);
+
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// T Ulistmin(T v1, T v2);
+// long Ulistmin(int v1, long v2);
+// DOUBLE_TYPE Ulistmin(int v1, DOUBLE_TYPE v2);
+// DOUBLE_TYPE Ulistmin(long v1, DOUBLE_TYPE v2);
+
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// T Ulistmax(T v1, T v2);
+// long Ulistmax(int v1, long v2);
+// DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2);
+// DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2);
+
+// // String functions
+// STRING_TYPE Usubstring(const STRING_TYPE &s, size_t start, size_t len);
+// int Upreg_match(const regex_t& preg, const STRING_TYPE& s);
+
+// // Vector functions
+// DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x, DOUBLE_TYPE y, DOUBLE_TYPE z);
+// DOUBLE_TYPE Uvec_dot(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+//                      DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
+// DOUBLE_TYPE Uvector_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+//                           DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
+// void Uvec_cross(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+//                 DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
+//                 DOUBLE_TYPE& x, DOUBLE_TYPE& y, DOUBLE_TYPE& z);
+// DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1,
+//                             DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
+//                             DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
+//                             DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4);
+
+// template <typename T>
+// size_t Uhash(T x);
+
+// // Math operations
+// DOUBLE_TYPE Uradians(DOUBLE_TYPE degree);
+// DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian);
+// DOUBLE_TYPE Ucos(DOUBLE_TYPE x);
+// DOUBLE_TYPE Usin(DOUBLE_TYPE x);
+// DOUBLE_TYPE Udiv(DOUBLE_TYPE x);
+// DOUBLE_TYPE Usqrt(DOUBLE_TYPE x);
+// DOUBLE_TYPE Upow(DOUBLE_TYPE base, DOUBLE_TYPE exponent);
+
+// // Type conversion functions
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// int cast_int(T t);
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// long cast_long(T t);
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// float cast_float(T t);
+// template <typename T,
+//           typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// double cast_double(T t);
+// date cast_date(date d);
+// date cast_date(STRING_TYPE s);
+// template <class T> 
+// STRING_TYPE cast_string(const T& t);
+// template <>
+// STRING_TYPE cast_string(const date& d);
+
+
 // Date extraction functions
 inline unsigned int Udate_year(date d) {
   return d.getYear();
