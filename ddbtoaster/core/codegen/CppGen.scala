@@ -212,16 +212,17 @@ trait ICppGen extends CodeGen {
       stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)      
     }
 
-  private def emitPostConstDefinitions = {
-    val s = hoistedConsts.map {
-      case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
-        "const " + typeToString(tp) + " data_t::" + 
-          n + " = STRING_TYPE(\"" + v + "\");"
-      case (a, n) => 
-        "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
-    }.mkString("\n")
-    stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
-  }
+  private def emitPostConstDefinitions = 
+    if (!cgOpts.useExperimentalRuntimeLibrary) "" else {
+      val s = hoistedConsts.map {
+        case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
+          "const " + typeToString(tp) + " data_t::" + 
+            n + " = STRING_TYPE(\"" + v + "\");"
+        case (a, n) => 
+          "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
+      }.mkString("\n")
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
+    }
 
   // Constant member initialization
   private def emitConstInits = if (cgOpts.useExperimentalRuntimeLibrary) "" else

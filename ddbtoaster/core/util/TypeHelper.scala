@@ -132,16 +132,25 @@ object TypeHelper {
   }
 
   def fromString(s: String, tp: Type) = tp match {
-    case TypeByte | TypeShort | TypeInt | TypeLong => s.trim.replaceAll("(l|L)$", "").toLong
-    case TypeFloat | TypeDouble => s.trim.replaceAll("(l|L|f|F)$", "").toDouble
-    case TypeChar => { val t = s.replaceAll("^'|'$", ""); assert(t.size == 1); t(0) }
-    case TypeString => s.replaceAll("^\"|\"$", "")
-    case TypeDate => s.trim.replaceAll("(l|L)$", "").toLong   // dateConv(v.toLong)
-    case _ => sys.error("Cannot convert " + s + " into " + tp)
+    case TypeByte | TypeShort | TypeInt | TypeLong =>
+        s.trim.replaceAll("(l|L)$", "").toLong
+    case TypeFloat | TypeDouble =>
+        s.trim.replaceAll("(l|L|f|F)$", "").toDouble
+    case TypeChar =>
+        val t = s.replaceAll("^('|\")|('|\")$", "")
+        assert(t.size == 1, "Unexpected character size: " + t)
+        t(0)
+    case TypeString =>
+      s.replaceAll("^\"|\"$", "")
+    case TypeDate =>
+      s.trim.replaceAll("(l|L)$", "").toLong   // dateConv(v.toLong)
+    case _ =>
+      sys.error("Cannot convert " + s + " into " + tp)
   }
 
   // Implicit castings allowed by second-stage compiler ('a' can be promoted to 'b'?)
   def cast(a: Type, b: Type): Boolean = 
-    try { b == a.resolve(b) } catch { case TypeMismatchException(msg) => false }
+    try { b == a.resolve(b) }
+    catch { case TypeMismatchException(msg) => false }
 
 }
