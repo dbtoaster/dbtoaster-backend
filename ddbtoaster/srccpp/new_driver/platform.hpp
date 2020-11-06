@@ -33,7 +33,7 @@ void setAffinity(int cpu) {
   CPU_SET(cpu, &mask);
     
   if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
-    std::err << "WARNING: Could not set CPU affinity" << std::endl;
+    std::cerr << "WARNING: Could not set CPU affinity" << std::endl;
   }
 #endif
 }
