@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <string>
+#include "platform.hpp"
 #include "runtime_opts.hpp"
 #include "application.hpp"
 
@@ -47,6 +48,9 @@ int main(int argc, char** argv) {
       opts.log_count = stoul(argv[++i]);
     }
   }
+
+  // Code runs on the 3rd CPU by default
+  setAffinity(2);
 
   Application app(opts);
   app.run();
