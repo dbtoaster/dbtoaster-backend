@@ -50,6 +50,9 @@ trait ICppGen extends CodeGen {
   protected def queryRefTypeToString(q: Query) = 
     if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else q.name + "_map&"
 
+  protected def queryReturnTypeToString(q: Query) = 
+    if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else "const " + q.name + "_map&"
+
   protected def cmpToString(op: OpCmp) = op match {
     case OpEq => "=="
     case OpNe => "!="
@@ -180,16 +183,48 @@ trait ICppGen extends CodeGen {
   // ---------- Methods manipulating with constants
 
   // Constant member definition
-  private def emitConstDefinitions = {
-    val s = hoistedConsts.map { case (a, n) =>
-      "/* const static */ " + typeToString(a.tp) + " " + n + ";"
-    }.mkString("\n")
+  // private def isConstexprDefinition(a: Apply) = a match {
+  //   case Apply("STRING_TYPE", TypeString, Const(TypeString, v) :: Nil) => false
+  //   case _ => true
+  // }
 
+  private def emitConstDefinitions = 
+    if (cgOpts.useExperimentalRuntimeLibrary) {
+      val s = hoistedConsts.map {
+        case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
+          "static const " + typeToString(tp) + " " + n + ";"
+
+        case (Apply(fn, tp, args), n) =>
+          val sArgs = args.map {
+            case Const(TypeString, v) => "\"" + v + "\""
+            case a => cpsExpr(a)
+          }.mkString(", ")
+          "static constexpr " + typeToString(tp) + " " +
+            n + " = U" + fn + "(" + sArgs + ");"
+      }.mkString("\n")
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
+    }
+    else {
+      val s = hoistedConsts.map { case (a, n) =>
+        "/* const static */ " + typeToString(a.tp) + " " + n + ";"
+      }.mkString("\n")
+
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)      
+    }
+
+  private def emitPostConstDefinitions = {
+    val s = hoistedConsts.map {
+      case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
+        "const " + typeToString(tp) + " data_t::" + 
+          n + " = STRING_TYPE(\"" + v + "\");"
+      case (a, n) => 
+        "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
+    }.mkString("\n")
     stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
   }
 
   // Constant member initialization
-  private def emitConstInits = 
+  private def emitConstInits = if (cgOpts.useExperimentalRuntimeLibrary) "" else
     hoistedConsts.map { case (Apply(fn, _, args), n) => 
       if (fn == "STRING_TYPE") {      // string initialization
         assert(args.size == 1)        // sanity check
@@ -197,12 +232,14 @@ trait ICppGen extends CodeGen {
       }
       else {
         val sArgs = args.map {
-          case Const(TypeString, v) => "STRING_TYPE(\"" + v + "\")"
+          case Const(TypeString, v) => "\"" + v + "\""
           case a => cpsExpr(a)
         }.mkString(", ")
         n + " = U" + fn + "(" + sArgs + ");"
       }
     }.mkString("\n")
+
+
 
   // ----------
 
@@ -757,7 +794,7 @@ trait ICppGen extends CodeGen {
                   |""".stripMargin
             }
         }
-        s"""|const ${queryRefTypeToString(q)} get_${q.name}() const {
+        s"""|${queryReturnTypeToString(q)} get_${q.name}() const {
             |${ind(body)}
             |}
             |""".stripMargin
@@ -1029,6 +1066,8 @@ trait ICppGen extends CodeGen {
         |private:
         |${ind(sDataDefinitions)}
         |};
+        |
+        |${emitPostConstDefinitions}
         |""".stripMargin
   }
 

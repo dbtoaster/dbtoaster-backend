@@ -10,22 +10,22 @@ struct DateType {
   constexpr DateType(uint16_t t_year, uint8_t t_month, uint8_t t_day)
       : day(t_day), month(t_month), year(t_year) { }
 
-  DateType() : day(0), month(0), year(0) { }
+  constexpr DateType() : day(0), month(0), year(0) { }
 
-  uint16_t getYear() const { return year; }
+  constexpr uint16_t getYear() const { return year; }
 
-  uint8_t getMonth() const { return month; }
+  constexpr uint8_t getMonth() const { return month; }
 
-  uint8_t getDay() const { return day; }
+  constexpr uint8_t getDay() const { return day; }
 
-  uint32_t getNumeric() const { return numeric; }
+  constexpr uint32_t getNumeric() const { return numeric; }
 
-  friend bool operator==(const DateType& d1, const DateType& d2);
-  friend bool operator!=(const DateType& d1, const DateType& d2);
-  friend bool operator< (const DateType& d1, const DateType& d2);
-  friend bool operator<=(const DateType& d1, const DateType& d2);
-  friend bool operator> (const DateType& d1, const DateType& d2);
-  friend bool operator>=(const DateType& d1, const DateType& d2);
+  friend constexpr bool operator==(const DateType& d1, const DateType& d2);
+  friend constexpr bool operator!=(const DateType& d1, const DateType& d2);
+  friend constexpr bool operator< (const DateType& d1, const DateType& d2);
+  friend constexpr bool operator<=(const DateType& d1, const DateType& d2);
+  friend constexpr bool operator> (const DateType& d1, const DateType& d2);
+  friend constexpr bool operator>=(const DateType& d1, const DateType& d2);
 
  private:
   union {
@@ -38,27 +38,27 @@ struct DateType {
   };
 };
 
-inline bool operator==(const DateType& d1, const DateType& d2) { 
+inline constexpr bool operator==(const DateType& d1, const DateType& d2) {
   return d1.numeric == d2.numeric;
 }
 
-inline bool operator!=(const DateType& d1, const DateType& d2) {
+inline constexpr bool operator!=(const DateType& d1, const DateType& d2) {
   return d1.numeric != d2.numeric;
 }
 
-inline bool operator< (const DateType& d1, const DateType& d2) {
+inline constexpr bool operator< (const DateType& d1, const DateType& d2) {
   return d1.numeric < d2.numeric;
 }
 
-inline bool operator<=(const DateType& d1, const DateType& d2) {
+inline constexpr bool operator<=(const DateType& d1, const DateType& d2) {
   return d1.numeric <= d2.numeric;
 }
 
-inline bool operator> (const DateType& d1, const DateType& d2) {
+inline constexpr bool operator> (const DateType& d1, const DateType& d2) {
   return d1.numeric > d2.numeric;
 }
 
-inline bool operator>=(const DateType& d1, const DateType& d2) {
+inline constexpr bool operator>=(const DateType& d1, const DateType& d2) {
   return d1.numeric >= d2.numeric;
 }
 
