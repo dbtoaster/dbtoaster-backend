@@ -390,7 +390,7 @@ trait ICppGen extends CodeGen {
       val sName = prefix + s.name
       val sParams = s.fields.map { case (n, t) => s"const ${refTypeToString(t)} ${n}" }.mkString(", ")
 
-      s"""|void ${sName}(${sParams}) {
+      s"""|inline void ${sName}(${sParams}) {
           |${ind(sTimeout)}
           |  ++tN;
           |${ind(body)}

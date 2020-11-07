@@ -25,6 +25,9 @@ struct Value {
   static constexpr bool isZero(const T& a) { return a.isZero(); }
 };
 
+template<class T, class Enable>
+constexpr T Value<T, Enable>::zero;
+
 template <class T>
 struct Value<T, typename std::enable_if<std::is_integral<T>::value>::type> {
   static constexpr T zero = 0;
@@ -32,10 +35,16 @@ struct Value<T, typename std::enable_if<std::is_integral<T>::value>::type> {
 };
 
 template <class T>
+constexpr T Value<T, typename std::enable_if<std::is_integral<T>::value>::type>::zero;
+
+template <class T>
 struct Value<T, typename std::enable_if<std::is_floating_point<T>::value>::type> {
   static constexpr T zero = 0.0;
   static constexpr bool isZero(const T& a) { return a == 0.0; }
 };
+
+template <class T>
+constexpr T Value<T, typename std::enable_if<std::is_floating_point<T>::value>::type>::zero;
 
 }
 #endif /* DBTOASTER_TYPES_HPP */

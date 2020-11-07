@@ -8,9 +8,11 @@ namespace dbtoaster {
 
 namespace hashing {
 
+uint32_t MurmurHash2(const void* key, int len, uint32_t seed);
+
 template <class T>
 FORCE_INLINE void hash_combine(std::size_t& seed, const T& v) {
-  seed ^= hash_value(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
 template <>
@@ -21,11 +23,6 @@ FORCE_INLINE void hash_combine(std::size_t& seed, const int& v) {
 template <>
 FORCE_INLINE void hash_combine(std::size_t& seed, const long& v) {
   seed ^= static_cast<size_t>(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-template <>
-FORCE_INLINE void hash_combine(std::size_t& seed, const std::string& v) {
-  seed ^= std::hash<std::string>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
 union CastDouble {
@@ -66,7 +63,6 @@ FORCE_INLINE void hash_combine(std::size_t& seed, const long double& v) {
   seed ^= castLongDouble(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-
 template <>
 FORCE_INLINE void hash_combine(std::size_t& seed, const char& v) {
   seed ^= static_cast<size_t>(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -75,6 +71,11 @@ FORCE_INLINE void hash_combine(std::size_t& seed, const char& v) {
 template <>
 FORCE_INLINE void hash_combine(std::size_t& seed, const DateType& v) {
   seed ^= v.getNumeric() + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+template <>
+FORCE_INLINE void hash_combine(std::size_t& seed, const std::string& v) {
+  seed ^= std::hash<std::string>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
 }
