@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "serialization.hpp"
 #include "memory_pool.hpp"
+#include "singleton.hpp"
 
 using namespace dbtoaster;
 
@@ -37,7 +38,7 @@ class PrimaryHashIndex {
     struct IdxNode* next;
   };
   
-  MemoryPool<IdxNode> pool_;
+  MemoryPool<IdxNode>* pool_;
   IdxNode* buckets_;
   size_t bucket_count_;
   size_t entry_count_;
@@ -49,7 +50,8 @@ class PrimaryHashIndex {
 
  public:
   PrimaryHashIndex(size_t init_size = kDefaultChunkSize, double load_factor = 0.75)
-      : buckets_(nullptr), bucket_count_(0), entry_count_(0),
+      : pool_(Singleton<MemoryPool<IdxNode>>().acquire()),
+        buckets_(nullptr), bucket_count_(0), entry_count_(0),
         index_mask_(0), threshold_(0), load_factor_(load_factor) {
     assert(isPowerOfTwo(init_size));
     resize(init_size);
@@ -95,7 +97,7 @@ class PrimaryHashIndex {
 
     IdxNode* dst = buckets_ + (h & index_mask_);
     if (dst->obj != nullptr) {
-      IdxNode* new_node = pool_.acquire();
+      IdxNode* new_node = pool_->acquire();
       new_node->obj = obj;
       new_node->hash = h;
       new_node->next = dst->next;
@@ -126,13 +128,13 @@ class PrimaryHashIndex {
       if (dst->obj == obj) {
         if (prev != nullptr) {  // element in linked list (and not in bucket itself)
           prev->next = next;
-          pool_.release(dst);
+          pool_->release(dst);
         } 
         else if (next != nullptr) {  // element in bucket, and there are other elements in linked list
           dst->obj = next->obj;
           dst->hash = next->hash;
           dst->next = next->next;
-          pool_.release(next);
+          pool_->release(next);
         } 
         else {   // only element in bucket
           dst->obj = nullptr;
@@ -163,6 +165,8 @@ PrimaryHashIndex<T, IDX_FN>::~PrimaryHashIndex() {
     free(buckets_);
     buckets_ = nullptr;
   }
+  Singleton<MemoryPool<IdxNode>>().release(pool_);
+  pool_ = nullptr;  
 }
 
 template <typename T, typename IDX_FN>
@@ -172,7 +176,7 @@ void PrimaryHashIndex<T, IDX_FN>::clear() {
   for (size_t i = 0; i < bucket_count_; ++i) {
     buckets_[i].obj = nullptr;
     buckets_[i].hash = 0;
-    pool_.releaseChain(buckets_[i].next, [](const IdxNode* t) { return t->next; });
+    pool_->releaseChain(buckets_[i].next, [](const IdxNode* t) { return t->next; });
     buckets_[i].next = nullptr;
   }
   entry_count_ = 0;
@@ -201,7 +205,7 @@ void PrimaryHashIndex<T, IDX_FN>::resize(size_t new_size) {
       // insert first node from src bucket
       IdxNode* dst = buckets_ + (src->hash & index_mask_);
       if (dst->obj != nullptr) {
-        IdxNode* new_node = pool_.acquire();
+        IdxNode* new_node = pool_->acquire();
         new_node->obj = src->obj;
         new_node->hash = src->hash;
         new_node->next = dst->next;
@@ -227,7 +231,7 @@ void PrimaryHashIndex<T, IDX_FN>::resize(size_t new_size) {
           dst2->obj = src->obj;
           dst2->hash = src->hash;
           assert(dst2->next == nullptr);
-          pool_.release(src);          
+          pool_->release(src);          
         }
         src = nxt;
       }
@@ -309,8 +313,8 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
     struct IdxNode* next;
   };
 
-  MemoryPool<IdxNode> idxNodePool_;
-  MemoryPool<LinkedNode> linkedNodePool_;
+  MemoryPool<IdxNode>* idxNodePool_;
+  MemoryPool<LinkedNode>* linkedNodePool_;
   IdxNode* buckets_;
   size_t bucket_count_;
   size_t entry_count_;
@@ -323,7 +327,9 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
 
  public:
   SecondaryHashIndex(size_t size = kDefaultChunkSize, double load_factor = 0.75)
-      : buckets_(nullptr), bucket_count_(0), entry_count_(0), index_mask_(0),
+      : idxNodePool_(Singleton<MemoryPool<IdxNode>>().acquire()),
+        linkedNodePool_(Singleton<MemoryPool<LinkedNode>>().acquire()),
+        buckets_(nullptr), bucket_count_(0), entry_count_(0), index_mask_(0),
         threshold_(0), load_factor_(load_factor) {
     resize(size);
   }
@@ -374,13 +380,13 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
     else {
       LinkedNode* idx_node = slice(*obj, h);
       if (idx_node != nullptr) {
-        LinkedNode* new_node = linkedNodePool_.acquire();
+        LinkedNode* new_node = linkedNodePool_->acquire();
         new_node->obj = obj;
         new_node->next = idx_node->next;
         idx_node->next = new_node;
       }
       else {
-        IdxNode* new_node = idxNodePool_.acquire();
+        IdxNode* new_node = idxNodePool_->acquire();
         new_node->node.obj = obj;
         new_node->node.next = nullptr;
         new_node->hash = h;
@@ -417,16 +423,16 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
             dst->node = *child;
             // dst->hash remains unchanged
             // dst->next remains unchanged            
-            linkedNodePool_.release(child);
+            linkedNodePool_->release(child);
           }
           else {
             if (prv != nullptr) {  // element in linked list (and not in bucket itself)
               prv->next = nxt;
-              idxNodePool_.release(dst);
+              idxNodePool_->release(dst);
             }
             else if (nxt != nullptr) {  // element in bucket, and there are other elements in linked list
               *dst = *nxt;
-              idxNodePool_.release(nxt);
+              idxNodePool_->release(nxt);
             }
             else {   // the only element in bucket
               dst->node.obj = nullptr;
@@ -444,7 +450,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
           while (curr != nullptr) {
             if (curr->obj == obj) {
               prev->next = curr->next;
-              linkedNodePool_.release(curr);
+              linkedNodePool_->release(curr);
               return;
             }
             prev = curr;
@@ -465,6 +471,10 @@ SecondaryHashIndex<T, IDX_FN>::~SecondaryHashIndex() {
     free(buckets_);
     buckets_ = nullptr;
   }
+  Singleton<MemoryPool<IdxNode>>().release(idxNodePool_);
+  idxNodePool_ = nullptr;
+  Singleton<MemoryPool<LinkedNode>>().release(linkedNodePool_);
+  linkedNodePool_ = nullptr;  
 }
 
 template <typename T, typename IDX_FN>
@@ -490,7 +500,7 @@ void SecondaryHashIndex<T, IDX_FN>::resize(size_t new_size) {
       // insert first node from src bucket
       IdxNode* dst = buckets_ + (src->hash & index_mask_);
       if (dst->node.obj != nullptr) {
-        IdxNode* new_node = idxNodePool_.acquire();
+        IdxNode* new_node = idxNodePool_->acquire();
         new_node->node = src->node;
         new_node->hash = src->hash;
         new_node->next = dst->next;
@@ -516,7 +526,7 @@ void SecondaryHashIndex<T, IDX_FN>::resize(size_t new_size) {
           dst2->node = src->node;
           dst2->hash = src->hash;
           assert(dst2->next == nullptr);
-          idxNodePool_.release(src);
+          idxNodePool_->release(src);
         }
         src = nxt;
       }
@@ -530,8 +540,8 @@ void SecondaryHashIndex<T, IDX_FN>::deleteBucket(IdxNode* bucket) {
   IdxNode* slice = bucket;
   while (slice != nullptr) {
     IdxNode* next_slice = slice->next;
-    linkedNodePool_.releaseChain(slice->node.next, [](const LinkedNode* t) { return t->next; });    
-    idxNodePool_.release(slice);
+    linkedNodePool_->releaseChain(slice->node.next, [](const LinkedNode* t) { return t->next; });    
+    idxNodePool_->release(slice);
     slice = next_slice;
   }
 }
@@ -543,7 +553,7 @@ void SecondaryHashIndex<T, IDX_FN>::clear() {
   for (size_t i = 0; i < bucket_count_; ++i) {
     buckets_[i].node.obj = nullptr;
     buckets_[i].hash = 0;
-    linkedNodePool_.releaseChain(buckets_[i].node.next, [](const LinkedNode* t) { return t->next; });
+    linkedNodePool_->releaseChain(buckets_[i].node.next, [](const LinkedNode* t) { return t->next; });
     buckets_[i].node.next = nullptr;
     deleteBucket(buckets_[i].next);
     buckets_[i].next = nullptr;
