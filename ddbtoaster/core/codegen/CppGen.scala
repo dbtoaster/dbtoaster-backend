@@ -1692,7 +1692,6 @@ trait ICppGen extends CodeGen {
           |#include "standard_functions.hpp"
           |#include "event.hpp"
           |#include "source.hpp"
-          |#include "map_type.hpp"
           |""".stripMargin,
       s"""|#include "program_base.hpp"
           |#include "types.hpp"

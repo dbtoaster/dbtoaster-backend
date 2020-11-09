@@ -1,5 +1,5 @@
-#ifndef MMAP2_H
-#define MMAP2_H
+#ifndef DBTOASTER_PARDIS_MMAP_HPP
+#define DBTOASTER_PARDIS_MMAP_HPP
 
 #include <iostream>
 #include <functional>
@@ -8,7 +8,12 @@
 #include <string>
 #include "serialization.hpp"
 #include "macro.hpp"
-#include "hpds/pstring.hpp"
+#include "types.hpp"
+#include "sc_extra.hpp"
+
+namespace dbtoaster {
+
+namespace pardis {
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 
@@ -3737,12 +3742,16 @@ public:
     template<class Archive>
     void serialize(Archive& ar) const {
         ar << "\n\t\t";
-        dbtoaster::serialize_nvp(ar, "count", count());
+        dbtoaster::serialization::serialize(ar, count(), "count");
         //SBJ: Hack! fix it!  Cannot use store.foreach directly , as the last index may not be ListIndex created
         auto idx = const_cast<Index<T, V> *> (index[0]);
         idx->foreach([&ar] (T * e) {
-            ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", *e, "\t\t"); });
+            ar << "\n"; dbtoaster::serialization::serialize(ar, *e, "item", "\t\t"); });
     }
 };
 
-#endif //MMAP_H
+}
+
+}
+
+#endif /* DBTOASTER_PARDIS_MMAP_HPP */

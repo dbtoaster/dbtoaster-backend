@@ -5,10 +5,10 @@
 #include <cstring>
 #include <cctype>
 #include "types.hpp"
+#include "hpds/pstringops.hpp"
 #include "GenericEntry.hpp"
 #include "Aggregator.hpp"
 #ifdef CONCURRENT
-#include "types.h"
 #include "Version.h"
 #endif
 
@@ -29,9 +29,9 @@ FORCE_INLINE size_t HASH(int x) {
     return x;
 }
 
-FORCE_INLINE size_t HASH(date x) {
-    return x.getNumeric();
-}
+// FORCE_INLINE size_t HASH(date x) {
+//     return x.getNumeric();
+// }
 
 FORCE_INLINE size_t HASH(const char *x) {
     size_t hash = 7;
@@ -66,11 +66,13 @@ int strcmpi(const char* This, const char *That) {
 FORCE_INLINE size_t HASH(const Any& a) {
     switch (a.type) {
         case INT: return a.data.i;
+            break;
         case LONG: return HASH(a.data.l);
+            break;
         case DOUBLE: return HASH(a.data.d);
+            break;
         case STRING: return HASH(a.data.s);
-        case CHAR: return a.data.c;
-        case DATE: return HASH(a.data.date);
+            break;
         default: throw std::logic_error("Hash not defined for AnyType " + std::to_string(a.type));
     }
     return -1;

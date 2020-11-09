@@ -72,8 +72,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       case TypeFloat | TypeDouble => runtimeType[Double]
       case TypeChar => runtimeType[Char]
       case TypeString => runtimeType[String]
-      case TypeDate => runtimeType[Long]
-      // case TypeDate => runtimeType[Date]
+      case TypeDate => runtimeType[java.util.Date]
       case _ => sys.error("Unsupported type: " + tp)
     }
   }.asInstanceOf[TypeRep[Any]]
@@ -403,8 +402,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       case TypeFloat | TypeDouble => cmp2[Double](l, r)
       case TypeChar => cmp2[Char](l, r)
       case TypeString => cmp2[String](l, r)
-      case TypeDate => cmp2[Long](l, r)
-      // case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
+      case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
     }
   }
@@ -449,8 +447,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
               case TypeFloat | TypeDouble => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Double]]]) -> DoubleType
               case TypeChar => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Char]]]) -> CharType
               case TypeString => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[String]]]) -> StringType
-              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> LongType
-              // case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
+              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
               case _ => sys.error("Unsupported type " + m.tp)
             }
 
@@ -718,16 +715,16 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
       var postBody = ""
       if (!x._1.contains("system_ready")) {
         preBody = s"""
-                    |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
-                    |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+                    |//BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
+                    |//BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
                     |$sTimeout
                     |++tN;
          """.stripMargin
         postBody =
           s"""
              |clearTempMem();
-             |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
-             |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+             |//END_TRIGGER(exec_stats,"${x._1.drop(1)}")
+             |//END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
          """.stripMargin
       }
       val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
@@ -763,7 +760,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
         val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
-          if (x.tpe == StringType)
+          if (x.tpe == StringType || x.tpe == DateType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
@@ -773,10 +770,26 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
 //          else
             doc"${x.name}"
         }).mkDocument(", ") :: "); return ptr; }"
-        val streamOp = doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => doc"obj.${x.name}").mkDocument(doc""" << "," << """)} << ")"; return os; }"""
-        val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
-          Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
-
+        val streamOp = 
+          doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => {
+              if (x.tpe == DateType)
+                doc"10000 * obj.${x.name}.getYear() + 100 * obj.${x.name}.getMonth() + obj.${x.name}.getDay()"
+              else 
+                doc"obj.${x.name}"
+            }).mkDocument(doc""" << "," << """)} << ")"; return os; }"""
+        val serializer = 
+          if (cgOpts.useExperimentalRuntimeLibrary) {
+            doc"template<class Archive> \nvoid serialize(Archive& ar) const {" :/:
+            Document.nest(4, fields.map(x => 
+              doc"dbtoaster::serialization::serialize(ar, ${x.name}, STRING(${x.name}));").mkDocument("ar << dbtoaster::serialization::kElemSeparator;\n", "\nar << dbtoaster::serialization::kElemSeparator;\n", "\n"
+            )) :/: "}"
+          }
+          else {
+            doc"template<class Archive> \nvoid serialize(Archive& ar) const {" :/:
+            Document.nest(4, fields.map(x =>
+              doc"dbtoaster::serialize_nvp(ar, STRING(${x.name}), ${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n"
+            )) :/: "}"
+          }
         "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn :/: streamOp) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
@@ -884,15 +897,33 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     s"void on_$Cname(" + params.map(i => "const")
   }
 
-  override def emitIncludeHeaders = 
-    s"""|#define SC_GENERATED 1
-        |#include "program_base.hpp"
-        |#include "types.hpp"
-        |#include "hash.hpp"
-        |#include "sc/mmap.hpp"
-        |""".stripMargin +    
+  override def emitIncludeHeaders =
+    "#define SC_GENERATED 1\n" +
+    stringIf(cgOpts.useExperimentalRuntimeLibrary,
+      s"""|#include <sys/time.h>
+          |#include <cstring>
+          |#include <vector>
+          |#include <tuple>
+          |#include "types.hpp"
+          |#include "hash.hpp"
+          |#include "standard_functions.hpp"
+          |#include "event.hpp"
+          |#include "source.hpp"
+          |#include "pardis/mmap.hpp"
+          |""".stripMargin,
+      s"""|#include "program_base.hpp"
+          |#include "types.hpp"
+          |#include "hash.hpp"
+          |#include "standard_functions.hpp"
+          |#include "sc/mmap.hpp"
+          |""".stripMargin) + 
     stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
-    "#include \"sc/ExecutionProfiler.h\"\n"
+    stringIf(cgOpts.useExperimentalRuntimeLibrary,
+      s"""|#include "pardis/execution_profiler.hpp"
+          |using namespace dbtoaster::pardis;
+          |""".stripMargin,
+      "#include \"sc/ExecutionProfiler.h\"\n"
+    )
 
   override protected def emitMapTypes(s0: System) = mapTypes  // genPardis._2
 

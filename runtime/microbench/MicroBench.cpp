@@ -15,9 +15,7 @@
 #include "sc/ExecutionProfiler.h"
 
 using namespace std;
-#include "hpds/pstring.hpp"
-#include "hpds/pstringops.hpp"
-
+#include "types.hpp"
      
 struct SEntry21_IIISSSSSSSSSTSDDDDIIS {
   int isSE;  int _1;  int _2;  int _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  PString _9;  PString _10;  PString _11;  PString _12;  date _13;  PString _14;  double _15;  double _16;  double _17;  double _18;  int _19;  int _20;  PString _21;  SEntry21_IIISSSSSSSSSTSDDDDIIS *prv;  SEntry21_IIISSSSSSSSSTSDDDDIIS *nxt; void* backPtrs[22];

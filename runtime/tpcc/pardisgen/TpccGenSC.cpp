@@ -19,8 +19,6 @@
 #include "sc/ExecutionProfiler.h"
 
 using namespace std;
-//#include "hpds/pstring.hpp"
-//#include "hpds/pstringops.hpp"
 
 #ifdef NUMWARE
   const int numWare = NUMWARE;

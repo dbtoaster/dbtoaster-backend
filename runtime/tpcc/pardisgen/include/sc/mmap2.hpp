@@ -9,6 +9,7 @@
 #include "serialization.hpp"
 #include "macro.hpp"
 #include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
 
 typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 

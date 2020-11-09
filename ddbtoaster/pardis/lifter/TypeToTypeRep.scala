@@ -17,8 +17,7 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeFloat | TypeDouble => runtimeType[Double]
     case TypeChar => runtimeType[Char]
     case TypeString => runtimeType[String]
-    case TypeDate => runtimeType[Long]
-    // case TypeDate => runtimeType[java.util.Date]
+    case TypeDate => runtimeType[java.util.Date]
     case _ => sys.error("No typeRep for "+tp)
   }
 
@@ -66,14 +65,14 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeFloat | TypeDouble => 0.0
     case TypeChar => 0.toChar
     case TypeString => ""
-    case TypeDate => 0L
-    // case TypeDate => new java.util.Date()
+    case TypeDate => new java.util.Date()
     case _ => sys.error("Bad Type")
   }
 
   def zero(m: TypeRep[_]) = m.name match {
     case "Long" => 0L
     case "Double" => 0.0
+    case "Char" => 0.toChar
     case "String" => ""
     case "java.util.Date" => new java.util.Date()
     case _ => sys.error("Bad manifest")

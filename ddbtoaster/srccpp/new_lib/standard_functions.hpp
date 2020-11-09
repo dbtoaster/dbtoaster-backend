@@ -2,6 +2,7 @@
 #define DBTOASTER_STANDARD_FUNCTIONS_H
 
 #include <cstdlib>
+#include <iostream>
 #include <string>
 #include <cmath>
 #include <regex.h>
@@ -83,6 +84,19 @@ inline STRING_TYPE Usubstring(const STRING_TYPE &s, size_t start, size_t len) {
 inline int Upreg_match(const regex_t& preg, const STRING_TYPE& s) {
   auto ret = regexec(&preg, s.c_str(), 0, NULL, 0);
   return (ret == 0) ? 1 : 0;
+}
+
+int Uregexp_match(const char *regex, const STRING_TYPE &s);
+
+int Uregexp_match(const char *regex, const STRING_TYPE &s) {
+  regex_t preg;
+  if (regcomp(&preg, regex, REG_EXTENDED | REG_NOSUB)) {
+    std::cerr << "Error compiling regular expression: /" << regex << "/" << std::endl;
+    exit(-1);
+  }
+  auto ret = regexec(&preg, s.c_str(), 0, NULL, 0);
+  regfree(&preg);
+  return (ret == 0 ? 1 : 0);
 }
 
 // Vector functions

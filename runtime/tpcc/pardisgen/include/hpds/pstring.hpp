@@ -30,12 +30,6 @@
 #include <cstring>
 #include "smhasher/MurmurHash2.hpp"
 
-#ifndef USE_PSTRING
-
-typedef std::string PString;
-
-#else
-
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
 // #define USE_POOL
 
@@ -367,7 +361,5 @@ public:
         return PString(this->data_ + pos, len);
     }
 };
-
-#endif
 
 #endif //POOLED_STRING_H

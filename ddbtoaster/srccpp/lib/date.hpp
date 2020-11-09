@@ -8,13 +8,13 @@ namespace dbtoaster {
         DateType() : day(0), month(0), year(0) { }
         DateType(uint16_t y, uint8_t m, uint8_t d) : day(d), month(m), year(y) { }       
 
-        uint16_t get_year() const { return year; }
+        uint16_t getYear() const { return year; }
 
-        uint8_t get_month() const { return month; }
+        uint8_t getMonth() const { return month; }
 
-        uint8_t get_day() const { return day; }
+        uint8_t getDay() const { return day; }
 
-        uint32_t get_numeric() const { return numeric; }
+        uint32_t getNumeric() const { return numeric; }
 
         friend bool operator==(const DateType& d1, const DateType& d2);
         friend bool operator!=(const DateType& d1, const DateType& d2);

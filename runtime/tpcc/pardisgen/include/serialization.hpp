@@ -62,11 +62,11 @@ inline Archive & serialize(Archive & ar, const STRING_TYPE & t){
     return ar;
 }
 
-template<class Archive>
-inline Archive & serialize(Archive & ar, const DateType & t){
-    ar << 10000 * t.getYear() + 100 * t.getMonth() + t.getDay();
-    return ar;
-}
+// template<class Archive>
+// inline Archive & serialize(Archive & ar, const DateType & t){
+//     ar << 10000 * t.getYear() + 100 * t.getMonth() + t.getDay();
+//     return ar;
+// }
 
 template<typename T, class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T & t, const char* tab){

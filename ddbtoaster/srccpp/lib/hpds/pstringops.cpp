@@ -2,5 +2,5 @@
 
 std::ostream& operator<< (std::ostream& o, PString const& str)
 {
-  return o << "\"" << str.data_ << "\"";
+  return o << "\"" << str.c_str() << "\"";
 }

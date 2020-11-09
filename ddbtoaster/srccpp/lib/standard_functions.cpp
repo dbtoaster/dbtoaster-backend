@@ -13,16 +13,13 @@ namespace standard_functions {
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
 int Udate_year(date d) { 
-  return d.get_year();
-    // return (d / 10000) % 10000;
+  return d.getYear();
 }
 int Udate_month(date d) { 
-  return d.get_month();
-    // return (d / 100) % 100;
+  return d.getMonth();
 }
 int Udate_day(date d) { 
-  return d.get_day();
-    // return d % 100;
+  return d.getDay();
 }
 
 date Udate(const char *c) { //cast_date_from_string
@@ -35,7 +32,7 @@ date Udate(const char *c) { //cast_date_from_string
 
 STRING_TYPE cast_string_from_date(date d) { 
   std::stringstream ss;
-  ss << d.get_year() << d.get_month() << d.get_day();
+  ss << d.getYear() << d.getMonth() << d.getDay();
   return STRING_TYPE(ss.str().c_str());
 }
 

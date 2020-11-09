@@ -1,5 +1,6 @@
 #ifndef GENTRY_HPP
 #define GENTRY_HPP
+#include <ostream>
 #include <unordered_map>
 #include <cmath>
 #include <type_traits>
@@ -44,7 +45,7 @@ void processFullEntry(GE* e, int col, const T& arg, const Args&... args) {
 }
 
 enum AnyType : char {
-    UNDEFINED, INT, LONG, DOUBLE, STRING, CHAR, DATE
+    UNDEFINED, INT, LONG, DOUBLE, STRING
 };
 
 union AnyUnion {
@@ -52,8 +53,6 @@ union AnyUnion {
     long l;
     double d;
     PString s;
-    char c;
-    DateType date;
 
     AnyUnion() {
         memset(this, 0, sizeof (AnyUnion));
@@ -87,11 +86,6 @@ struct Any {
                 break;
             case STRING: os << obj.data.s;
                 break;
-            case CHAR: os << obj.data.c;
-                break;
-            case DATE: os << obj.data.date.getYear() * 10000 +
-                             obj.data.date.getMonth() * 100 +
-                             obj.data.date.getDay();
             default: os << "????";
 
         }
@@ -110,11 +104,13 @@ struct Any {
         if (type != that.type) return false;
         switch (type) {
             case INT: return data.i == that.data.i;
+                break;
             case LONG: return data.l == that.data.l;
+                break;
             case DOUBLE: return fabs(data.d - that.data.d) < 0.01;
+                break;
             case STRING: return data.s == that.data.s;
-            case CHAR: return data.c == that.data.c;
-            case DATE: return data.date == that.data.date;
+                break;
             default: throw std::logic_error("Unknown type");
         }
     }
@@ -124,11 +120,13 @@ struct Any {
         if (type != that.type) return true;
         switch (type) {
             case INT: return data.i != that.data.i;
+                break;
             case LONG: return data.l != that.data.l;
+                break;
             case DOUBLE: return data.d != that.data.d;
+                break;
             case STRING: return !(data.s == that.data.s);
-            case CHAR: return data.c != that.data.c;
-            case DATE: return data.date != that.data.date;
+                break;
             default: throw std::logic_error("Unknown type");
         }
     }
@@ -138,11 +136,13 @@ struct Any {
         if (type != that.type) throw std::logic_error("Cannot compare different types in Any");
         switch (type) {
             case INT: return data.i < that.data.i;
+                break;
             case LONG: return data.l < that.data.l;
+                break;
             case DOUBLE: return data.d < that.data.d;
+                break;
             case STRING: return data.s < that.data.s;
-            case CHAR: return data.c < that.data.c;
-            case DATE: return data.date < that.data.date;
+                break;
             default: throw std::logic_error("Unknown type");
         }
     }
@@ -189,10 +189,6 @@ public:
                     break;
                 case STRING: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.s);
                     break;
-                case CHAR: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.c);
-                  break;
-                case DATE: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.date);
-                  break;
                 default: throw std::logic_error("Cannot serialize AnyType");
             }
         }
@@ -250,16 +246,6 @@ public:
         map[i].data.s = v;
     }
 
-    FORCE_INLINE void update(int i, char v) {
-        map[i].type = CHAR;
-        map[i].data.c = v;
-    }
-
-    FORCE_INLINE void update(int i, DateType v) {
-        map[i].type = DATE;
-        map[i].data.date = v;
-    }
-
     FORCE_INLINE void increase(int i, int v) {
         map[i].data.i += v;
     }
@@ -308,14 +294,6 @@ public:
 
     FORCE_INLINE const PString& getString(int i) const {
         return map.at(i).data.s;
-    }
-
-    FORCE_INLINE const char getChar(int i) const {
-        return map.at(i).data.c;
-    }
-
-    FORCE_INLINE const DateType getDate(int i) const {
-        return map.at(i).data.date;
     }
 
     FORCE_INLINE GenericEntry* copy() const {
