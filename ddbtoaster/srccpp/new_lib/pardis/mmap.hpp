@@ -40,8 +40,6 @@ FORCE_INLINE void clearTempMem() {
 #define INSERT_INTO_MMAP 1
 #define DELETE_FROM_MMAP -1
 
-#define HASH_RES_t size_t
-
 //#define DOUBLE_ZERO_APPROXIMATED
 #define DOUBLE_ZERO_THRESHOLD 1e-8
 
@@ -269,7 +267,7 @@ public:
     typedef IDX_FN IFN;
 
     typedef struct __IdxNode {
-        HASH_RES_t hash;
+        HashType hash;
         T* obj;
         struct __IdxNode* nxt, *prv;
     } IdxNode; //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
@@ -287,7 +285,7 @@ public:
 
     void resize_(size_t new_size) {
         IdxNode *old = buckets_, *n, *n2a, *n2w, *nnext;
-        HASH_RES_t h;
+        HashType h;
         size_t sz = size_;
         buckets_ = new IdxNode[new_size];
         memset(buckets_, 0, sizeof (IdxNode) * new_size);
@@ -557,7 +555,7 @@ public:
     // retrieves the first element equivalent to the key or nullptr if not found
 
     FORCE_INLINE T * get(const T * key) const override {
-        HASH_RES_t h = IDX_FN::hash(*key);
+        HashType h = IDX_FN::hash(*key);
         IdxNode* n = &buckets_[h % size_];
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) return n->obj;
@@ -566,7 +564,7 @@ public:
     }
 
     FORCE_INLINE bool getOrInsert(T* &entry) override {
-        HASH_RES_t h = IDX_FN::hash(*entry);
+        HashType h = IDX_FN::hash(*entry);
         IdxNode* n = &buckets_[h % size_];
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*entry, *n->obj)) {
@@ -613,7 +611,7 @@ public:
     }
 
     FORCE_INLINE void add(T * obj) override {
-        HASH_RES_t h = IDX_FN::hash(*obj);
+        HashType h = IDX_FN::hash(*obj);
         auto idxId = Index<T, V>::idxId;
         if (idxId == 0) { //maintain usedEntry list for efficient for-each
             obj->prv = nullptr;
@@ -911,7 +909,7 @@ public:
     };
 
     struct IdxEquivNode {
-        HASH_RES_t hash;
+        HashType hash;
         IdxN head;
         IdxEquivNode *nxt;
 
@@ -1130,7 +1128,7 @@ public:
     }
 
     FORCE_INLINE IdxEquivNode* sliceRes(const T& key) {
-        HASH_RES_t h = IDX_FN::hash(key);
+        HashType h = IDX_FN::hash(key);
         IdxEquivNode* n = &(buckets_[h % size_]);
         if (n->head.obj)
             do {
@@ -1168,7 +1166,7 @@ public:
     }
 
     FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
-        HASH_RES_t h = IDX_FN::hash(*key);
+        HashType h = IDX_FN::hash(*key);
         IdxEquivNode* e = &(buckets_[h % size_]);
         if (e->head.obj)
             do {
@@ -1195,7 +1193,7 @@ public:
     }
 
     FORCE_INLINE void add(T* obj) override {
-        HASH_RES_t h = IDX_FN::hash(*obj);
+        HashType h = IDX_FN::hash(*obj);
         if (count_ > threshold_) {
 #ifdef NORESIZE
             std::cerr << " NonUnique Hash Index resize size=" << size_ << std::endl;
@@ -1302,7 +1300,7 @@ public:
     }
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
-        HASH_RES_t h = IDX_FN::hash(*key);
+        HashType h = IDX_FN::hash(*key);
         IdxEquivNode* e = &(buckets_[h % size_]);
         std::vector<T*> entries;
         if (e->head.obj)
@@ -1321,7 +1319,7 @@ public:
     }
 
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
-        HASH_RES_t h = IDX_FN::hash(*key);
+        HashType h = IDX_FN::hash(*key);
         std::vector<T*> entries;
         IdxEquivNode* e = &(buckets_[h % size_]);
         if (e->head.obj)
@@ -1483,7 +1481,7 @@ public:
         T** array;
         uint arraySize;
         uint size;
-        HASH_RES_t hash;
+        HashType hash;
         __IdxHeapNode * nxt;
 
         __IdxHeapNode() {
@@ -1702,7 +1700,7 @@ public:
     }
 
     FORCE_INLINE T* get(const T* key) const override {
-        HASH_RES_t h = IDX_FN1::hash(*key);
+        HashType h = IDX_FN1::hash(*key);
         IdxNode n = buckets_[h % size_];
         //        if (n) n->checkHeap(Index<T, V>::idxId);
         while (n != nullptr) {
@@ -1716,7 +1714,7 @@ public:
     }
 
     FORCE_INLINE void add(T* obj) override {
-        HASH_RES_t h = IDX_FN1::hash(*obj);
+        HashType h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
 #ifdef NORESIZE
             std::cerr << " Heap Index resize size=" << size_ << std::endl;
@@ -2055,7 +2053,7 @@ class SlicedMedHeapIndex : public Index<T, V> {
     struct __IdxNode {
         __IdxHeapNode<true> left;
         __IdxHeapNode<false> right;
-        HASH_RES_t hash;
+        HashType hash;
         __IdxNode* nxt;
 
         __IdxNode() {
@@ -2194,7 +2192,7 @@ public:
     }
 
     FORCE_INLINE T* get(const T* key) const override {
-        HASH_RES_t h = IDX_FN1::hash(*key);
+        HashType h = IDX_FN1::hash(*key);
         IdxNode n = buckets_[h % size_];
         while (n != nullptr) {
             T* obj;
@@ -2207,7 +2205,7 @@ public:
     }
 
     FORCE_INLINE void add(T* obj) override {
-        HASH_RES_t h = IDX_FN1::hash(*obj);
+        HashType h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
 #ifdef NORESIZE
             std::cerr << " MedHeap Index resize size=" << size_ << std::endl;
@@ -2388,7 +2386,7 @@ public:
     } IdxEquivNode;
 
     typedef struct __IdxNode {
-        HASH_RES_t hash;
+        HashType hash;
         IdxEquivNode* equivNodes;
         struct __IdxNode* nxt;
     } IdxNode; //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
@@ -2403,7 +2401,7 @@ private:
 
     void resize_(size_t new_size) {
         IdxNode *old = buckets_, *n, *na, *nw, *d;
-        HASH_RES_t h;
+        HashType h;
         size_t sz = size_;
         buckets_ = new IdxNode[new_size];
         memset(buckets_, 0, sizeof (IdxNode) * new_size);
@@ -2709,7 +2707,7 @@ public:
 
     void printTree(const T& key) {
         std::cout << "--------------------------" << std::endl;
-        HASH_RES_t h = IDX_FN1::hash(key);
+        HashType h = IDX_FN1::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
 
         do {
@@ -2730,7 +2728,7 @@ public:
     }
 
     FORCE_INLINE T* get(const T* key) const override {
-        HASH_RES_t h = IDX_FN1::hash(*key);
+        HashType h = IDX_FN1::hash(*key);
         IdxNode* n = &(buckets_[h % size_]);
 
         do {
@@ -2746,7 +2744,7 @@ public:
     // inserts regardless of whether element exists already
 
     FORCE_INLINE void add(T* obj) override {
-        HASH_RES_t h = IDX_FN1::hash(*obj);
+        HashType h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
 #ifdef NORESIZE
             std::cerr << " Tree Index resize size=" << size_ << std::endl;
@@ -2801,7 +2799,7 @@ public:
     // deletes an existing elements (equality by pointer comparison)
 
     FORCE_INLINE void del(T* obj) override {
-        HASH_RES_t h = IDX_FN1::hash(*obj);
+        HashType h = IDX_FN1::hash(*obj);
         IdxNode *n = &buckets_[h % size_];
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
@@ -3000,7 +2998,7 @@ public:
     }
 
     FORCE_INLINE T* get(const T* key) const override {
-        HASH_RES_t idx = IDX_FN::hash(*key);
+        HashType idx = IDX_FN::hash(*key);
         //        if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
         return array[idx];
         //        return nullptr;
@@ -3008,14 +3006,14 @@ public:
 
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
-        HASH_RES_t idx = IDX_FN::hash(*obj);
+        HashType idx = IDX_FN::hash(*obj);
         isUsed[idx] = true;
         obj->backPtrs[idxId] = (void *) &(array[idx]);
         array[idx] = obj;
     }
 
     FORCE_INLINE void del(T* obj) override {
-        HASH_RES_t idx = IDX_FN::hash(*obj);
+        HashType idx = IDX_FN::hash(*obj);
         isUsed[idx] = false;
         array[idx] = nullptr;
     }

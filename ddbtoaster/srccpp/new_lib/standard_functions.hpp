@@ -35,7 +35,7 @@ inline constexpr date Udate(const char *s) {
   return dbtoaster::DateFormat::parse(s);
 }
 
-inline date Udate(const STRING_TYPE &s) { 
+inline date Udate(const StringType &s) { 
   return Udate(s.c_str()); 
 }
 
@@ -50,11 +50,11 @@ inline long Ulistmin(int v1, long v2) {
   return (v1 < v2) ? v1 : v2;
 }
 
-inline DOUBLE_TYPE Ulistmin(int v1, DOUBLE_TYPE v2) {
+inline DoubleType Ulistmin(int v1, DoubleType v2) {
   return (v1 < v2) ? v1 : v2;
 }
 
-inline DOUBLE_TYPE Ulistmin(long v1, DOUBLE_TYPE v2) {
+inline DoubleType Ulistmin(long v1, DoubleType v2) {
   return (v1 < v2) ? v1 : v2;
 }
 
@@ -68,27 +68,27 @@ inline long Ulistmax(int v1, long v2) {
   return (v1 > v2) ? v1 : v2;
 }
 
-inline DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2) {
+inline DoubleType Ulistmax(int v1, DoubleType v2) {
   return (v1 > v2) ? v1 : v2;
 }
 
-inline DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2) {
+inline DoubleType Ulistmax(long v1, DoubleType v2) {
   return (v1 > v2) ? v1 : v2;
 }
 
 // String functions
-inline STRING_TYPE Usubstring(const STRING_TYPE &s, size_t start, size_t len) {
+inline StringType Usubstring(const StringType &s, size_t start, size_t len) {
   return s.substr(start, len);
 }
 
-inline int Upreg_match(const regex_t& preg, const STRING_TYPE& s) {
+inline int Upreg_match(const regex_t& preg, const StringType& s) {
   auto ret = regexec(&preg, s.c_str(), 0, NULL, 0);
   return (ret == 0) ? 1 : 0;
 }
 
-int Uregexp_match(const char *regex, const STRING_TYPE &s);
+int Uregexp_match(const char* regex, const StringType& s);
 
-int Uregexp_match(const char *regex, const STRING_TYPE &s) {
+int Uregexp_match(const char* regex, const StringType& s) {
   regex_t preg;
   if (regcomp(&preg, regex, REG_EXTENDED | REG_NOSUB)) {
     std::cerr << "Error compiling regular expression: /" << regex << "/" << std::endl;
@@ -100,42 +100,42 @@ int Uregexp_match(const char *regex, const STRING_TYPE &s) {
 }
 
 // Vector functions
-inline DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x, DOUBLE_TYPE y, DOUBLE_TYPE z) {
+inline DoubleType Uvec_length(DoubleType x, DoubleType y, DoubleType z) {
   return sqrt(x * x + y * y + z * z);
 }
 
-inline DOUBLE_TYPE Uvec_dot(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                            DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2) {
+inline DoubleType Uvec_dot(DoubleType x1, DoubleType y1, DoubleType z1, 
+                           DoubleType x2, DoubleType y2, DoubleType z2) {
   return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-inline DOUBLE_TYPE Uvector_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                                 DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2) {
+inline DoubleType Uvector_angle(DoubleType x1, DoubleType y1, DoubleType z1, 
+                                DoubleType x2, DoubleType y2, DoubleType z2) {
   return acos(Uvec_dot(x1, y1, z1, x2, y2, z2) / (Uvec_length(x1, y1, z1) * Uvec_length(x2, y2, z2)));
 }
 
-inline void Uvec_cross(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                       DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
-                       DOUBLE_TYPE& x, DOUBLE_TYPE& y, DOUBLE_TYPE& z) {
+inline void Uvec_cross(DoubleType x1, DoubleType y1, DoubleType z1, 
+                       DoubleType x2, DoubleType y2, DoubleType z2,
+                       DoubleType& x, DoubleType& y, DoubleType& z) {
   x = (y1 * z2 - z1 * y2);
   y = (z1 * x2 - x1 * z2);
   z = (x1 * y2 - y1 * x2);
 }
 
-DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                            DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
-                            DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
-                            DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4);
+DoubleType Udihedral_angle(DoubleType x1, DoubleType y1, DoubleType z1, 
+                           DoubleType x2, DoubleType y2, DoubleType z2,
+                           DoubleType x3, DoubleType y3, DoubleType z3,
+                           DoubleType x4, DoubleType y4, DoubleType z4);
 
-DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                            DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
-                            DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
-                            DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4) {
-  DOUBLE_TYPE v1_x, v1_y, v1_z;
-  DOUBLE_TYPE v2_x, v2_y, v2_z;
-  DOUBLE_TYPE v3_x, v3_y, v3_z;
-  DOUBLE_TYPE n1_x, n1_y, n1_z;
-  DOUBLE_TYPE n2_x, n2_y, n2_z;
+DoubleType Udihedral_angle(DoubleType x1, DoubleType y1, DoubleType z1, 
+                           DoubleType x2, DoubleType y2, DoubleType z2,
+                           DoubleType x3, DoubleType y3, DoubleType z3,
+                           DoubleType x4, DoubleType y4, DoubleType z4) {
+  DoubleType v1_x, v1_y, v1_z;
+  DoubleType v2_x, v2_y, v2_z;
+  DoubleType v3_x, v3_y, v3_z;
+  DoubleType n1_x, n1_y, n1_z;
+  DoubleType n2_x, n2_y, n2_z;
   
   v1_x = x2 - x1;
   v1_y = y2 - y1;
@@ -157,38 +157,38 @@ DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1,
 }
 
 template <typename T>
-inline size_t Uhash(T x) {
+inline HashType Uhash(T x) {
   return std::hash<T>{}(x);
 }
 
 // Math operations
 constexpr double kPi = 3.141592653589793238462643383279502884;
 
-inline DOUBLE_TYPE Uradians(DOUBLE_TYPE degree) {
+inline DoubleType Uradians(DoubleType degree) {
   return degree * kPi / 180;
 }
 
-inline DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian) {
+inline DoubleType Udegrees(DoubleType radian) {
   return radian * 180 / kPi;
 }
 
-inline DOUBLE_TYPE Ucos(DOUBLE_TYPE x) {
+inline DoubleType Ucos(DoubleType x) {
   return cos(x);
 }
 
-inline DOUBLE_TYPE Usin(DOUBLE_TYPE x) {
+inline DoubleType Usin(DoubleType x) {
   return sin(x);
 }
 
-inline DOUBLE_TYPE Udiv(DOUBLE_TYPE x) {
+inline DoubleType Udiv(DoubleType x) {
   return (x == 0 ? 0.0 : 1.0 / x);
 }
 
-inline DOUBLE_TYPE Usqrt(DOUBLE_TYPE x) {
+inline DoubleType Usqrt(DoubleType x) {
   return sqrt(x);
 }
 
-inline DOUBLE_TYPE Upow(DOUBLE_TYPE base, DOUBLE_TYPE exponent) {
+inline DoubleType Upow(DoubleType base, DoubleType exponent) {
   return pow(base, exponent);
 }
 
@@ -221,17 +221,17 @@ inline date cast_date(date d) {
   return d;
 }
 
-inline date cast_date(STRING_TYPE s) {
+inline date cast_date(StringType s) {
   return Udate(s.c_str());
 }
 
 template <class T> 
-inline STRING_TYPE cast_string(const T& t) {
+inline StringType cast_string(const T& t) {
   return std::to_string(t);
 }
 
 template <>
-inline STRING_TYPE cast_string(const date& d) {
+inline StringType cast_string(const date& d) {
   return std::to_string(d.getYear() * 10000 + d.getMonth() * 100 + d.getDay());
 }
 

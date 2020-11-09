@@ -143,7 +143,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
       doc"//sliceRes " :\\:
         doc"typedef typename ${self }Idx${idxNum }Type::IFN $IDX_FN;" :\\:
-        doc"HASH_RES_t $h = $IDX_FN::hash($key);" :\\:
+        doc"HashType $h = $IDX_FN::hash($key);" :\\:
         doc"auto* $sym = &($idx.buckets_[$h % $idx.size_]);" :\\:
         doc"if($sym -> head.obj) {" :\\:
         doc"   do {" :\\:
@@ -260,7 +260,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val pre =
         doc"//slice " :\\:
           doc"typedef typename ${self }Idx${idxNum }Type::IFN $IDX_FN;" :\\:
-          doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
+          doc"HashType h$symid = $IDX_FN::hash($key);" :\\:
           doc"std::vector<${i.tp }> entVector$symid;" :\\:
           doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
           doc"if(e$symid->head.obj)" :\\:
@@ -284,7 +284,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val pre =
         doc"//sliceNoUpdate " :\\:
           doc"typedef typename ${self }Idx${idxNum }Type::IFN $IDX_FN;" :\\:
-          doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
+          doc"HashType h$symid = $IDX_FN::hash($key);" :\\:
           doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
           doc"if(e$symid->head.obj)" :\\:
           doc"  do {" :\\:
@@ -409,14 +409,14 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
-    case Constant(null) if exp.tp == DateType => "0"
+    case Constant(null) if exp.tp == DateType => "DateType()"
     case Constant(null) if exp.tp == StringType => "PString()"
     case _ => super.expToDocument(exp)
   }
 
   override def tpeToDocument[T](tp: TypeRep[T]): Document = tp match {
     case StringType => "PString"
-    case DateType => "date"
+    case DateType => "DateType"
     case IR.ArrayType(atp) => doc"$atp*"
     case PardisVariableType(vtp) if vtp == NullType => tpeToDocument(PointerType(GenericEntryType))
     case PardisVariableType(vtp) => tpeToDocument(vtp)

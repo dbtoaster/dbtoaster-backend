@@ -15,8 +15,8 @@ struct rec {
   rec* prv;
 };
 struct IndexFn1 {
-  static HASH_RES_t hash(const rec& a) {
-    return (HASH_RES_t)(a._1*1000+a._2);
+  static HashType hash(const rec& a) {
+    return (HashType)(a._1*1000+a._2);
   }
   static bool equals(const rec& a,const rec& b) { 
     std::cout << "-     in equals" << std::endl;
@@ -27,8 +27,8 @@ struct IndexFn1 {
 };
 
 struct IndexFn2 {
-  static HASH_RES_t hash(const rec& a) {
-    return (HASH_RES_t)a._1;
+  static HashType hash(const rec& a) {
+    return (HashType)a._1;
   }
   static bool equals(const rec& a,const rec& b) { 
     return a._1==b._1;

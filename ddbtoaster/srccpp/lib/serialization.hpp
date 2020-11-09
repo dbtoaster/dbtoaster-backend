@@ -57,7 +57,7 @@ inline Archive & serialize(Archive & ar, const char & t){
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const STRING_TYPE & t){
+inline Archive & serialize(Archive & ar, const StringType & t){
     ar << t.c_str();
     return ar;
 }
@@ -101,7 +101,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const siz
 }
 
 template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab){
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const StringType & t, const char* tab){
     ar << tab << "<"  << name << ">";
     serialize(ar, t);
     ar << "</" << name << ">";

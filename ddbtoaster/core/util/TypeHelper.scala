@@ -16,10 +16,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"      
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "STRING_TYPE"
+      case TypeString => "StringType"
       case TypeCustom(d, ps) =>
         if (ps.isEmpty) d.name
         else d.name + "<" + ps.map(paramToString).mkString(", ") + ">"
@@ -38,10 +38,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "STRING_TYPE&"
+      case TypeString => "StringType&"
       case TypeCustom(_, _) => typeToString(t) + "&"
     }
 
@@ -51,10 +51,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "const STRING_TYPE&"
+      case TypeString => "const StringType&"
       case TypeCustom(_, _) => "const " + typeToString(t) + "&"
     }    
 

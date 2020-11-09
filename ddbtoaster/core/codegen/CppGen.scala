@@ -184,14 +184,14 @@ trait ICppGen extends CodeGen {
 
   // Constant member definition
   // private def isConstexprDefinition(a: Apply) = a match {
-  //   case Apply("STRING_TYPE", TypeString, Const(TypeString, v) :: Nil) => false
+  //   case Apply("StringType", TypeString, Const(TypeString, v) :: Nil) => false
   //   case _ => true
   // }
 
   private def emitConstDefinitions = 
     if (cgOpts.useExperimentalRuntimeLibrary) {
       val s = hoistedConsts.map {
-        case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
+        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
           "static const " + typeToString(tp) + " " + n + ";"
 
         case (Apply(fn, tp, args), n) =>
@@ -215,9 +215,9 @@ trait ICppGen extends CodeGen {
   private def emitPostConstDefinitions = 
     if (!cgOpts.useExperimentalRuntimeLibrary) "" else {
       val s = hoistedConsts.map {
-        case (Apply("STRING_TYPE", tp, Const(TypeString, v) :: Nil), n) =>
+        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
           "const " + typeToString(tp) + " data_t::" + 
-            n + " = STRING_TYPE(\"" + v + "\");"
+            n + " = StringType(\"" + v + "\");"
         case (a, n) => 
           "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
       }.mkString("\n")
@@ -227,7 +227,7 @@ trait ICppGen extends CodeGen {
   // Constant member initialization
   private def emitConstInits = if (cgOpts.useExperimentalRuntimeLibrary) "" else
     hoistedConsts.map { case (Apply(fn, _, args), n) => 
-      if (fn == "STRING_TYPE") {      // string initialization
+      if (fn == "StringType") {      // string initialization
         assert(args.size == 1)        // sanity check
         n + " = " + fn + "(\"" + args.head.asInstanceOf[Const].v + "\");"
       }
@@ -1334,7 +1334,7 @@ trait ICppGen extends CodeGen {
       case TypeLong => co(v + "L")
       case TypeFloat => co(v + "f")
       case TypeChar => co("'" + v + "'")
-      case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co)
+      case TypeString => cpsExpr(Apply("StringType", TypeString, List(ex)), co)
       case _ => co(v)
     }
 
@@ -1419,7 +1419,7 @@ trait ICppGen extends CodeGen {
               val idxName = "HashIndex_" + mapType + "_" + getIndexId(mapName, is)
               val idxFn = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
               s"""|{ //slice
-                  |  const HASH_RES_t ${h0} = ${idxFn}::hash(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}));
+                  |  const HashType ${h0} = ${idxFn}::hash(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}));
                   |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
                   |  ${idxName}::IdxNode* ${n0} = &(${idx0}->buckets_[${h0} & ${idx0}->mask_]);
                   |  ${mapEntryType}* ${e0};

@@ -8,13 +8,11 @@
 
 namespace dbtoaster {
 
-typedef DateType date;
+typedef double DoubleType;
 
-typedef double DOUBLE_TYPE;
+typedef std::size_t HashType;
 
-typedef std::size_t HASH_RES_t;
-
-typedef std::string STRING_TYPE;
+typedef std::string StringType;
 
 template<std::size_t Size>
 using CStringMap = Map<const char*, const char*, Size>;

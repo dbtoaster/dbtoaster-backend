@@ -34,7 +34,7 @@ class PrimaryHashIndex {
  private: 
   struct IdxNode {
     void* obj;
-    HASH_RES_t hash;
+    HashType hash;
     struct IdxNode* next;
   };
   
@@ -65,7 +65,7 @@ class PrimaryHashIndex {
     return entry_count_;
   }
 
-  FORCE_INLINE HASH_RES_t computeHash(const T& key) { 
+  FORCE_INLINE HashType computeHash(const T& key) { 
     return IDX_FN::hash(key); 
   }
 
@@ -74,7 +74,7 @@ class PrimaryHashIndex {
   }
 
   // Returns the first matching element or nullptr if not found
-  FORCE_INLINE T* get(const T& key, const HASH_RES_t h) const {
+  FORCE_INLINE T* get(const T& key, const HashType h) const {
     IdxNode* n = buckets_ + (h & index_mask_);
     do {
       T* t = reinterpret_cast<T*>(n->obj);
@@ -90,7 +90,7 @@ class PrimaryHashIndex {
   }
 
   // Inserts regardless of whether element already exists
-  FORCE_INLINE void insert(T* obj, const HASH_RES_t h) {
+  FORCE_INLINE void insert(T* obj, const HashType h) {
     assert(obj != nullptr);
 
     if (entry_count_ > threshold_) { resize(bucket_count_ << 1); }
@@ -116,7 +116,7 @@ class PrimaryHashIndex {
   }
 
   // Deletes an existing elements (equality by pointer comparison)
-  void erase(const T* obj, const HASH_RES_t h) {
+  void erase(const T* obj, const HashType h) {
     assert(obj != nullptr);
 
     IdxNode *dst = buckets_ + (h & index_mask_);
@@ -309,7 +309,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
  private:
   struct IdxNode {
     LinkedNode node;
-    HASH_RES_t hash;
+    HashType hash;
     struct IdxNode* next;
   };
 
@@ -347,7 +347,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
   }
 
   // returns the first matching node or nullptr if not found
-  LinkedNode* slice(const T& key, const HASH_RES_t h) const {
+  LinkedNode* slice(const T& key, const HashType h) const {
     IdxNode* n = buckets_ + (h & index_mask_);
     do {
       if (n->node.obj != nullptr && h == n->hash &&
@@ -363,7 +363,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
   }
 
   // Inserts regardless of whether element already exists
-  FORCE_INLINE void insert(T* obj, const HASH_RES_t h) {
+  FORCE_INLINE void insert(T* obj, const HashType h) {
     assert(obj != nullptr);
 
     if (entry_count_ > threshold_) { resize(bucket_count_ << 1); }
@@ -402,7 +402,7 @@ class SecondaryHashIndex : public SecondaryIndex<T> {
   }
 
   // Deletes an existing elements (equality by pointer comparison)
-  void erase(const T* obj, const HASH_RES_t h) {
+  void erase(const T* obj, const HashType h) {
     assert(obj != nullptr);
 
     IdxNode* dst = buckets_ + (h & index_mask_);
@@ -568,7 +568,7 @@ class MultiHashMap {
   PRIMARY_INDEX* primary_index_;
   SecondaryIndex<T>** secondary_indexes_;
 
-  FORCE_INLINE void insert(const T& elem, HASH_RES_t h) {
+  FORCE_INLINE void insert(const T& elem, HashType h) {
     T *curr = pool_.acquire(elem);
     curr->prv = nullptr;
     curr->nxt = head;
@@ -581,7 +581,7 @@ class MultiHashMap {
     }
   }
 
-  void erase(T* elem, HASH_RES_t h) { // assume the element is already in the map and mainIdx=0
+  void erase(T* elem, HashType h) { // assume the element is already in the map and mainIdx=0
     assert(elem != nullptr);    // and elem is in the map
 
     T* elem_prv = elem->prv;
@@ -638,7 +638,7 @@ class MultiHashMap {
   }    
     
   void erase(const T& k) {
-    HASH_RES_t h = primary_index_->computeHash(k);
+    HashType h = primary_index_->computeHash(k);
     T *elem = get(k, h);
     if (elem != nullptr) erase(elem, h);
   }
@@ -650,7 +650,7 @@ class MultiHashMap {
   void add(T& k, const V& v) {
     if (Value<V>::isZero(v)) return;
 
-    HASH_RES_t h = primary_index_->computeHash(k);
+    HashType h = primary_index_->computeHash(k);
     T* elem = primary_index_->get(k, h);
     if (elem != nullptr) { 
       elem->__av += v; 
@@ -664,7 +664,7 @@ class MultiHashMap {
   FORCE_INLINE void addOrDelOnZero(T& k, const V& v) {
     if (Value<V>::isZero(v)) return;
 
-    HASH_RES_t h = primary_index_->computeHash(k);
+    HashType h = primary_index_->computeHash(k);
     T* elem = primary_index_->get(k, h);
     if (elem != nullptr) {
       elem->__av += v;
@@ -677,7 +677,7 @@ class MultiHashMap {
   }
 
   FORCE_INLINE void setOrDelOnZero(T& k, const V& v) {
-    HASH_RES_t h = primary_index_->computeHash(k);
+    HashType h = primary_index_->computeHash(k);
     T* elem = primary_index_->get(k, h);
     if (elem != nullptr) {
       if (Value<V>::isZero(v)) { erase(elem, h); }

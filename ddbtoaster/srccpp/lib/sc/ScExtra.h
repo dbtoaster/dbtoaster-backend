@@ -29,7 +29,7 @@ FORCE_INLINE size_t HASH(int x) {
     return x;
 }
 
-FORCE_INLINE size_t HASH(date x) {
+FORCE_INLINE size_t HASH(DateType x) {
     return x.getNumeric();
 }
 
@@ -75,9 +75,6 @@ FORCE_INLINE size_t HASH(const Any& a) {
     }
     return -1;
 }
-char* IntToStrdate(date);
-
-
 
 #endif /* SCEXTRA_H */
 

@@ -16,7 +16,7 @@ namespace dbtoaster {
 
 #define DEFAULT_CHUNK_SIZE 32   // 2^N
 
-// #define HASH_RES_t size_t
+// #define HashType size_t
 
 // #define DOUBLE_ZERO_APPROXIMATED
 // #define DOUBLE_ZERO_THRESHOLD 1e-8
@@ -65,14 +65,14 @@ struct ZeroValue<double>
 template <typename T>
 struct PrimaryIdxNode {
     T* obj;
-    HASH_RES_t hash;
+    HashType hash;
     struct PrimaryIdxNode* nxt;
 };
 
 template <typename T>
 struct SecondaryIdxNode {
     T* obj;
-    HASH_RES_t hash;
+    HashType hash;
     struct SecondaryIdxNode* nxt;       // next slice
     struct SecondaryIdxNode* child;     // next elem in slice
 };
@@ -157,12 +157,12 @@ public:
         return count_; 
     }    
 
-    FORCE_INLINE HASH_RES_t computeHash(const T& key) { 
+    FORCE_INLINE HashType computeHash(const T& key) { 
         return IDX_FN::hash(key); 
     }
 
     // returns the first matching element or nullptr if not found
-    FORCE_INLINE T* get(const T& key, const HASH_RES_t h) const {
+    FORCE_INLINE T* get(const T& key, const HashType h) const {
         IdxNode* n = buckets_ + (h & index_mask_);
         do {
             if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
@@ -177,7 +177,7 @@ public:
     }
 
     // inserts regardless of whether element already exists
-    FORCE_INLINE void insert(T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void insert(T* obj, const HashType h) {
         assert(obj != nullptr);
 
         if (count_ > threshold_) { resize_(size_ << 1); }
@@ -203,7 +203,7 @@ public:
     }        
 
     // deletes an existing elements (equality by pointer comparison)
-    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(const T* obj, const HashType h) {
         assert(obj != nullptr);
 
         IdxNode *dst = buckets_ + (h & index_mask_);
@@ -354,7 +354,7 @@ public:
     }    
 
     // returns the first matching node or nullptr if not found
-    FORCE_INLINE IdxNode* slice(const T& key, const HASH_RES_t h) const {
+    FORCE_INLINE IdxNode* slice(const T& key, const HashType h) const {
         IdxNode* n = buckets_ + (h & index_mask_);
         do {
             if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
@@ -369,7 +369,7 @@ public:
     }
 
     // inserts regardless of whether element already exists
-    FORCE_INLINE void insert(T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void insert(T* obj, const HashType h) {
         assert(obj != nullptr);
 
         if (count_ > threshold_) { resize_(size_ << 1); }
@@ -413,7 +413,7 @@ public:
     }
 
     // deletes an existing elements (equality by pointer comparison)
-    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(const T* obj, const HashType h) {
         assert(obj != nullptr);
 
         IdxNode* dst = buckets_ + (h & index_mask_);
@@ -518,7 +518,7 @@ class MultiHashMap {
 
     const V Zero = ZeroValue<V>().get();
 
-    FORCE_INLINE void insert(const T& elem, HASH_RES_t h) {
+    FORCE_INLINE void insert(const T& elem, HashType h) {
         T *cur = pool.add();
         new (cur) T(elem);
 
@@ -533,7 +533,7 @@ class MultiHashMap {
     }
 
 
-    FORCE_INLINE void del(T* elem, HASH_RES_t h) { // assume the element is already in the map and mainIdx=0
+    FORCE_INLINE void del(T* elem, HashType h) { // assume the element is already in the map and mainIdx=0
         assert(elem != nullptr);    // and elem is in the map
 
         T* elemPrv = elem->prv;
@@ -607,7 +607,7 @@ class MultiHashMap {
     }    
     
     FORCE_INLINE void del(const T& k) {
-        HASH_RES_t h = primary_index->computeHash(k);
+        HashType h = primary_index->computeHash(k);
         T *elem = get(k, h);
         if (elem != nullptr) { del(elem, h); }
     }
@@ -619,7 +619,7 @@ class MultiHashMap {
     FORCE_INLINE void add(T& k, const V& v) {
         if (ZeroValue<V>().isZero(v)) { return; }
 
-        HASH_RES_t h = primary_index->computeHash(k);
+        HashType h = primary_index->computeHash(k);
         T* elem = primary_index->get(k, h);
         if (elem != nullptr) { 
             elem->__av += v; 
@@ -633,7 +633,7 @@ class MultiHashMap {
     FORCE_INLINE void addOrDelOnZero(T& k, const V& v) {
         if (ZeroValue<V>().isZero(v)) { return; }
 
-        HASH_RES_t h = primary_index->computeHash(k);
+        HashType h = primary_index->computeHash(k);
         T* elem = primary_index->get(k, h);
         if (elem != nullptr) {
             elem->__av += v;
@@ -646,7 +646,7 @@ class MultiHashMap {
     }
 
     FORCE_INLINE void setOrDelOnZero(T& k, const V& v) {
-        HASH_RES_t h = primary_index->computeHash(k);
+        HashType h = primary_index->computeHash(k);
         T* elem = primary_index->get(k, h);
         if (elem != nullptr) {
             if (ZeroValue<V>().isZero(v)) { del(elem, h); }
@@ -693,33 +693,33 @@ class Index {
 
     virtual T *get(const T &key) const = 0;
 
-    virtual T *get(const T &key, const HASH_RES_t h) const = 0;
+    virtual T *get(const T &key, const HashType h) const = 0;
 
     virtual const V& getValueOrDefault(const T &key) const = 0;
 
-    virtual const V& getValueOrDefault(const T &key, const HASH_RES_t hash_val) const = 0;
+    virtual const V& getValueOrDefault(const T &key, const HashType hash_val) const = 0;
 
     virtual int setOrDelOnZero(const T &k, const V &v) = 0;
 
-    virtual int setOrDelOnZero(const T &k, const V &v, const HASH_RES_t hash_val0) = 0;
+    virtual int setOrDelOnZero(const T &k, const V &v, const HashType hash_val0) = 0;
 
     virtual int addOrDelOnZero(const T &k, const V &v) = 0;
 
-    virtual int addOrDelOnZero(const T &k, const V &v, const HASH_RES_t hash_val) = 0;
+    virtual int addOrDelOnZero(const T &k, const V &v, const HashType hash_val) = 0;
 
     virtual void add(T &obj) = 0;
 
     virtual void add(T *obj) = 0;
 
-    virtual void add(T *obj, const HASH_RES_t h) = 0;
+    virtual void add(T *obj, const HashType h) = 0;
 
     virtual void del(const T &obj) = 0;
 
-    virtual void del(const T &obj, const HASH_RES_t h) = 0;
+    virtual void del(const T &obj, const HashType h) = 0;
 
     virtual void del(const T *obj) = 0;
 
-    virtual void del(const T *obj, const HASH_RES_t h) = 0;
+    virtual void del(const T *obj, const HashType h) = 0;
 
     virtual void foreach (std::function<void(const T &)> f) const = 0;
 
@@ -729,7 +729,7 @@ class Index {
 
     virtual void clear() = 0;
 
-    virtual HASH_RES_t computeHash(const T &key) = 0;
+    virtual HashType computeHash(const T &key) = 0;
 
     virtual ~Index(){};
 };
@@ -739,7 +739,7 @@ class HashIndex : public Index<T, V>
   public:
     typedef struct __IdxNode 
     {
-      HASH_RES_t hash;
+      HashType hash;
       T *obj;
       struct __IdxNode *nxt;
       // struct __IdxNode *child;
@@ -758,7 +758,7 @@ class HashIndex : public Index<T, V>
 
     // void add_(T* obj) { // does not resize the bucket array, does not maintain
     // count
-    //   HASH_RES_t h = IDX_FN::hash(*obj);
+    //   HashType h = IDX_FN::hash(*obj);
     //   IdxNode* n = &buckets_[h & mask_];
     //   if (n->obj) {
     //     IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a
@@ -772,7 +772,7 @@ class HashIndex : public Index<T, V>
 
     void resize_(size_t new_size) {
       IdxNode *old = buckets_, *n, *na, *nw, *d;
-      HASH_RES_t h;
+      HashType h;
       size_t sz = size_;
       buckets_ = new IdxNode[new_size];
       memset(buckets_, 0, sizeof(IdxNode) * new_size);
@@ -842,7 +842,7 @@ class HashIndex : public Index<T, V>
 
     // retrieves the first element equivalent to the key or nullptr if not found
     inline virtual T *get(const T &key) const {
-      HASH_RES_t h = IDX_FN::hash(key);
+      HashType h = IDX_FN::hash(key);
       IdxNode *n = &buckets_[h & mask_];
       do {
         if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj))
@@ -851,7 +851,7 @@ class HashIndex : public Index<T, V>
       return nullptr;
     }
 
-    inline virtual T *get(const T &key, const HASH_RES_t h) const {
+    inline virtual T *get(const T &key, const HashType h) const {
       IdxNode *n = &buckets_[h & mask_];
       do {
         if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj))
@@ -864,11 +864,11 @@ class HashIndex : public Index<T, V>
     FORCE_INLINE virtual void add(T &obj) { add(&obj); }
 
     FORCE_INLINE virtual void add(T *obj) {
-      HASH_RES_t h = IDX_FN::hash(*obj);
+      HashType h = IDX_FN::hash(*obj);
       add(obj, h);
     }
 
-    FORCE_INLINE virtual void add(T *obj, const HASH_RES_t h) {
+    FORCE_INLINE virtual void add(T *obj, const HashType h) {
       if (count_ > threshold_)
         resize_(size_ << 1);
       size_t b = h & mask_;
@@ -945,16 +945,16 @@ class HashIndex : public Index<T, V>
       if (ptr)
         del(ptr);
     }
-    FORCE_INLINE virtual void del(const T &obj, const HASH_RES_t h) {
+    FORCE_INLINE virtual void del(const T &obj, const HashType h) {
       const T *ptr = get(obj, h);
       if (ptr)
         del(ptr, h);
     }
     FORCE_INLINE virtual void del(const T *obj) {
-      HASH_RES_t h = IDX_FN::hash(*obj);
+      HashType h = IDX_FN::hash(*obj);
       del(obj, h);
     }
-    FORCE_INLINE virtual void del(const T *obj, const HASH_RES_t h) {
+    FORCE_INLINE virtual void del(const T *obj, const HashType h) {
       IdxNode *n = &buckets_[h & mask_];
       IdxNode *prev = nullptr, *next; // previous and next pointers
       do {
@@ -1001,7 +1001,7 @@ class HashIndex : public Index<T, V>
     }
 
     inline virtual void slice(const T &key, std::function<void(const T &)> f) {
-      HASH_RES_t h = IDX_FN::hash(key);
+      HashType h = IDX_FN::hash(key);
       IdxNode *n = &(buckets_[h & mask_]);
       do {
         if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
@@ -1039,12 +1039,12 @@ class HashIndex : public Index<T, V>
 
     FORCE_INLINE virtual size_t count() { return count_; }
 
-    FORCE_INLINE virtual HASH_RES_t computeHash(const T &key) {
+    FORCE_INLINE virtual HashType computeHash(const T &key) {
       return IDX_FN::hash(key);
     }
 
     inline virtual const V& getValueOrDefault(const T &key) const {
-      HASH_RES_t h = IDX_FN::hash(key);
+      HashType h = IDX_FN::hash(key);
       IdxNode *n = &buckets_[h & mask_];
       do {
         T *lkup = n->obj;
@@ -1054,7 +1054,7 @@ class HashIndex : public Index<T, V>
       return zero;
     }
 
-    inline virtual const V& getValueOrDefault(const T &key, HASH_RES_t h) const {
+    inline virtual const V& getValueOrDefault(const T &key, HashType h) const {
       IdxNode *n = &buckets_[h & mask_];
       do {
         T *lkup = n->obj;
@@ -1065,7 +1065,7 @@ class HashIndex : public Index<T, V>
     }
 
     inline virtual int setOrDelOnZero(const T &k, const V &v) {
-      HASH_RES_t h = IDX_FN::hash(k);
+      HashType h = IDX_FN::hash(k);
       IdxNode *n = &buckets_[h & mask_];
       do {
         T *lkup = n->obj;
@@ -1083,7 +1083,7 @@ class HashIndex : public Index<T, V>
       return 0;
     }
 
-    inline virtual int setOrDelOnZero(const T &k, const V &v, HASH_RES_t h) {
+    inline virtual int setOrDelOnZero(const T &k, const V &v, HashType h) {
       IdxNode *n = &buckets_[h & mask_];
       do {
         T *lkup = n->obj;
@@ -1103,7 +1103,7 @@ class HashIndex : public Index<T, V>
 
     inline virtual int addOrDelOnZero(const T &k, const V &v) {
       if (!ZeroValue<V>().isZero(v)) {
-        HASH_RES_t h = IDX_FN::hash(k);
+        HashType h = IDX_FN::hash(k);
         IdxNode *n = &buckets_[h & mask_];
         do {
           T *lkup = n->obj;
@@ -1121,7 +1121,7 @@ class HashIndex : public Index<T, V>
       return 0;
     }
 
-    inline virtual int addOrDelOnZero(const T &k, const V &v, HASH_RES_t h) {
+    inline virtual int addOrDelOnZero(const T &k, const V &v, HashType h) {
       if (!ZeroValue<V>().isZero(v)) {
         IdxNode *n = &buckets_[h & mask_];
         do {
@@ -1176,7 +1176,7 @@ class MultiHashMap {
       return index[0]->get(key);
     } // assume mainIdx=0
 
-    FORCE_INLINE T *get(const T &key, const HASH_RES_t h, const size_t idx = 0) const {
+    FORCE_INLINE T *get(const T &key, const HashType h, const size_t idx = 0) const {
       return index[idx]->get(key, h);
     }
 
@@ -1224,7 +1224,7 @@ class MultiHashMap {
         index[i]->add(cur);
     }
     
-    FORCE_INLINE virtual void insert_nocheck(const T &elem, HASH_RES_t h) { // assume mainIdx=0
+    FORCE_INLINE virtual void insert_nocheck(const T &elem, HashType h) { // assume mainIdx=0
       T *cur = pool.add();
       // cur->~T();
       // *cur=std::move(elem);
@@ -1245,7 +1245,7 @@ class MultiHashMap {
         del(elem);
     }
 
-    FORCE_INLINE void del(const T &key, HASH_RES_t h, int idx = 0) {
+    FORCE_INLINE void del(const T &key, HashType h, int idx = 0) {
       T *elem = get(key, h, idx);
       if (elem != nullptr)
         del(elem, h);
@@ -1271,7 +1271,7 @@ class MultiHashMap {
       pool.del(elem);
     }
 
-    FORCE_INLINE void del(T *elem, HASH_RES_t h) { // assume the element is already in the map and mainIdx=0
+    FORCE_INLINE void del(T *elem, HashType h) { // assume the element is already in the map and mainIdx=0
       T *elemPrv = elem->prv, *elemNxt = elem->nxt;
       if (elemPrv)
         elemPrv->nxt = elemNxt;
@@ -1325,7 +1325,7 @@ class MultiHashMap {
     }
 
     inline virtual void setOrDelOnZero(T &k, const V &v, const int mainIdx = 0) {
-      HASH_RES_t h = index[mainIdx]->computeHash(k);
+      HashType h = index[mainIdx]->computeHash(k);
       switch (index[mainIdx]->setOrDelOnZero(k, v, h)) {
       case INSERT_INTO_MMAP:
         k.__av = v;
@@ -1340,7 +1340,7 @@ class MultiHashMap {
     }
 
     inline virtual void addOrDelOnZero(T &k, const V &v, const int mainIdx = 0) {
-      HASH_RES_t h = index[mainIdx]->computeHash(k);
+      HashType h = index[mainIdx]->computeHash(k);
       switch (index[mainIdx]->addOrDelOnZero(k, v, h)) {
       case INSERT_INTO_MMAP:
         k.__av = v;

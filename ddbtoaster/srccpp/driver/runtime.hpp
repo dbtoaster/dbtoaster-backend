@@ -12,15 +12,15 @@
 #include "hpds/pstring.hpp"
 #include "hpds/KDouble.hpp"
 
-#define STRING(s) #s
+// #define STRING(s) #s
 
-#ifndef STRING_TYPE_STR
-#define STRING_TYPE_STR STRING(STRING_TYPE)
-#endif //STRING_TYPE_STR
+// #ifndef STRING_TYPE_STR
+// #define STRING_TYPE_STR STRING(StringType)
+// #endif //STRING_TYPE_STR
 
-#ifndef DOUBLE_TYPE_STR
-#define DOUBLE_TYPE_STR STRING(DOUBLE_TYPE)
-#endif //DOUBLE_TYPE_STR
+// #ifndef DOUBLE_TYPE_STR
+// #define DOUBLE_TYPE_STR STRING(DoubleType)
+// #endif //DOUBLE_TYPE_STR
 
 #define PROCESS_RELATIONS_SEQUENTIALLY 0
 #define MIX_INPUT_TUPLES 2

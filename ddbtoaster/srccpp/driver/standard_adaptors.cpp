@@ -153,7 +153,7 @@ csv_adaptor::interpret_event(char* data)
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
 			case 'l': tuple[tupleIdx++]=std::shared_ptr<long>(new long(atol(field_start))); break;
-			case 'f': tuple[tupleIdx++]=std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(atof(field_start))); break;
+			case 'f': tuple[tupleIdx++]=std::shared_ptr<DoubleType>(new DoubleType(atof(field_start))); break;
 			case 'h': tuple[tupleIdx++]=std::shared_ptr<int>(new int(static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0))));
 					  break;
 			case 'd': 
@@ -168,7 +168,7 @@ csv_adaptor::interpret_event(char* data)
 							d = atoi(date_d_field);
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
 								// tuple[tupleIdx++]=std::shared_ptr<date>(new date(y*10000+m*100+d));
-								tuple[tupleIdx++]=std::shared_ptr<date>(new date(y, m, d));
+								tuple[tupleIdx++]=std::shared_ptr<DateType>(new DateType(y, m, d));
 							}
         					// std::cout << "  date is => " << date(y*10000+m*100+d) << std::endl;
 						} else valid = false;
@@ -182,7 +182,7 @@ csv_adaptor::interpret_event(char* data)
   				tuple[tupleIdx++]=std::shared_ptr<char>(new char(field_start[0])); 
   				break;
 			case 's': 
-			    tuple[tupleIdx++]=std::shared_ptr<STRING_TYPE>(new STRING_TYPE(field_start)); 
+			    tuple[tupleIdx++]=std::shared_ptr<StringType>(new StringType(field_start)); 
 			    break;
 			default: valid = false; break;
 		}
@@ -252,16 +252,16 @@ order_book_tuple& order_book_tuple::operator=(order_book_tuple& other) {
 }
 
 void order_book_tuple::operator()(event_args_t& e) {
-	if (e.size() > 0) e[0] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(t)); 
-	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(t)));
+	if (e.size() > 0) e[0] = std::shared_ptr<DoubleType>(new DoubleType(t)); 
+	else e.push_back(std::shared_ptr<DoubleType>(new DoubleType(t)));
 	if (e.size() > 1) e[1] = std::shared_ptr<long>(new long(id)); 
 	else e.push_back(std::shared_ptr<long>(new long(id)));
 	if (e.size() > 2) e[2] = std::shared_ptr<long>(new long(broker_id)); 
 	else e.push_back(std::shared_ptr<long>(new long(broker_id)));
-	if (e.size() > 3) e[3] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(volume)); 
-	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(volume)));
-	if (e.size() > 4) e[4] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(price)); 
-	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(price)));
+	if (e.size() > 3) e[3] = std::shared_ptr<DoubleType>(new DoubleType(volume)); 
+	else e.push_back(std::shared_ptr<DoubleType>(new DoubleType(volume)));
+	if (e.size() > 4) e[4] = std::shared_ptr<DoubleType>(new DoubleType(price)); 
+	else e.push_back(std::shared_ptr<DoubleType>(new DoubleType(price)));
 }
 
 /******************************************************************************
