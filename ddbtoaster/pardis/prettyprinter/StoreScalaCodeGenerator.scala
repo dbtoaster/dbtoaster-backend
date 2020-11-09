@@ -64,6 +64,10 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
+  override def tpeToDocument[T](tp: TypeRep[T]): Document = tp match {
+    case DateType => "Long"
+    case _ => super.tpeToDocument(tp)
+  }
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
     case IfThenElse(c, ift, iff) =>

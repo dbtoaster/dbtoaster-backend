@@ -65,7 +65,8 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeFloat | TypeDouble => 0.0
     case TypeChar => 0.toChar
     case TypeString => ""
-    case TypeDate => new java.util.Date()
+    case TypeDate => 0L
+    // case TypeDate => new java.util.Date()
     case _ => sys.error("Bad Type")
   }
 
@@ -74,7 +75,8 @@ trait TypeToTypeRep { this: StoreDSL =>
     case "Double" => 0.0
     case "Char" => 0.toChar
     case "String" => ""
-    case "java.util.Date" => new java.util.Date()
+    case "java.util.Date" => 0L
+    // case "java.util.Date" => new java.util.Date()
     case _ => sys.error("Bad manifest")
   }
 }
