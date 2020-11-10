@@ -113,7 +113,7 @@ trait StoreDSL extends
     case BooleanType => unit(false)
     case CharType => unit(scala.Char.MinValue)  
     case StringType => unit[String](null)
-    case DateType => unit[Long](0)
+    case DateType => unit[Date](null)
     case PardisVariableType(ctp) => nullValue(ctp)
     case NullType => unit(null)
     case _ => System.err.println(s"Type $tp doesn't have nullValue defined"); unit(null)

@@ -17,25 +17,25 @@ namespace dbtoaster {
 namespace standard_functions {
 
 // Date extraction functions
-inline constexpr unsigned int Udate_year(date d) {
+inline constexpr unsigned int Udate_year(DateType d) {
   return d.getYear();
 }
 
-inline constexpr unsigned int Udate_month(date d) {
+inline constexpr unsigned int Udate_month(DateType d) {
   return d.getMonth();
 }
 
-inline constexpr unsigned int Udate_day(date d) {
+inline constexpr unsigned int Udate_day(DateType d) {
   return d.getDay();
 }
 
 // Date conversion functions
-inline constexpr date Udate(const char *s) {
+inline constexpr DateType Udate(const char *s) {
   // expected date format YYYY-MM-DD
   return dbtoaster::DateFormat::parse(s);
 }
 
-inline date Udate(const StringType &s) { 
+inline DateType Udate(const StringType &s) { 
   return Udate(s.c_str()); 
 }
 
@@ -217,11 +217,11 @@ inline double cast_double(T t) {
   return static_cast<double>(t);
 }
 
-inline date cast_date(date d) {
+inline DateType cast_date(DateType d) {
   return d;
 }
 
-inline date cast_date(StringType s) {
+inline DateType cast_date(StringType s) {
   return Udate(s.c_str());
 }
 
@@ -231,7 +231,7 @@ inline StringType cast_string(const T& t) {
 }
 
 template <>
-inline StringType cast_string(const date& d) {
+inline StringType cast_string(const DateType& d) {
   return std::to_string(d.getYear() * 10000 + d.getMonth() * 100 + d.getDay());
 }
 

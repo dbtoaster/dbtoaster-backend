@@ -18,7 +18,8 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
-    case c@Constant(q) if c.tp == UnitType => Document.empty
+    case Constant(null) if exp.tp == DateType => "0L"
+    case Constant(q) if exp.tp == UnitType => Document.empty
     case Constant(b: Boolean) => s"$b"
     case Constant(l: List[Any]) =>
       val tp = exp.tp.typeArguments(0).asInstanceOf[TypeRep[Any]]
