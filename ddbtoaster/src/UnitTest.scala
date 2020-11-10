@@ -451,9 +451,9 @@ object UnitTest {
   def testQueryCpp(sqlFile: String, queryName: String, dataset: String,
                    lang: String,  dir: File, sourceM3: String) = {
     val langID = lang match {
-        case LANG_CPP_VANILLA => "VCpp"
+        case LANG_CPP_VANILLA => "Cpp"
         case LANG_CPP_LMS => "LMSCpp"
-        case LANG_CPP_PARDIS => "Cpp"
+        case LANG_CPP_PARDIS => "PCpp"
         case _ => sys.error("Unknown lang: " + lang)
       }
     val exeFile = dir.getPath + "/" + queryName + langID
