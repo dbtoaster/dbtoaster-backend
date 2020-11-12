@@ -2,6 +2,7 @@
 #define DBTOASTER_HASH_HPP
 
 #include "macro.hpp"
+#include "hpds/KDouble.hpp"
 #include "types.hpp"
 
 extern std::hash<double> double_hasher;
