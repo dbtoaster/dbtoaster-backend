@@ -88,6 +88,8 @@ object Functions {
 
   def Ucos(x: Double): Double = Math.cos(x)
 
+  def Usin(x: Double): Double = Math.sin(x)
+
   def Uround(x: Double) = Math.round(x)
 
   def Uvector_angle(x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double): Double = 

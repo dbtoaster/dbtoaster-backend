@@ -28,18 +28,16 @@
 #include <string>
 #include <iostream>
 #include <cstring>
-#include "../smhasher/MurmurHash2.hpp"
-#include "string.hpp"
+#include "smhasher/MurmurHash2.hpp"
 
-#ifndef STRING_TYPE
-  //#define STRING_TYPE PString
-  #define STRING_TYPE PooledRefCountedString
-#endif //STRING_TYPE
+#ifndef USE_PSTRING
 
+typedef std::string PString;
 
-// #define USE_POOL
+#else
 
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
+// #define USE_POOL
 
 struct PString {
 public:
@@ -135,26 +133,26 @@ public:
     }
 
     ~PString() {
-//        if (data_) {
-//            if ((--(*ptr_count_)) == 0) {
-//#ifdef USE_POOL
-//                pool_.del(getNumCells(size_), data_);
-//#else
-//                delete[] data_;
-//#endif //USE_POOL
-//                data_ = nullptr;
-//                delete ptr_count_;
-//                ptr_count_ = nullptr;
-//            }
-//        }
+       if (data_) {
+           if ((--(*ptr_count_)) == 0) {
+#ifdef USE_POOL
+               pool_.del(getNumCells(size_), data_);
+#else
+               delete[] data_;
+#endif //USE_POOL
+               data_ = nullptr;
+               delete ptr_count_;
+               ptr_count_ = nullptr;
+           }
+       }
     }
 
-//    PString copy() const {
-//        if (data_)
-//            return PString(data_, size_ - 1);
-//        else
-//            return PString();
-//    }
+    PString copy() const {
+        if (data_)
+           return PString(data_, size_ - 1);
+        else
+           return PString();
+    }
 
     void recomputeSize() {
         if (!ptr_count_)
@@ -369,5 +367,7 @@ public:
         return PString(this->data_ + pos, len);
     }
 };
+
+#endif
 
 #endif //POOLED_STRING_H

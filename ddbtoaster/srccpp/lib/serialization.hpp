@@ -26,46 +26,52 @@ namespace dbtoaster {
 typedef std::ostream xml_oarchive;
 
 template<typename T, class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const T & t){
-    t.serialize(ar, version);
+inline Archive & serialize(Archive & ar, const T & t){
+    t.serialize(ar);
     ar << "\n";
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const long & t){
+inline Archive & serialize(Archive & ar, const long & t){
     ar << t;
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const int & t){
+inline Archive & serialize(Archive & ar, const int & t){
     ar << t;
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const size_t & t){
+inline Archive & serialize(Archive & ar, const size_t & t){
     ar << t;
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const char & t){
+inline Archive & serialize(Archive & ar, const char & t){
     ar << t;
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const STRING_TYPE & t){
+inline Archive & serialize(Archive & ar, const StringType & t){
     ar << t.c_str();
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize(Archive & ar, const DateType & t){
+    ar << 10000 * t.getYear() + 100 * t.getMonth() + t.getDay();
     return ar;
 }
 
 template<typename T, class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << tab << "</" << name << ">";
     return ar;
 }
@@ -73,7 +79,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T &
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -81,7 +87,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const lon
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const int & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -89,21 +95,21 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const int
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const size_t & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab){
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const StringType & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const float & t){
+inline Archive & serialize(Archive & ar, const float & t){
     ar << std::setprecision(15) << t;
     return ar;
 }
@@ -111,7 +117,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const float
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const float & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -120,7 +126,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const flo
 #if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const KDouble & t){
+inline Archive & serialize(Archive & ar, const KDouble & t){
     ar << std::setprecision(15) << t;
     return ar;
 }
@@ -128,7 +134,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const KDoub
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const KDouble & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -136,7 +142,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const KDo
 #elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_BOOST
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const cpp_dec_float_1000 & t){
+inline Archive & serialize(Archive & ar, const cpp_dec_float_1000 & t){
     ar << std::setprecision(15) << t;
     return ar;
 }
@@ -144,7 +150,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const cpp_d
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const boost::multiprecision::cpp_dec_float_100 & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -152,7 +158,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const boo
 #elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_STD_LONG_DOUBLE
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const long double & t){
+inline Archive & serialize(Archive & ar, const long double & t){
     ar << std::setprecision(15) << t;
     return ar;
 }
@@ -160,7 +166,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const long 
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long double & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -168,7 +174,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const lon
 #else
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const double & t){
+inline Archive & serialize(Archive & ar, const double & t){
     ar << std::setprecision(15) << t;
     return ar;
 }
@@ -176,7 +182,7 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const doubl
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const double & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }
@@ -186,7 +192,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const dou
 template<typename T, class Archive>
 inline Archive & serialize_nvp(Archive & ar, const char * name, const T & t){
     ar << "<"  << name << ">";
-    serialize(ar, 0, t);
+    serialize(ar, t);
     ar << "</" << name << ">";
     return ar;
 }

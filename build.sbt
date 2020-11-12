@@ -4,7 +4,7 @@ lazy val commonSettings = Seq(
   version := "2.3",
 
   // --------- Compilation options
-  scalaVersion := "2.11.11",    // LMS requires 2.11.2 --> root uses the same
+  scalaVersion := "2.11.12",    // LMS requires 2.11.2 --> root uses the same
   javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target", "1.6"),
   scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-target:jvm-1.6" /* , "-Yinline-warnings" */),
 

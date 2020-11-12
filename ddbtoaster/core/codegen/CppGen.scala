@@ -10,7 +10,7 @@ object CppGen {
   val VALUE_NAME = "__av"
 }
 
-class CppGen(val cgOpts: CodeGenOptions) extends ICppGen
+class CppGen(val cgOpts: CodeGenOptions) extends ICppGen 
 
 trait ICppGen extends CodeGen {
 
@@ -20,6 +20,9 @@ trait ICppGen extends CodeGen {
   import ddbt.ast._
   import ddbt.ast.M3._ 
   import CppGen._
+
+  val useExperimentalHashMap: Boolean =
+    cgOpts.useExperimentalHashMap || cgOpts.useExperimentalRuntimeLibrary
 
   private var deltaRelationNames = Set[String]()
   
@@ -46,6 +49,9 @@ trait ICppGen extends CodeGen {
 
   protected def queryRefTypeToString(q: Query) = 
     if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else q.name + "_map&"
+
+  protected def queryReturnTypeToString(q: Query) = 
+    if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else "const " + q.name + "_map&"
 
   protected def cmpToString(op: OpCmp) = op match {
     case OpEq => "=="
@@ -77,7 +83,7 @@ trait ICppGen extends CodeGen {
 
   protected def emitTempMapDefinitions = {
     val s = tempMapDefinitions.map { case (n, (ksTp, vTp)) =>
-      if (cgOpts.useExperimentalHashMap)
+      if (useExperimentalHashMap)
           "MultiHashMap<" + tempEntryTypeName(ksTp, vTp) + ", " + typeToString(vTp) + 
             ", PrimaryHashIndex<" + tempEntryTypeName(ksTp, vTp) + "> > " + n + ";"
       else 
@@ -109,12 +115,16 @@ trait ICppGen extends CodeGen {
       val sModFnParams = ksTpIdx.map { case (t, i) => "const " + refTypeToString(t) + " c" + (i + 1) }.mkString(", ")
       val sModFnBody = ksTpIdx.map { case (_, i) => "_" + (i + 1) + " = c" + (i + 1) + ";"}.mkString(" ")
       val sEqualFnBody = ksTpIdx.map { case (_, i) => "(x._" + (i + 1) + " == y._" + (i + 1) + ")" }.mkString(" && ")
-      val sHashFnBody = ksTpIdx.map { case (_, i) => "hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")
+      val sHashFnBody = 
+        // if (ksTp.forall(isPrimitiveType))
+        //   s"h = MurmurHash64A(&e, sizeof(${name}) - sizeof(e.${VALUE_NAME}) - sizeof(e.nxt) - sizeof(e.prv), 0);"
+        // else
+          ksTpIdx.map { case (_, i) => "hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")
 
       s"""|struct ${name} {
           |  ${sKeyDefs} ${sValueDef} ${name}* nxt; ${name}* prv;
           |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
-          |  FORCE_INLINE ${name}& modify(${sModFnParams}) { ${sModFnBody} return *this; }
+          |  ${name}& modify(${sModFnParams}) { ${sModFnBody} return *this; }
           |  static bool equals(const ${name} &x, const ${name} &y) {
           |    return (${sEqualFnBody});
           |  }
@@ -173,29 +183,64 @@ trait ICppGen extends CodeGen {
   // ---------- Methods manipulating with constants
 
   // Constant member definition
-  private def emitConstDefinitions = {
-    val s = hoistedConsts.map { case (a, n) =>
-      "/* const static */ " + typeToString(a.tp) + " " + n + ";"
-    }.mkString("\n")
+  // private def isConstexprDefinition(a: Apply) = a match {
+  //   case Apply("StringType", TypeString, Const(TypeString, v) :: Nil) => false
+  //   case _ => true
+  // }
 
-    stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
-  }
+  private def emitConstDefinitions = 
+    if (cgOpts.useExperimentalRuntimeLibrary) {
+      val s = hoistedConsts.map {
+        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
+          "static const " + typeToString(tp) + " " + n + ";"
+
+        case (Apply(fn, tp, args), n) =>
+          val sArgs = args.map {
+            case Const(TypeString, v) => "\"" + v + "\""
+            case a => cpsExpr(a)
+          }.mkString(", ")
+          "static constexpr " + typeToString(tp) + " " +
+            n + " = U" + fn + "(" + sArgs + ");"
+      }.mkString("\n")
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
+    }
+    else {
+      val s = hoistedConsts.map { case (a, n) =>
+        "/* const static */ " + typeToString(a.tp) + " " + n + ";"
+      }.mkString("\n")
+
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)      
+    }
+
+  private def emitPostConstDefinitions = 
+    if (!cgOpts.useExperimentalRuntimeLibrary) "" else {
+      val s = hoistedConsts.map {
+        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
+          "const " + typeToString(tp) + " data_t::" + 
+            n + " = StringType(\"" + v + "\");"
+        case (a, n) => 
+          "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
+      }.mkString("\n")
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
+    }
 
   // Constant member initialization
-  private def emitConstInits = 
+  private def emitConstInits = if (cgOpts.useExperimentalRuntimeLibrary) "" else
     hoistedConsts.map { case (Apply(fn, _, args), n) => 
-      if (fn == "STRING_TYPE") {      // string initialization
+      if (fn == "StringType") {      // string initialization
         assert(args.size == 1)        // sanity check
         n + " = " + fn + "(\"" + args.head.asInstanceOf[Const].v + "\");"
       }
       else {
         val sArgs = args.map {
-          case Const(TypeString, v) => "STRING_TYPE(\"" + v + "\")"
+          case Const(TypeString, v) => "\"" + v + "\""
           case a => cpsExpr(a)
         }.mkString(", ")
         n + " = U" + fn + "(" + sArgs + ");"
       }
     }.mkString("\n")
+
+
 
   // ----------
 
@@ -313,11 +358,11 @@ trait ICppGen extends CodeGen {
             |tT = (t.tv_sec - t0.tv_sec) * 1000L;
             |if (tT > ${cgOpts.timeoutMilli}) { tS = batchSize; return; }
             |""".stripMargin)
-        if (cgOpts.useExperimentalRuntimeLibrary) {
-        s"""|void on_batch_update_${s.name}(const std::vector<${delta(s.name)}_entry>::iterator &begin, const std::vector<${delta(s.name)}_entry>::iterator &end) {
-            |  long batchSize = std::distance(begin, end);
+      val name = s.name.toLowerCase.capitalize
+      if (cgOpts.useExperimentalRuntimeLibrary) {
+        s"""|void on_batch_update_${s.name}(const vector<BatchMessage<${name}Adaptor::MessageType, int>::KVpair>& batch) {
             |${ind(sTimeout)}
-            |  tN += batchSize;
+            |  tN += batch.size();
             |${ind(body)}
             |}
             |""".stripMargin
@@ -345,20 +390,21 @@ trait ICppGen extends CodeGen {
       val sName = prefix + s.name
       val sParams = s.fields.map { case (n, t) => s"const ${refTypeToString(t)} ${n}" }.mkString(", ")
 
-      s"""|void ${sName}(${sParams}) {
+      s"""|inline void ${sName}(${sParams}) {
           |${ind(sTimeout)}
           |  ++tN;
           |${ind(body)}
           |}
-          |""".stripMargin +
+          |""".stripMargin 
+      // +
       // TODO: Perhaps this could be kept together with struct definitions for each relation
-      stringIf(cgOpts.useExperimentalRuntimeLibrary, {
-        val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
-        s"""|void ${sName}(${s.name}_entry &e) {
-            |  ${sName}(${sArgs});
-            |}
-            |""".stripMargin
-      })
+      // stringIf(cgOpts.useExperimentalRuntimeLibrary, {
+      //   val sArgs = s.fields.map { case (n, _) => s"e.${n}" }.mkString(", ")
+      //   s"""|void ${sName}(${s.name}_entry &e) {
+      //       |  ${sName}(${sArgs});
+      //       |}
+      //       |""".stripMargin
+      // })
     }
 
     def emitReadyTrigger(body: String) = {
@@ -397,11 +443,12 @@ trait ICppGen extends CodeGen {
       //
       // TODO: perhaps enable in all cases
       (if (cgOpts.useExperimentalRuntimeLibrary) {
-         s"""|void on_insert_${name}(${name}_entry &e) {
-             |  e.${VALUE_NAME} = 1;
-             |  ${name}.addOrDelOnZero(e, 1);
-             |}
-             |""".stripMargin
+        ""
+         // s"""|void on_insert_${name}(${name}_entry &e) {
+         //     |  e.${VALUE_NAME} = 1;
+         //     |  ${name}.addOrDelOnZero(e, 1);
+         //     |}
+         //     |""".stripMargin
       }
       else {
         val castArgs = fields.zipWithIndex.map { case ((_, tp), i) => 
@@ -479,7 +526,7 @@ trait ICppGen extends CodeGen {
         code = code +   "}\n\n"
 
         val deltaRel = delta(name)
-        val insertOp = stringIf(cgOpts.useExperimentalHashMap, "insert", "insert_nocheck")
+        val insertOp = stringIf(useExperimentalHashMap, "insert", "insert_nocheck")
         code +
         s"""|void unwrap_insert_${name}(const event_args_t& ea) {
             |  ${deltaRel}.clear(); 
@@ -507,10 +554,22 @@ trait ICppGen extends CodeGen {
   protected def emitMapTypes(s0: System) = {
     "/* Definitions of maps used for storing materialized views. */\n" + 
     stringIf(cgOpts.useExperimentalRuntimeLibrary, {
-      // 1. Entry type definitions for all streams
-      s0.sources.filter(_.isStream).map { s =>
-        emitEntryType(s.schema.name + "_entry", s.schema.fields, (VALUE_NAME, TypeLong))("")
-      }.mkString("\n") 
+      ""
+    //   // 1. Source type definitions
+    //   s0.sources.map { s =>
+    //     val name = s.schema.name.toLowerCase.capitalize
+    //     val types = s.schema.fields.map { case (_, t) => typeToString(t) }.mkString(", ")
+    //     s"""|using ${name}Tuple = tuple<${types}>;
+    //         |struct Message${name} : MessageBase {
+    //         |  ${name}Tuple tpl;
+    //         |};
+    //         |""".stripMargin
+    //   }.mkString("\n") + "\n"
+
+    //   // // 1. Entry type definitions for all streams
+    //   // s0.sources.filter(_.isStream).map { s =>
+    //   //   emitEntryType(s.schema.name + "_entry", s.schema.fields, (VALUE_NAME, TypeLong))("")
+    //   // }.mkString("\n") 
     }) +
     {
       // 2. Maps (declared maps + tables + batch updates)
@@ -552,9 +611,13 @@ trait ICppGen extends CodeGen {
     val sIndexOpsType = indices.map { case (is, unique) =>
       val name = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
 
-      val sCombinators = is.map { idx =>
-        "hash_combine(h, e." + fields(idx)._1 + ");"
-      }.mkString("\n")
+      val sCombinators = 
+        // if (unique && m.keys.forall(x => isPrimitiveType(x._2)))
+        //   s"h = MurmurHash64A(&e, sizeof(${mapEntryType}) - sizeof(e.${VALUE_NAME}) - sizeof(e.nxt) - sizeof(e.prv), 0);"
+        // else 
+          is.map { idx =>
+            "hash_combine(h, e." + fields(idx)._1 + ");"
+          }.mkString("\n")
 
       val sCmpExpr = is.map { idx =>
         val (n, tp) = fields(idx)
@@ -576,7 +639,7 @@ trait ICppGen extends CodeGen {
     }.mkString("\n")
 
     val sMapTypedefs = {
-      if (cgOpts.useExperimentalHashMap) {
+      if (useExperimentalHashMap) {
         val sIndices = indices.map { case (is, unique) =>
             if (unique) "PrimaryHashIndex<" + mapEntryType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
             else "SecondaryHashIndex<" + mapEntryType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
@@ -643,18 +706,26 @@ trait ICppGen extends CodeGen {
         }
       }.mkString(" ") + s" ${VALUE_NAME} = v; nxt = nullptr; prv = nullptr;" 
 
-    val sSerialization = fields.map { case (n, _) =>
-        s"""|ar << ELEM_SEPARATOR;
-            |DBT_SERIALIZATION_NVP(ar, ${n});
-            |""".stripMargin
-      }.mkString
+    val sSerialization = 
+      if (cgOpts.useExperimentalRuntimeLibrary)
+        fields.map { case (n, _) =>
+          s"""|ar << dbtoaster::serialization::kElemSeparator;
+              |dbtoaster::serialization::serialize(ar, ${n}, STRING(${n}));
+              |""".stripMargin
+        }.mkString
+      else 
+        fields.map { case (n, _) =>
+          s"""|ar << ELEM_SEPARATOR;
+              |dbtoaster::serialize_nvp(ar, STRING(${n}), ${n});
+              |""".stripMargin
+        }.mkString
 
-    val sConstructorFromStrings = 
-      stringIf(cgOpts.useExperimentalRuntimeLibrary, 
-        s"""|${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
-            |    /* if (f.size() < ${keys.size}) return; */
-            |    ${sStringInit}
-            |}""".stripMargin)
+    val sConstructorFromStrings = ""
+      // stringIf(cgOpts.useExperimentalRuntimeLibrary, 
+      //   s"""|${name}(const std::vector<std::string>& f, const ${refTypeToString(value._2)} v) {
+      //       |    /* if (f.size() < ${keys.size}) return; */
+      //       |    ${sStringInit}
+      //       |}""".stripMargin)
 
     s =>
       s"""|struct ${name} {
@@ -666,7 +737,7 @@ trait ICppGen extends CodeGen {
           |${ind(sConstructorFromStrings)}
           |${ind(s)}
           |  template<class Archive>
-          |  void serialize(Archive& ar, const unsigned int version) const {
+          |  void serialize(Archive& ar) const {
           |${ind(sSerialization, 2)}
           |  }
           |};
@@ -676,16 +747,26 @@ trait ICppGen extends CodeGen {
   private def emitTLQStructure(s0: System) = {  
     
     val sSerializeFn = {
-      val body = s0.queries.map { q =>
-        s"""|ar << "\\n";
-            |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
-            |dbtoaster::serialize_nvp_tabbed(ar, STRING(${q.name}), _${q.name}, "\\t");
-            |""".stripMargin
-      }.mkString("\n")
+      val body = 
+        if (cgOpts.useExperimentalRuntimeLibrary)
+          s0.queries.map { q =>
+            s"""|ar << "\\n";
+                |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
+                |dbtoaster::serialization::serialize(ar, _${q.name}, STRING(${q.name}), "\\t");
+                |""".stripMargin
+          }.mkString("\n")
+        else 
+          s0.queries.map { q =>
+            s"""|ar << "\\n";
+                |const ${queryRefTypeToString(q)} _${q.name} = get_${q.name}();
+                |dbtoaster::serialize_nvp_tabbed(ar, STRING(${q.name}), _${q.name}, "\\t");
+                |""".stripMargin
+          }.mkString("\n")
+
 
       s"""|/* Serialization code */
           |template<class Archive>
-          |void serialize(Archive& ar, const unsigned int version) const {
+          |void serialize(Archive& ar) const {
           |${ind(body)}
           |}
           |""".stripMargin
@@ -714,7 +795,7 @@ trait ICppGen extends CodeGen {
                   |""".stripMargin
             }
         }
-        s"""|const ${queryRefTypeToString(q)} get_${q.name}() const {
+        s"""|${queryReturnTypeToString(q)} get_${q.name}() const {
             |${ind(body)}
             |}
             |""".stripMargin
@@ -732,7 +813,7 @@ trait ICppGen extends CodeGen {
 
     s"""|/* Defines top-level materialized views */
         |struct tlq_t {
-        |  struct timeval t0, t; long tT, tN, tS;
+        |  struct timeval t0, t; unsigned long tT, tN, tS;
         |  tlq_t(): tN(0), tS(0) ${sTLQMapInitializer} { 
         |    gettimeofday(&t0, NULL); 
         |  }
@@ -746,6 +827,129 @@ trait ICppGen extends CodeGen {
         |${ind(sDataDefinitions)}
         |};
         |
+        |""".stripMargin
+  }
+
+  private def emitSourceInitializers(s0: System) = {
+    val adaptors = s0.sources.zipWithIndex.map { case (s, i) =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val types = s.schema.fields.map { case (_, t) => typeToString(t) }.mkString(", ")
+      val params = 
+          (s.adaptor.options + ("deletions" -> cgOpts.datasetWithDeletions.toString)).map {
+            case (k, v) => s"""{ "$k", "$v" }""" 
+          }
+      val tp = if (s.isStream) "RelationType::kStream" else "RelationType::kTable"
+      s"""|struct ${name}Adaptor {
+          |  using MessageType = Message<std::tuple<$types>>;
+          |
+          |  static constexpr Relation relation() {
+          |    return Relation(${i + 1}, "${name.toUpperCase}", $tp);
+          |  }
+          |
+          |  static constexpr CStringMap<${params.size}> params() {
+          |    return CStringMap<${params.size}>{{ { ${params.mkString(", ")} } }};
+          |  }
+          |};""".stripMargin
+    }.mkString("\n")
+
+    s"""|static constexpr bool kOrderedDataset = ${cgOpts.datasetWithDeletions};
+        |static constexpr bool kBatchModeActive = ${isBatchModeActive};
+        |
+        |${adaptors}
+        |""".stripMargin
+  }
+
+  private def emitRegisterMapsFn(s0: System) = {
+    val body = s0.maps.map { m =>
+        val toplevel = s0.queries.exists(_.name == m.name)
+        s"""visitor.template addMap<${mapTypeToString(m)}>("${m.name}", ${m.name}, ${toplevel});"""
+      }.mkString("\n")
+    s"""|template <class Visitor>
+        |void registerMaps(Visitor& visitor) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitRegisterSourcesFn(s0: System) = {
+    val body = s0.sources.groupBy(_.in).map { 
+      case (SourceFile(path), sources) =>        
+        assert(sources.map(_.adaptor.name).distinct.size == 1)
+        val adaptors = sources.map(_.schema.name.toLowerCase.capitalize + "Adaptor{}").mkString(",\n")
+        s"""|visitor.template addSource(
+            |  "${sources.head.adaptor.name.toUpperCase}",
+            |  FileSource("$path"),
+            |${ind(adaptors)}
+            |);""".stripMargin
+      case (s, _) => 
+        sys.error("Unsupported source type: " + s)
+    }.mkString("\n")
+    s"""|template <class Visitor>
+        |static void registerSources(Visitor& visitor) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitProcessStreamEventFn(s0: System) = {
+    val body = s0.sources.flatMap { s =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val msgType = s"${name}Adaptor::MessageType"
+      val args = 
+        (0 until s.schema.fields.size).map { i => 
+          s"get<${i}>(tpl)" }.mkString(", ")
+      s0.triggers.flatMap { _.event match {
+        case EventInsert(schema) if schema.name == s.schema.name =>
+            List(
+              s"""|if (e.id == Event::getId(${name}Adaptor::relation().id, EventType::kInsertTuple)) {
+                  |  auto& tpl = static_cast<$msgType*>(e.message.get())->content;
+                  |  on_insert_${name.toUpperCase}(
+                  |${ind(args, 2)}
+                  |  );
+                  |}
+                  |""".stripMargin)
+          case EventDelete(schema) if schema.name == s.schema.name =>
+            List(
+              s"""|if (e.id == Event::getId(${name}Adaptor::relation().id, EventType::kDeleteTuple)) {
+                  |  auto& tpl = static_cast<$msgType*>(e.message.get())->content;
+                  |  on_delete_${name.toUpperCase}(
+                  |${ind(args, 2)}
+                  |  );
+                  |}
+                  |""".stripMargin)
+          case EventBatchUpdate(schema) if schema.name == s.schema.name =>
+            List(
+              s"""|if (e.id == Event::getId(${name}Adaptor::relation().id, EventType::kBatchUpdate)) {
+                  |  auto* msg = static_cast<BatchMessage<$msgType, int>*>(e.message.get());
+                  |  on_batch_update_${name.toUpperCase}(msg->content);
+                  |}
+                  |""".stripMargin)
+          case _ => Nil
+      }}
+    }.mkString("else ")
+    s"""|void process_stream_event(const Event& e) {
+        |${ind(body)}
+        |}
+        |""".stripMargin
+  }
+
+  private def emitProcessTableEventFn(s0: System) = {
+    val body = s0.sources.filterNot(_.isStream).map { s =>
+      val name = s.schema.name.toLowerCase.capitalize
+      val msgType = s"${name}Adaptor::MessageType"
+      val args =
+        (0 until s.schema.fields.size).map { i => s"get<${i}>(tpl)" }.mkString(", ")
+      s"""|if (e.id == Event::getId(${name}Adaptor::relation().id, EventType::kInsertTuple)) {
+          |  auto& tpl = static_cast<$msgType*>(e.message.get())->content;
+          |  on_insert_${name.toUpperCase}(
+          |${ind(args, 2)}
+          |  );
+          |}
+          |""".stripMargin
+    }.mkString("else ")
+    s"""|void process_table_event(const Event& e) {
+        |${ind(body)}
+        |}
         |""".stripMargin
   }
 
@@ -848,11 +1052,23 @@ trait ICppGen extends CodeGen {
         |
         |${ind(sRegisterData)}
         |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitSourceInitializers(s0)))}
+        |
         |${ind(sTriggerFunctions)}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitRegisterMapsFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitRegisterSourcesFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitProcessStreamEventFn(s0)))}
+        |
+        |${stringIf(cgOpts.useExperimentalRuntimeLibrary, ind(emitProcessTableEventFn(s0)))}
         |
         |private:
         |${ind(sDataDefinitions)}
         |};
+        |
+        |${emitPostConstDefinitions}
         |""".stripMargin
   }
 
@@ -1048,7 +1264,7 @@ trait ICppGen extends CodeGen {
       tempEntryTypes += ((ksTp, vsTp))
       localEntries += ((localEntry, tempEntryTypeName(ksTp, vsTp)))
 
-      if (cgOpts.useExperimentalHashMap) {
+      if (useExperimentalHashMap) {
         extractBooleanExp(vs) match {
           case Some((c, t)) =>
             s"(/*if */(" + c + ") ? " + name + ".add(" + localEntry + ".modify(" + ks.map(rn).mkString(", ") + "), " + t + ") : (void)0);\n"
@@ -1118,7 +1334,7 @@ trait ICppGen extends CodeGen {
       case TypeLong => co(v + "L")
       case TypeFloat => co(v + "f")
       case TypeChar => co("'" + v + "'")
-      case TypeString => cpsExpr(Apply("STRING_TYPE", TypeString, List(ex)), co)
+      case TypeString => cpsExpr(Apply("StringType", TypeString, List(ex)), co)
       case _ => co(v)
     }
 
@@ -1159,11 +1375,20 @@ trait ICppGen extends CodeGen {
 
         if (!isTemp) { // slice or foreach
           val body = 
-            ki.map { case ((k, ktp), i) => 
-              typeToString(ktp) + " " + rn(k) + " = " + e0 + "->" + mapDefs(mapName).keys(i)._1 + ";\n"
-            }.mkString + 
-            refTypeToString(tp) + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
-            co(v0)
+            if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
+              ki.map { case ((k, ktp), i) => 
+                s"const ${refTypeToString(ktp)} ${rn(k)} = get<${i}>(${e0}.first.content);\n"
+              }.mkString + 
+              s"const ${refTypeToString(tp)} ${v0} = ${e0}.second;\n" +
+              co(v0)              
+            }
+            else {
+              ki.map { case ((k, ktp), i) =>
+                s"const ${refTypeToString(ktp)} ${rn(k)} = ${e0}->${mapDefs(mapName).keys(i)._1};\n"
+              }.mkString +
+              s"const ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME};\n" +
+              co(v0)
+            }
 
           if (ko.nonEmpty) { //slice
             if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
@@ -1177,36 +1402,24 @@ trait ICppGen extends CodeGen {
             val sKeys = ko.map(x => rn(x._1._1)).mkString(", ")
             val n0 = fresh("n")
 
-            if (cgOpts.useExperimentalHashMap) {
+            if (useExperimentalHashMap) {
               s"""|{ //slice
-                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0}_head = static_cast<const SecondaryIdxNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
-                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0} = ${n0}_head;
+                  |  const LinkedNode* ${n0} = ${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1});
                   |  ${mapEntryType}* ${e0};
                   |  while (${n0}) {
-                  |    ${e0} = ${n0}->obj;
+                  |    ${e0} = reinterpret_cast<${mapEntryType}*>(${n0}->obj);
                   |${ind(body, 2)}
-                  |    ${n0} = (${n0} != ${n0}_head ? ${n0}->nxt : ${n0}->child);
+                  |    ${n0} = ${n0}->next;
                   |  }
                   |}
                   |""".stripMargin
-
-              // s"""|{ //slice
-              //     |  const LinkedNode<${mapEntryType}>* ${n0} = static_cast<const LinkedNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
-              //     |  ${mapEntryType}* ${e0};
-              //     |  while (${n0}) {
-              //     |    ${e0} = ${n0}->obj;
-              //     |${ind(body, 2)}
-              //     |    ${n0} = ${n0}->next;
-              //     |  }
-              //     |}
-              //     |""".stripMargin
             }
             else {
               val (h0, idx0) = (fresh("h"), fresh("i"))
               val idxName = "HashIndex_" + mapType + "_" + getIndexId(mapName, is)
               val idxFn = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
               s"""|{ //slice
-                  |  const HASH_RES_t ${h0} = ${idxFn}::hash(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}));
+                  |  const HashType ${h0} = ${idxFn}::hash(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}));
                   |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
                   |  ${idxName}::IdxNode* ${n0} = &(${idx0}->buckets_[${h0} & ${idx0}->mask_]);
                   |  ${mapEntryType}* ${e0};
@@ -1220,11 +1433,11 @@ trait ICppGen extends CodeGen {
           else { //foreach
             if (cgOpts.useExperimentalRuntimeLibrary && deltaRelationNames.contains(mapName)) {
               s"""|{ //foreach
-                  |  for (std::vector<${mapEntryType}>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
+                  |  for (auto& ${e0} : batch) {  
                   |${ind(body, 2)}
                   |  }
                   |}
-                  |""".stripMargin                
+                  |""".stripMargin
             }
             else {
               s"""|{ //foreach
@@ -1241,14 +1454,14 @@ trait ICppGen extends CodeGen {
         else { // only foreach for Temp map
           val localVars = 
             ki.map { case ((k, tp), i) => 
-              s"${typeToString(tp)} ${rn(k)} = ${e0}->_${i + 1};"
+              s"const ${refTypeToString(tp)} ${rn(k)} = ${e0}->_${i + 1};"
             }.mkString("\n") 
 
           s"""|{ // temp foreach
               |  ${tempEntryTypeName(ks.map(_._2), tp)}* ${e0} = ${mapName}.head;
               |  while(${e0}) {
               |${ind(localVars, 2)} 
-              |    ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
+              |    const ${refTypeToString(tp)} ${v0} = ${e0}->${VALUE_NAME}; 
               |
               |${ind(co(v0), 2)}
               |
@@ -1420,24 +1633,36 @@ trait ICppGen extends CodeGen {
 
     val sIncludeHeaders = emitIncludeHeaders
 
-    val sRelationTypeDirectives = 
-      s0.sources.map { s => 
-        if (s.isStream)
-          s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
-        else 
-          s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
-      }.mkString("\n")
+    val sRelationTypeDirectives = ""
+      // s0.sources.map { s => 
+      //   if (s.isStream)
+      //     s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
+      //   else 
+      //     s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
+      // }.mkString("\n")
 
     val sIncludeTypeDefs =
       s0.typeDefs.map(_.file.path).distinct
                  .map(s => "#include \"" + s + "\"").mkString("\n") + "\n"
+
+    val sUsingNamespace =
+      if (cgOpts.useExperimentalRuntimeLibrary) 
+        s"""|using namespace standard_functions;
+            |using namespace hashing;
+            |using namespace serialization;""".stripMargin
+      else
+        s"""|using namespace standard_functions;""".stripMargin
 
     // Generating the entire file
     s"""|${sIncludeHeaders}
         |${sIncludeTypeDefs}
         |${sRelationTypeDirectives}
         |
+        |using namespace std;
+        |
         |namespace dbtoaster {
+        |
+        |${ind(sUsingNamespace)}
         |
         |${ind(emitMapTypes(s0))}
         |
@@ -1455,22 +1680,22 @@ trait ICppGen extends CodeGen {
   protected def prepareCodegen(s0: System): Unit = {}
 
   protected def emitIncludeHeaders = 
-    stringIf(!cgOpts.useExperimentalHashMap, "#define USE_OLD_MAP\n") +
+    stringIf(!useExperimentalHashMap, "#define USE_OLD_MAP\n") +
     stringIf(cgOpts.useExperimentalRuntimeLibrary,
       s"""|#include <sys/time.h>
+          |#include <cstring>
           |#include <vector>
-          |#include "macro.hpp"
+          |#include <tuple>
           |#include "types.hpp"
-          |#include "functions.hpp"
           |#include "hash.hpp"
-          |#include "mmap.hpp"
-          |#include "serialization.hpp"
+          |#include "multi_map.hpp"
+          |#include "standard_functions.hpp"
+          |#include "event.hpp"
+          |#include "source.hpp"
           |""".stripMargin,
       s"""|#include "program_base.hpp"
-          |#include "hpds/KDouble.hpp"
+          |#include "types.hpp"
           |#include "hash.hpp"
           |#include "mmap/mmap.hpp"
-          |#include "hpds/pstring.hpp"
-          |#include "hpds/pstringops.hpp"
           |""".stripMargin)
 }

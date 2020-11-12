@@ -16,10 +16,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"      
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "STRING_TYPE"
+      case TypeString => "StringType"
       case TypeCustom(d, ps) =>
         if (ps.isEmpty) d.name
         else d.name + "<" + ps.map(paramToString).mkString(", ") + ">"
@@ -38,10 +38,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "STRING_TYPE&"
+      case TypeString => "StringType&"
       case TypeCustom(_, _) => typeToString(t) + "&"
     }
 
@@ -51,10 +51,10 @@ object TypeHelper {
       case TypeInt    => "int"
       case TypeLong   => "long"
       case TypeFloat  => "float"
-      case TypeDouble => "DOUBLE_TYPE"
-      case TypeDate   => "date"
+      case TypeDouble => "DoubleType"
+      case TypeDate   => "DateType"
       case TypeChar   => "char"
-      case TypeString => "const STRING_TYPE&"
+      case TypeString => "const StringType&"
       case TypeCustom(_, _) => "const " + typeToString(t) + "&"
     }    
 
@@ -92,6 +92,12 @@ object TypeHelper {
       case TypeString => "\"\""
       case TypeCustom(_, _) => typeToString(t) + "()"
     }
+
+    def isPrimitiveType(t: Type): Boolean = t match {
+      case TypeByte | TypeShort | TypeInt | TypeLong | 
+           TypeFloat | TypeDouble | TypeDate | TypeChar => true
+      case TypeString | _: TypeCustom => false
+    }
   }
 
   // C++-type specific string functions
@@ -126,16 +132,25 @@ object TypeHelper {
   }
 
   def fromString(s: String, tp: Type) = tp match {
-    case TypeByte | TypeShort | TypeInt | TypeLong => s.trim.replaceAll("(l|L)$", "").toLong
-    case TypeFloat | TypeDouble => s.trim.replaceAll("(l|L|f|F)$", "").toDouble
-    case TypeChar => { val t = s.replaceAll("^'|'$", ""); assert(t.size == 1); t(0) }
-    case TypeString => s.replaceAll("^\"|\"$", "")
-    case TypeDate => s.trim.replaceAll("(l|L)$", "").toLong   // dateConv(v.toLong)
-    case _ => sys.error("Cannot convert " + s + " into " + tp)
+    case TypeByte | TypeShort | TypeInt | TypeLong =>
+        s.trim.replaceAll("(l|L)$", "").toLong
+    case TypeFloat | TypeDouble =>
+        s.trim.replaceAll("(l|L|f|F)$", "").toDouble
+    case TypeChar =>
+        val t = s.replaceAll("^('|\")|('|\")$", "")
+        assert(t.size == 1, "Unexpected character size: " + t)
+        t(0)
+    case TypeString =>
+      s.replaceAll("^\"|\"$", "")
+    case TypeDate =>
+      s.trim.replaceAll("(l|L)$", "").toLong   // dateConv(v.toLong)
+    case _ =>
+      sys.error("Cannot convert " + s + " into " + tp)
   }
 
   // Implicit castings allowed by second-stage compiler ('a' can be promoted to 'b'?)
   def cast(a: Type, b: Type): Boolean = 
-    try { b == a.resolve(b) } catch { case TypeMismatchException(msg) => false }
+    try { b == a.resolve(b) }
+    catch { case TypeMismatchException(msg) => false }
 
 }

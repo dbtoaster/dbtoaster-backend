@@ -3,86 +3,91 @@
 
 #include <cstdlib>
 #include <string>
-using namespace std;
-#include "hpds/pstring.hpp"
-#include "hpds/KDouble.hpp"
-
-#include "event.hpp"
+#include <cmath>
 #include <regex.h>
+#include "types.hpp"
+
+using namespace std;
 
 namespace dbtoaster {
+
+namespace standard_functions {
 
   // Date extraction functions
   // ImperativeCompiler synthesizes calls to the following from calls to 
   // date_part
-  int Udate_year(date d);
-  int Udate_month(date d);
-  int Udate_day(date d);
+  int Udate_year(dbtoaster::DateType d);
+  int Udate_month(dbtoaster::DateType d);
+  int Udate_day(dbtoaster::DateType d);
   
+  StringType cast_string_from_date(dbtoaster::DateType ymd);
+  dbtoaster::DateType Udate(const char *c);
+  inline dbtoaster::DateType Udate(const StringType &s) { 
+    return Udate(s.c_str()); 
+  }
+
   // String functions
-  STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len);
-  int Uregexp_match(const char *regex, const STRING_TYPE &s);
-  int Upreg_match(const regex_t &preg, const STRING_TYPE &s);
+  StringType Usubstring(const StringType &s, size_t start, size_t len);
+  int Uregexp_match(const char *regex, const StringType &s);
+  int Upreg_match(const regex_t &preg, const StringType &s);
   
   // Vector functions
-  DOUBLE_TYPE Uvec_dot(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
-  DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1);
-  DOUBLE_TYPE Uvector_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
-  DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
-                    DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
-                    DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
-                    DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4);
+  DoubleType Uvec_dot(DoubleType x1, DoubleType y1, DoubleType z1, 
+              DoubleType x2, DoubleType y2, DoubleType z2);
+  DoubleType Uvec_length(DoubleType x1, DoubleType y1, DoubleType z1);
+  DoubleType Uvector_angle(DoubleType x1, DoubleType y1, DoubleType z1, 
+              DoubleType x2, DoubleType y2, DoubleType z2);
+  DoubleType Udihedral_angle(DoubleType x1, DoubleType y1, DoubleType z1, 
+                    DoubleType x2, DoubleType y2, DoubleType z2,
+                    DoubleType x3, DoubleType y3, DoubleType z3,
+                    DoubleType x4, DoubleType y4, DoubleType z4);
 
-  long long Uhash(long long v);
+  HashType Uhash(long long v);
   
   // Math funtions
-  DOUBLE_TYPE Uradians(DOUBLE_TYPE degree);
-  DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian);
-  DOUBLE_TYPE Upow(DOUBLE_TYPE a, DOUBLE_TYPE b);
-/*  DOUBLE_TYPE pow(DOUBLE_TYPE a, int b);
-  DOUBLE_TYPE pow(int a, DOUBLE_TYPE b);
-  DOUBLE_TYPE pow(int a, int b);
+  DoubleType Uradians(DoubleType degree);
+  DoubleType Udegrees(DoubleType radian);
+  DoubleType Upow(DoubleType a, DoubleType b);
+  DoubleType Ucos(DoubleType a);
+  DoubleType Usin(DoubleType a);
+
+/*  DoubleType pow(DoubleType a, int b);
+  DoubleType pow(int a, DoubleType b);
+  DoubleType pow(int a, int b);
  */
   long UmulLng(long x, long y);
 
-  DOUBLE_TYPE Udiv(DOUBLE_TYPE x);
-  DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y);
+  DoubleType Udiv(DoubleType x);
+  DoubleType UmulDbl(DoubleType x, DoubleType y);
 
   long Ulistmax(int v1, int v2);
   long Ulistmax(int v1, long v2);
-  DOUBLE_TYPE Ulistmax(int v1, DOUBLE_TYPE v2);
+  DoubleType Ulistmax(int v1, DoubleType v2);
 
   // long Ulistmax(long v1, int v2);
   // long Ulistmax(long v1, long v2);
-  // DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2);
-  // DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2);
-  // DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2);
+  // DoubleType Ulistmax(DoubleType v1, DoubleType v2);
+  // DoubleType Ulistmax(long v1, DoubleType v2);
+  // DoubleType Ulistmax(DoubleType v1, long v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };
   inline long cast_int_from_string(const char     *c) { return atoi(c); };
-  inline long cast_int_from_string(STRING_TYPE         &s) { 
+  inline long cast_int_from_string(StringType         &s) { 
     return cast_int_from_string(s.c_str()); 
   };
   inline double cast_float_from_int(long           i) { return (double)i; };
   inline double cast_float_from_string(const char *c) { return atof(c); };
-  inline double cast_float_from_string(STRING_TYPE     &s) { 
+  inline double cast_float_from_string(StringType     &s) { 
     return cast_float_from_string(s.c_str()); 
   };
   
   template <class T> 
-  STRING_TYPE cast_string(const T &t);
+  StringType cast_string(const T &t);
   
-  inline STRING_TYPE cast_string_from_int(long      i) { return cast_string(i); }
-  inline STRING_TYPE cast_string_from_double(double d) { return cast_string(d); }
-  STRING_TYPE cast_string_from_date(date ymd);
-  date Udate(const char *c);
-  inline date Udate(const STRING_TYPE &s) { 
-    return Udate(s.c_str()); 
-  }
-  
+  inline StringType cast_string_from_int(long      i) { return cast_string(i); }
+  inline StringType cast_string_from_double(double d) { return cast_string(d); }  
 }
 
+}
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H

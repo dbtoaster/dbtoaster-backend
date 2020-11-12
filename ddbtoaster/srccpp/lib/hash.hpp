@@ -1,23 +1,28 @@
-#include "hpds/macro.hpp"
-#include "hpds/KDouble.hpp"
-#include "hpds/string.hpp"
+#ifndef DBTOASTER_HASH_HPP
+#define DBTOASTER_HASH_HPP
+
+#include "macro.hpp"
+#include "types.hpp"
+
+extern std::hash<double> double_hasher;
+extern std::hash<std::string> string_hasher;
 
 namespace dbtoaster {
+
   template <class T>
   FORCE_INLINE void hash_combine(std::size_t& seed, const T& v)
   {
       seed ^= hash_value(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 
-  std::hash<double> double_hasher;
-  std::hash<std::string> string_hasher;
-
   union Cast
   {
     double d;
     long l;
   };
-  volatile Cast c;
+  
+  extern volatile Cast c;
+
   inline int float2int( double d )
   {
     c.d = d + 6755399441055744.0;
@@ -29,7 +34,9 @@ namespace dbtoaster {
     long double d;
     long l;
   };
-  volatile Cast cLLD;
+  
+  extern volatile Cast cLLD;
+
   inline int longDouble2int( long double d )
   {
     cLLD.d = d + 6755399441055744.0;
@@ -100,9 +107,11 @@ namespace dbtoaster {
       seed ^= v + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 
-  template<>
-  FORCE_INLINE void hash_combine(size_t& seed, const PooledRefCountedString& v) {
-    seed ^= MurmurHash2(v.data_, sizeof(char) * (v.size_ - 1), 0) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  template <>
+  FORCE_INLINE void hash_combine(std::size_t& seed, const DateType& v)
+  {
+      seed ^= v.getNumeric() + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
-
 }
+
+#endif /* DBTOASTER_HASH_HPP */

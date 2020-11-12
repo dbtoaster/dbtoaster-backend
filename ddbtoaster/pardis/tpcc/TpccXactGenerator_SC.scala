@@ -104,6 +104,10 @@ object TpccXactGenerator_SC {
         Optimizer.cTransformer = true
         Optimizer.mvget = true
         Optimizer.concCPP = true
+        Optimizer.indexInline = true
+        Optimizer.indexLookupFusion = true
+        Optimizer.analyzeEntry = true
+        Optimizer.secondaryIndex = true
         new TpccPardisConcCppGen(Context)
     }
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
