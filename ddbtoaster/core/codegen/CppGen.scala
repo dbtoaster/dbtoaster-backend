@@ -1309,16 +1309,28 @@ trait ICppGen extends CodeGen {
             val sKeys = ko.map(x => rn(x._1._1)).mkString(", ")
             val n0 = fresh("n")
 
-            s"""|{ //slice
-                |  const LinkedNode* ${n0} = ${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1});
-                |  ${mapEntryType}* ${e0};
-                |  while (${n0}) {
-                |    ${e0} = reinterpret_cast<${mapEntryType}*>(${n0}->obj);
-                |${ind(body, 2)}
-                |    ${n0} = ${n0}->next;
-                |  }
-                |}
-                |""".stripMargin
+            stringIf(cgOpts.useOldRuntimeLibrary,
+              s"""|{ //slice
+                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0}_head = static_cast<const SecondaryIdxNode<${mapEntryType}>*>(${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1}));
+                  |  const SecondaryIdxNode<${mapEntryType}>* ${n0} = ${n0}_head;
+                  |  ${mapEntryType}* ${e0};
+                  |  while (${n0}) {
+                  |    ${e0} = ${n0}->obj;
+                  |${ind(body, 2)}
+                  |    ${n0} = (${n0} != ${n0}_head ? ${n0}->nxt : ${n0}->child);
+                  |  }
+                  |}
+                  |""".stripMargin,
+              s"""|{ //slice
+                  |  const LinkedNode* ${n0} = ${mapName}.slice(${localEntry}.modify${getIndexId(mapName,is)}(${sKeys}), ${idxIndex - 1});
+                  |  ${mapEntryType}* ${e0};
+                  |  while (${n0}) {
+                  |    ${e0} = reinterpret_cast<${mapEntryType}*>(${n0}->obj);
+                  |${ind(body, 2)}
+                  |    ${n0} = ${n0}->next;
+                  |  }
+                  |}
+                  |""".stripMargin)
           } 
           else { //foreach
             if (!cgOpts.useOldRuntimeLibrary && deltaRelationNames.contains(mapName)) {
