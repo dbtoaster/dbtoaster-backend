@@ -188,39 +188,32 @@ object Utils {
   }
 
   // C++ compiler wrapper
-  def cppCompilerNewDriver(out: String, cPath: String, boost: String, cppLibDir: String) = {
-    val cppDriverDir = cppLibDir + "/../new_driver"
-    val cppLibDir2 = cppLibDir + "/../new_lib"
+  def cppCompiler(out: String, cPath: String, cppDir: String) = {
+    val cppDriverDir = cppDir + "/driver"
+    val cppLibDir = cppDir + "/lib"
     val as = 
       ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", 
           "-Wno-maybe-uninitialized",
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", //"-ljemalloc",
-          "-I" + cppLibDir2, "-I" + cppDriverDir
+          "-I" + cppLibDir, "-I" + cppDriverDir
         ) :::
         cppOpts
       ).filter(_ != "")
-    //make DBT c++ library
-    Utils.exec(Array("make", "-C", cppLibDir))
     Utils.exec(as.toArray)
   }
 
-  def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
-    val cppDriverDir = cppLibDir + "/../driver"
+  def cppCompilerOldRuntime(out: String, cPath: String, cppDir: String) = {
+    val cppDriverDir = cppDir + "/old_driver"
+    val cppLibDir = cppDir + "/old_lib"
     val as = 
       ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldriver", "-ldbtoaster", //"-ljemalloc",
           "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir, "-L" + cppDriverDir
-        ) :::
-        (if (boost == null) Nil else 
-          List("program_options", "serialization", "system", "filesystem",
-               "chrono", "thread").map("-lboost_" + _ + Utils.prop("lib_boost_thread", "")) ::: 
-          List("-I" + boost + "/include", "-L" + boost + "/lib")
-        ) ::: 
-        cppOpts
+        ) ::: cppOpts
       ).filter(_ != "")
-    //make DBT c++ library
+    //make DBT c++ library and driver
     Utils.exec(Array("make", "-C", cppLibDir))
     Utils.exec(Array("make", "-C", cppDriverDir))
     Utils.exec(as.toArray)

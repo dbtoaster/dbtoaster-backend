@@ -220,23 +220,50 @@ commands += Command.command("release")((state: State) => {
     // copyFiles(IO.listFiles(websitePath/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
     // copyFiles(IO.listFiles(websitePath/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
 
-    println("make c++ libs")
-    val cppLibDir = baseDir/"srccpp"/"lib"    
-    ("make -C " + cppLibDir.getAbsolutePath)!;
+    val cppOldLibDir = baseDir/"srccpp"/"old_lib"
+    // sanity check old c++ lib compiles
+    println("make old C++ libs")
+    ("make -C " + cppOldLibDir.getAbsolutePath)!;
 
-    println("copy c++ libs")
-    val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"
+    println("copy old C++ libs")
+    val releaseCppOldLibDir = releaseDir/"lib"/"dbt_c++"/"old_lib"
+    releaseCppOldLibDir.mkdirs
+    (releaseCppOldLibDir/"hpds").mkdirs
+    (releaseCppOldLibDir/"mmap").mkdirs
+    (releaseCppOldLibDir/"smhasher").mkdirs
+    (releaseCppOldLibDir/"sc").mkdirs
+    copyFiles(IO.listFiles(cppOldLibDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".h") || "makefile" == f.getName }, releaseCppOldLibDir)
+    copyFiles(IO.listFiles(cppOldLibDir/"hpds").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || "makefile" == f.getName }, releaseCppOldLibDir/"hpds")
+    copyFiles(IO.listFiles(cppOldLibDir/"mmap").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || "makefile" == f.getName }, releaseCppOldLibDir/"mmap")
+    copyFiles(IO.listFiles(cppOldLibDir/"smhasher").filter { f => f.getName.startsWith("MurmurHash2") }, releaseCppOldLibDir/"smhasher")
+    copyFiles(IO.listFiles(cppOldLibDir/"sc").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".h") || "makefile" == f.getName }, releaseCppOldLibDir/"sc")
+
+    val cppOldDriverDir = baseDir/"srccpp"/"old_driver"
+    // sanity check old c++ driver compiles
+    println("make old C++ driver")
+    ("make -C " + cppOldDriverDir.getAbsolutePath)!;
+
+    println("copy old C++ driver")
+    val releaseCppOldDriverDir = releaseDir/"lib"/"dbt_c++"/"old_driver"
+    releaseCppOldDriverDir.mkdirs
+    copyFiles(IO.listFiles(cppOldDriverDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".h") || "makefile" == f.getName }, releaseCppOldDriverDir)
+
+    println("copy C++ libs")
+    val cppLibDir = baseDir/"srccpp"/"lib"
+    val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"/"lib"
     releaseCppLibDir.mkdirs
-    (releaseCppLibDir/"hpds").mkdirs
-    (releaseCppLibDir/"mmap").mkdirs
-    (releaseCppLibDir/"smhasher").mkdirs
-    copyFiles(IO.listFiles(cppLibDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".h") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir)
-    copyFiles(IO.listFiles(cppLibDir/"hpds").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir/"hpds")
-    copyFiles(IO.listFiles(cppLibDir/"mmap").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir/"mmap")
-    copyFiles(IO.listFiles(cppLibDir/"smhasher").filter { f => f.getName.startsWith("MurmurHash2") }, releaseCppLibDir/"smhasher")
+    (releaseCppLibDir/"pardis").mkdirs
+    copyFiles(IO.listFiles(cppLibDir).filter { f => f.getName.endsWith(".hpp") }, releaseCppLibDir)
+    copyFiles(IO.listFiles(cppLibDir/"pardis").filter { f => f.getName.endsWith(".hpp") }, releaseCppLibDir/"pardis")
 
-    println("copy main.cpp")
-    copyFile(frontendRepo/"lib"/"dbt_c++"/"main.cpp", releaseDir/"examples"/"code")
+    println("copy C++ driver")
+    val cppDriverDir = baseDir/"srccpp"/"driver"
+    val releaseCppDriverDir = releaseDir/"lib"/"dbt_c++"/"driver"
+    releaseCppDriverDir.mkdirs
+    copyFiles(IO.listFiles(cppDriverDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") }, releaseCppDriverDir)
+
+    // println("copy main.cpp")
+    // copyFile(frontendRepo/"lib"/"dbt_c++"/"main.cpp", releaseDir/"examples"/"code")
 
     // println("make scala libs")
     // val scalaLibDir = frontendRepo/"lib"/"dbt_scala"

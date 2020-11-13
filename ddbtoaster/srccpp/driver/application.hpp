@@ -23,6 +23,12 @@ class Application {
       std::cerr << "Use -b <arg> to specify a valid batch size." << std::endl;
       exit(1);
     }
+    if (!dbtoaster::data_t::kBatchModeActive && opts.batch_size > 0) {
+      std::cerr << "Generated code is for single-tuple updates. "
+                << "Recompile with --batch flag to generate code for batch updates."
+                << std::endl;
+      exit(1);
+    }
   }
 
   void run();

@@ -778,7 +778,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
                 doc"obj.${x.name}"
             }).mkDocument(doc""" << "," << """)} << ")"; return os; }"""
         val serializer = 
-          if (cgOpts.useExperimentalRuntimeLibrary) {
+          if (!cgOpts.useOldRuntimeLibrary) {
             doc"template<class Archive> \nvoid serialize(Archive& ar) const {" :/:
             Document.nest(4, fields.map(x => 
               doc"dbtoaster::serialization::serialize(ar, ${x.name}, STRING(${x.name}));").mkDocument("ar << dbtoaster::serialization::kElemSeparator;\n", "\nar << dbtoaster::serialization::kElemSeparator;\n", "\n"
@@ -899,7 +899,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
 
   override def emitIncludeHeaders =
     "#define SC_GENERATED 1\n" +
-    stringIf(cgOpts.useExperimentalRuntimeLibrary,
+    stringIf(!cgOpts.useOldRuntimeLibrary,
       s"""|#include <sys/time.h>
           |#include <cstring>
           |#include <vector>
@@ -918,7 +918,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
           |#include "sc/mmap.hpp"
           |""".stripMargin) + 
     stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
-    stringIf(cgOpts.useExperimentalRuntimeLibrary,
+    stringIf(!cgOpts.useOldRuntimeLibrary,
       s"""|#include "pardis/execution_profiler.hpp"
           |using namespace dbtoaster::pardis;
           |""".stripMargin,

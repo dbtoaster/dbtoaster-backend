@@ -12,6 +12,5 @@ class CodeGenOptions(
   val isReleaseMode: Boolean,
   val printTiminingInfo: Boolean, 
   val printProgress: Long = 0L,
-  val useExperimentalHashMap: Boolean = false,
-  val useExperimentalRuntimeLibrary: Boolean = false
+  val useOldRuntimeLibrary: Boolean = false
 )

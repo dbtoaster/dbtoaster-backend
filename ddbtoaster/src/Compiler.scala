@@ -97,9 +97,8 @@ object Compiler {
   private var execRuntimeLibs = List[String]() // runtime libraries (defaults to lib/ddbt.jar for scala)
   private var execPreloadInput = false         // preload input dataset  
 
-  // Experimental features
-  private var useExperimentalCppHashMap = false
-  private var useExperimentalCppRuntimeLibrary = false    
+  // Backward compatibility
+  private var useOldCppRuntimeLibrary = false
 
   private var useExternalScalac = false        // compile using fsc / external scalac
   private var useExternalJVM = false           // execute in a fresh JVM
@@ -162,12 +161,10 @@ object Compiler {
     error("  -xvm          execute in a new JVM instance (Scala)")
     error("  -t <n>        execution timeout in seconds")
     error("  -xbs <n>      execute with batches of certain size")
-    error("  -xa <arg>     pass an argument to generated program")    
-    error("Experimental features:")
-    error("  -xhashmap     use experimental C++ hash map implementation")
-    error("  -xruntime     use experimental C++ runtime library")
+    error("  -xa <arg>     pass an argument to generated program")
     error("  -preload      preload input datasets")
-    
+    error("Backward compatibility:")
+    error("  -xruntime     use old C++ runtime library")
     error("", true)     // exit here
   }
 
@@ -225,8 +222,7 @@ object Compiler {
     execRuntimeLibs = Nil
     execPreloadInput = false
 
-    useExperimentalCppHashMap = false
-    useExperimentalCppRuntimeLibrary = false
+    useOldCppRuntimeLibrary = false
 
     useExternalScalac = false
     useExternalJVM = false
@@ -271,8 +267,7 @@ object Compiler {
         case "-d" => eat(s => datasetName = s)
         case "--del" => datasetWithDeletions = true
         case "-L" => eat(s => execRuntimeLibs = s :: execRuntimeLibs)
-        case "-xhashmap" => useExperimentalCppHashMap = true
-        case "-xruntime" => useExperimentalCppRuntimeLibrary = true
+        case "-xruntime" => useOldCppRuntimeLibrary = true
         case "-preload" => execPreloadInput = true
         // case "-wa" => watch = true;
         // case "-ni" => ni = true; frontendIvmDepth = 0; frontendDebugFlags = Nil
@@ -514,10 +509,10 @@ object Compiler {
         if (outputFile == null) {
           error("Compilation failed, output file name missing", true)
         }
-        if (useExperimentalCppRuntimeLibrary) 
-          Utils.cppCompilerNewDriver(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")  
+        if (useOldCppRuntimeLibrary)
+          Utils.cppCompilerOldRuntime(inputFile, outputFile, "ddbtoaster/srccpp")
         else
-          Utils.cppCompiler(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")
+          Utils.cppCompiler(inputFile, outputFile, "ddbtoaster/srccpp")
 
       case _ => error("Source compilation for " + lang + " is not supported", true)
     }    
@@ -528,9 +523,9 @@ object Compiler {
       error("Execution failed, executable file missing", true)
     }
     val execArgs = args ++ 
-      (if (batchSize > 0 && !useExperimentalCppRuntimeLibrary) List("-b" + batchSize) else Nil) ++
-      (if (batchSize > 0 && useExperimentalCppRuntimeLibrary) List("-b", batchSize.toString) else Nil) ++
-      (if (preloadInput && useExperimentalCppRuntimeLibrary) List("--preload") else Nil) 
+      (if (batchSize > 0 && useOldCppRuntimeLibrary) List("-b" + batchSize) else Nil) ++
+      (if (batchSize > 0 && !useOldCppRuntimeLibrary) List("-b", batchSize.toString) else Nil) ++
+      (if (preloadInput && !useOldCppRuntimeLibrary) List("--preload") else Nil)
     Utils.cppExec(file, execArgs)
   }
 
@@ -576,7 +571,7 @@ object Compiler {
       new CodeGenOptions(
         className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli, 
         DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, 
-        execPrintProgress, useExperimentalCppHashMap, useExperimentalCppRuntimeLibrary)
+        execPrintProgress, useOldCppRuntimeLibrary)
 
     val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
 
