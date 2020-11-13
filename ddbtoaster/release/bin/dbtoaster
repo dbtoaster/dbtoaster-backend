@@ -91,6 +91,7 @@ function show_help() {
   echo "                     - LOG-CPP: C++ compiler commands"
   echo "                     - LOG-SCALA: Scala compiler commands"
   echo "                     - LOG-RUN: execute commands"
+  echo " -O[123]            Set the optimization level in the frontend (default: 2)"
   echo " --preload          Preload input datasets when executing generated code"
   echo " --depth <depth>    Set incrementalization depth (default: -1 = infinite)"
   echo " --batch            Enable batch processing"
@@ -167,6 +168,9 @@ while (( "$#" )); do
              CODEGEN_ARGS="$CODEGEN_ARGS --batch"
              shift
              ;;
+    -O1|-O2|-O3) CODEGEN_ARGS="$CODEGEN_ARGS $1"
+                 shift
+                 ;;              
     --preload) CPP_BIN_PRELOAD_ARG=1
                shift
                ;;
