@@ -32,8 +32,6 @@ trait ICppGen extends CodeGen {
    * This optimization is not activated by default at any optimization level.
    */
   private var isExpressiveTLQSEnabled = false
-
-  private var isBatchModeActive = false
   
   private def getIndexId(m: String, is: List[Int]): String = 
     (if (is.isEmpty) mapDefs(m).keys.indices.toList else is).mkString
@@ -432,7 +430,7 @@ trait ICppGen extends CodeGen {
 
         emitUnwrapFunction(EventInsert(s.schema), sources) +
         // 
-        stringIf(isBatchModeActive, 
+        stringIf(cgOpts.isBatchingEnabled, 
           s"""|void unwrap_batch_update_${name}(const event_args_t& eaList) {
               |  size_t sz = eaList.size();
               |  for (size_t i = 0; i < sz; i++) {
@@ -771,7 +769,7 @@ trait ICppGen extends CodeGen {
     }.mkString("\n")
 
     s"""|static constexpr bool kOrderedDataset = ${cgOpts.datasetWithDeletions};
-        |static constexpr bool kBatchModeActive = ${isBatchModeActive};
+        |static constexpr bool kBatchModeActive = ${cgOpts.isBatchingEnabled};
         |
         |${adaptors}
         |""".stripMargin
@@ -929,7 +927,7 @@ trait ICppGen extends CodeGen {
 
       val sRegisterTableTriggers = {          
         val s = s0.sources.filter(!_.isStream).map { s => 
-            stringIf(isBatchModeActive,
+            stringIf(cgOpts.isBatchingEnabled,
               s"""pb.add_trigger("${s.schema.name}", batch_update, std::bind(&data_t::unwrap_batch_update_${s.schema.name}, this, std::placeholders::_1));\n"""
             ) + 
             s"""pb.add_trigger("${s.schema.name}", insert_tuple, std::bind(&data_t::unwrap_insert_${s.schema.name}, this, std::placeholders::_1));"""
@@ -1507,8 +1505,6 @@ trait ICppGen extends CodeGen {
       case EventBatchUpdate(s) => List(delta(s.name))
       case _ => Nil
     }).toSet
-
-    isBatchModeActive = deltaRelationNames.nonEmpty
 
     isExpressiveTLQSEnabled = s0.queries.exists { q => 
       q.expr match { 

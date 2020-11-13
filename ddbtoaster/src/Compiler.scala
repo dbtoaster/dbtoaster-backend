@@ -106,8 +106,6 @@ object Compiler {
   // private var ni   = false     // non-incremental query evaluation (implies depth=0)
   // private var watch  = false    // stream of updates on result map
 
-  def isBatchingEnable = batchingEnabled
-
   def batchSize = execBatchSize
 
   def outputLang = lang
@@ -571,7 +569,7 @@ object Compiler {
       new CodeGenOptions(
         className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli, 
         DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, 
-        execPrintProgress, useOldCppRuntimeLibrary)
+        execPrintProgress, batchingEnabled, useOldCppRuntimeLibrary)
 
     val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
 
