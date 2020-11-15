@@ -86,9 +86,11 @@ class ExtParser extends StandardTokenParsers {
     )
 
   lazy val customType: Parser[TypeCustom] =
-    acceptIf (x => typeMap.contains(x.chars)) (x => "No such type '" + x.chars + "'") ~
-      opt("<" ~> repsep(genericParam, ",") <~ ">") ^^ {
-      case i ~ p => TypeCustom(typeMap(i.chars), p.getOrElse(Nil))
+    ident ~ opt("<" ~> repsep(genericParam, ",") <~ ">") ^^ { case i ~ p =>
+      if (typeMap.contains(i))
+        TypeCustom(typeMap(i), p.getOrElse(Nil))
+      else
+        TypeCustom(TypeDefinition(i, SourceFile(""), Nil, false), p.getOrElse(Nil))
     }
 
   private val typeMap = collection.mutable.Map[String, TypeDefinition]()

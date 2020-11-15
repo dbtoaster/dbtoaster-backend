@@ -1548,6 +1548,7 @@ trait ICppGen extends CodeGen {
     val sUsingNamespace =
       if (!cgOpts.useOldRuntimeLibrary) 
         s"""|using namespace standard_functions;
+            |using namespace standard_rings;
             |using namespace hashing;
             |using namespace serialization;""".stripMargin
       else
@@ -1589,6 +1590,7 @@ trait ICppGen extends CodeGen {
           |#include "hash.hpp"
           |#include "multi_map.hpp"
           |#include "standard_functions.hpp"
+          |#include "standard_rings.hpp"
           |#include "event.hpp"
           |#include "source.hpp"
           |""".stripMargin,

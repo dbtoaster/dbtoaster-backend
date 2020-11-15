@@ -6,6 +6,7 @@
 #include <string>
 #include "macro.hpp"
 #include "date_type.hpp"
+#include "rings/numeric_ring.hpp"
 
 namespace dbtoaster {
 
@@ -77,6 +78,19 @@ struct XmlSerializer<Output, DateType> {
     out << "</" << name << ">";
   }
 }; // specialization for date type
+
+template<class Output, class T>
+struct XmlSerializer<Output, T, typename std::enable_if<std::is_base_of<dbtoaster::standard_rings::NumericRing, T>::value>::type> {
+  void operator()(Output& out, const T& t) {
+    out << t.result();
+  }
+
+  void operator()(Output& out, const T& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << "</" << name << ">";
+  }
+}; // specialization for numeric struct
 
 template<class Output, class T>
 void serialize(Output& s, const T& t) {
