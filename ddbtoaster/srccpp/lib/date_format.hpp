@@ -2,6 +2,7 @@
 #define DBTOASTER_DATEFORMAT_HPP
 
 #include "date_type.hpp"
+#include "utils.hpp"
 
 namespace dbtoaster {
 
@@ -22,7 +23,7 @@ struct DateFormat {
   }
 
   static constexpr const char* find(char c, const char* str) {
-    return find(c, str, strlen(str));
+    return find(c, str, dbtoaster::utils::stringLength(str));
   }
 
   static constexpr size_t parseDigit(const char* str, size_t i) {
@@ -38,7 +39,7 @@ struct DateFormat {
   }
 
   static constexpr size_t parseNumber(const char* str) {
-    return parseNumber(str, strlen(str) - 1);
+    return parseNumber(str, dbtoaster::utils::stringLength(str) - 1);
   }
 
   static constexpr size_t parseNumber(const char* start, const char* end) {

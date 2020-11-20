@@ -192,10 +192,9 @@ object Utils {
     val cppDriverDir = cppDir + "/driver"
     val cppLibDir = cppDir + "/lib"
     val as = 
-      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", 
-          "-Wno-maybe-uninitialized",
-          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
-          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", //"-ljemalloc",
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-uninitialized",
+          "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++14",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG",
           "-I" + cppLibDir, "-I" + cppDriverDir
         ) :::
         cppOpts
@@ -207,7 +206,7 @@ object Utils {
     val cppDriverDir = cppDir + "/old_driver"
     val cppLibDir = cppDir + "/old_lib"
     val as = 
-      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-maybe-uninitialized",
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-Wno-uninitialized",
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
           "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldriver", "-ldbtoaster", //"-ljemalloc",
           "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir, "-L" + cppDriverDir
