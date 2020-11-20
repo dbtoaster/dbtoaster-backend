@@ -2,9 +2,9 @@
 #define DBTOASTER_MAP_HPP
 
 #include <array>
-#include <stdexcept>
 #include <utility>
-#include <cstring>
+#include <stdexcept>
+#include "utils.hpp"
 
 namespace dbtoaster {
 
@@ -20,7 +20,7 @@ struct EqualTo {
 template <>
 struct EqualTo<const char*> {
   constexpr bool operator()(const char* x, const char* y) const {
-    return std::strcmp(x, y) == 0;
+    return dbtoaster::utils::stringEqual(x, y);
   }
 };
 
@@ -30,7 +30,7 @@ template<class Key, class Value, size_t N,
 struct Map {
   using Pair = std::pair<Key, Value>;
 
-  std::array<Pair, N> data;
+  const std::array<Pair, N> data;
 
   constexpr Value get(const Key& key) const {
     return (find(key) != N) ? 
@@ -56,11 +56,11 @@ struct Map {
   }
 
   template <size_t I>
-  constexpr size_t find(const Key& key, Index_<I>) {
+  constexpr size_t find(const Key& key, Index_<I>) const {
     return KeyEqual{}(data[I].first, key) ? I : find(key, Index_<I - 1>{});
   }
 
-  constexpr size_t find(const Key& key, Index_<0>) {
+  constexpr size_t find(const Key& key, Index_<0>) const {
     return KeyEqual{}(data[0].first, key) ? 0 : N;
   }
 };

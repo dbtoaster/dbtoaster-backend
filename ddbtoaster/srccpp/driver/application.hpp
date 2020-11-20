@@ -13,6 +13,7 @@
 #include "stopwatch.hpp"
 #include "source.hpp"
 #include "multiplexer.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -89,7 +90,7 @@ class Application {
     void addCSVSource(FileSource source, Adaptor adaptor) {
       constexpr bool has_deletions = Adaptor::params().exists("deletions", "true");
       constexpr auto delimiter = Adaptor::params().getOrElse("delimiter", ",");
-      static_assert(strlen(delimiter) == 1, "Unexpected delimiter size");
+      static_assert(dbtoaster::utils::stringLength(delimiter) == 1, "Unexpected delimiter size");
       
       if (Adaptor::relation().isTable()) {
         table_iterators.push_back(
@@ -139,7 +140,7 @@ class Application {
                     "Different delimiters for the same source");
       constexpr auto delimiter =
         Adaptor1::params().getOrElse("delimiter", ",");
-      static_assert(strlen(delimiter) == 1, "Unexpected delimiter size");
+      static_assert(dbtoaster::utils::stringLength(delimiter) == 1, "Unexpected delimiter size");
 
       if (Adaptor1::relation().isTable()) {
         table_iterators.push_back(
