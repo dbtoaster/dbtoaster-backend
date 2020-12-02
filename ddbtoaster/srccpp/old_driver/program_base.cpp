@@ -266,6 +266,62 @@ void ProgramBase::set_log_count_every(
 	log_count_every = _log_count_every;
 }
 
+void ProgramBase::print_tuple(const event_t &evt) {
+
+    std::shared_ptr<dbt_file_source> source;
+    bool _schema_found = false;
+
+    // get schema if it is a stream
+    auto it = stream_multiplexer.inputs.begin();
+    auto end = stream_multiplexer.inputs.end();
+    for (; it != end; it++) {
+        source = std::dynamic_pointer_cast<dbt_file_source> (*it);
+        if (source->adaptor->id == evt.id) {
+	    _schema_found = true;
+            break;
+	}
+    }
+
+    // get schema if its a table
+    if (!_schema_found) {
+        auto it  = table_multiplexer.inputs.begin();
+        auto end = table_multiplexer.inputs.end();
+        for (; it != end; it++) {
+            source = std::dynamic_pointer_cast<dbt_file_source> (*it);
+            if (source->adaptor->id == evt.id) {
+                break;
+            }
+        }
+    }
+
+    // print tuple
+    const string schema = source->adaptor->schema;
+    for (size_t i=0; i<evt.data.size(); i ++) {
+        auto address = evt.data[i].get();
+        switch (schema[i]) {
+            case 'o': // order field type
+            case 'l': // int, long
+                std::cout << *((long*)address);
+                break;
+            case 'f': // float, double
+                std::cout << std::setprecision(2) << std::fixed << *((double*)address);
+                break;
+            case 'd': // date yyyymmdd
+                std::cout << *((int*)address);
+                break;
+            case 'c': // char
+            case 'h': // hash
+            case 's': // string
+                std::cout << *((string*)address);
+                break;
+            default: break;
+        }
+        if (i<evt.data.size() - 1)
+            cout << "|";
+    }
+    cout << endl;
+}
+
 void ProgramBase::process_event(const event_t& evt, const bool process_table) {
 	map<relation_id_t, 
 				 std::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
@@ -278,7 +334,7 @@ void ProgramBase::process_event(const event_t& evt, const bool process_table) {
 				r_it->second->trigger[evt.type];
 
 			#ifdef DBT_TRACE
-			cout << trig->name << ": " << evt.data << endl;
+			print_tuple(evt);
 			#endif // DBT_TRACE
 			trig->log(r_it->second->name, evt);
 
