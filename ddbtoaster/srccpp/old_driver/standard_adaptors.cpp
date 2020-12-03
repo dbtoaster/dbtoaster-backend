@@ -15,22 +15,25 @@ namespace adaptors {
 ******************************************************************************/
 
 csv_adaptor::csv_adaptor(relation_id_t _id) 
-		: id(_id), type(insert_tuple), schema_size(0), delimiter(",") 
+		: type(insert_tuple), delimiter(",")
 {
 	schema = std::string();
+    id = _id;
 }
 
 csv_adaptor::csv_adaptor(relation_id_t _id, std::string sch)
-		: id(_id), type(insert_tuple), schema_size(0), delimiter(",")
+		: type(insert_tuple), delimiter(",")
 {
+    id = _id;
 	schema = std::string(sch);
 	validate_schema();
 }
 
 csv_adaptor::csv_adaptor(relation_id_t i, int num_params,
 						const std::pair<std::string,std::string> params[])
-		: id(i), type(insert_tuple), schema_size(0), delimiter(",")
+		: type(insert_tuple), delimiter(",")
 {
+    id = i;
 	parse_params(num_params,params);
 	validate_schema();
 }

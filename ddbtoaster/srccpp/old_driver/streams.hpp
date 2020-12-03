@@ -22,7 +22,14 @@ namespace streams {
 
 struct stream_adaptor
 {
-    stream_adaptor() {}
+    relation_id_t id;
+    string schema;
+    size_t schema_size;
+
+    stream_adaptor() {
+        schema = "";
+        schema_size = 0;
+    }
 
     virtual void read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) = 0;
 };

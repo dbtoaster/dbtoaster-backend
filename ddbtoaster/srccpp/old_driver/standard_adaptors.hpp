@@ -15,10 +15,7 @@ namespace dbtoaster {
 
     struct csv_adaptor : public stream_adaptor
     {
-      relation_id_t id;
       event_type type;
-      string schema;
-      size_t schema_size;
       std::string delimiter;
       
       std::shared_ptr<event_t> saved_event;
