@@ -1,5 +1,6 @@
 #include "program_base.hpp"
 #include <iomanip>
+#include <cassert>
 
 namespace dbtoaster {
 
@@ -267,6 +268,10 @@ void ProgramBase::set_log_count_every(
 }
 
 void ProgramBase::print_tuple(const event_t &evt) {
+	// print only insert/delete events, ignore others
+	if (!(evt.type == insert_tuple || evt.type == delete_tuple)) {
+		return;
+	}
 
     std::shared_ptr<dbt_file_source> source;
     bool _schema_found = false;
@@ -277,9 +282,9 @@ void ProgramBase::print_tuple(const event_t &evt) {
     for (; it != end; it++) {
         source = std::dynamic_pointer_cast<dbt_file_source> (*it);
         if (source->adaptor->id == evt.id) {
-	    _schema_found = true;
-            break;
-	}
+		    _schema_found = true;
+	        break;
+		}
     }
 
     // get schema if its a table
@@ -289,35 +294,51 @@ void ProgramBase::print_tuple(const event_t &evt) {
         for (; it != end; it++) {
             source = std::dynamic_pointer_cast<dbt_file_source> (*it);
             if (source->adaptor->id == evt.id) {
+            	_schema_found = true;
                 break;
             }
         }
     }
 
+    assert(_schema_found);
+
     // print tuple
     const string schema = source->adaptor->schema;
-    for (size_t i=0; i<evt.data.size(); i ++) {
-        auto address = evt.data[i].get();
-        switch (schema[i]) {
+    size_t i = 0;
+    for (char field_tp : schema) {
+    	switch (field_tp) {
+        	case 'e': // event type
+        		std::cout << (evt.type == insert_tuple ? '+' : '-');
+        		break;
             case 'o': // order field type
+            	std::cout << evt.event_order;
+            	break;
             case 'l': // int, long
-                std::cout << *((long*)address);
+                std::cout << *((long*) evt.data[i++].get());
                 break;
             case 'f': // float, double
-                std::cout << std::setprecision(2) << std::fixed << *((double*)address);
+                std::cout << std::setprecision(2) << std::fixed 
+                		  << *((DoubleType*) evt.data[i++].get());
                 break;
             case 'd': // date yyyymmdd
-                std::cout << *((int*)address);
+            	{ auto d = (DateType*) evt.data[i++].get();
+               	  std::cout << d->getYear() * 10000 + d->getMonth() * 100 + d->getDay();
+               	}
                 break;
             case 'c': // char
+            	std::cout << *((char*) evt.data[i++].get());
+            	break;
             case 'h': // hash
+            	std::cout << *((int*) evt.data[i++].get());
+            	break;
             case 's': // string
-                std::cout << *((string*)address);
+                std::cout << *((StringType*) evt.data[i++].get());
                 break;
-            default: break;
-        }
-        if (i<evt.data.size() - 1)
+            default: break;    		
+    	}
+        if (i < evt.data.size() - 1) {
             cout << "|";
+        }
     }
     cout << endl;
 }
