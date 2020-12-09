@@ -1,50 +1,73 @@
 #ifndef DBTOASTER_RINGS_MIN_STRUCT_HPP
 #define DBTOASTER_RINGS_MIN_STRUCT_HPP
 
+#include <map>
 #include "numeric_ring.hpp"
 
 namespace dbtoaster {
 
 namespace standard_rings {
 
-// SKELETON CLASS - NOT IMPLEMENTED yet
-
 struct MinRing : NumericRing {
-  int count;
-  DoubleType sum;
 
-  explicit constexpr MinRing() : count(0), sum(0.0) { }
+  std::map<DoubleType, long> sorted_map;
 
-  explicit constexpr MinRing(int c, DoubleType s) : count(c), sum(s) { }
+  explicit MinRing() { }
 
-  inline constexpr bool isZero() const { return count == 0; }
+  explicit MinRing(DoubleType v) : sorted_map { { v, 1 } } { }
 
-  inline constexpr DoubleType result() const {
-    return (count != 0 ? sum : 0.0);
+  explicit MinRing(const MinRing& other, long a) {
+    if (a == 0L) return;
+    for (auto& kv : other.sorted_map) {
+      sorted_map[kv.first] = kv.second * a;
+    }
+  }
+
+  inline bool isZero() const { return sorted_map.empty(); }
+
+  inline DoubleType result() const {
+    return (sorted_map.empty() ? 0.0 : sorted_map.begin()->first);
   }
 
   inline MinRing& operator+=(const MinRing& other) {
-    this->count += other.count;
-    this->sum += other.sum;
+    for (auto& kv : other.sorted_map) {
+      auto it = sorted_map.find(kv.first);
+      if (it == sorted_map.end()) {
+        sorted_map[kv.first] = kv.second;
+      }
+      else {
+        it->second += kv.second;
+        if (it->second == 0L) sorted_map.erase(it);
+      }
+    }
     return *this;
-  }
-
-  inline constexpr MinRing operator+(const MinRing& other) const {
-    return MinRing(count + other.count, sum + other.sum);
-  }
-
-  inline constexpr MinRing operator*(const MinRing& other) const {
-    return MinRing(count * other.count, sum * other.sum);
   }
 
 };
 
-inline constexpr MinRing operator*(long v, const MinRing& a) {
-  return MinRing(v * a.count, v * a.sum);
+inline MinRing multiply(MinRing&& r, long a) {
+  if (a == 0L) return MinRing();
+  if (a == 1L) return std::move(r);
+  for (auto& kv : r.sorted_map) {
+    kv.second *= a;
+  }
+  return std::move(r);
 }
 
-inline constexpr MinRing operator*(const MinRing& a, long v) {
-  return MinRing(v * a.count, v * a.sum);
+inline MinRing operator*(long a, MinRing&& r) {
+  return multiply(std::forward<MinRing>(r), a);
+}
+
+inline MinRing operator*(MinRing&& r, long a) {
+  return multiply(std::forward<MinRing>(r), a);
+}
+
+inline MinRing operator*(long a, const MinRing& r) {
+  return MinRing(r, a);
+}
+
+inline MinRing operator*(const MinRing& r, long a) {
+  return MinRing(r, a);
 }
 
 }

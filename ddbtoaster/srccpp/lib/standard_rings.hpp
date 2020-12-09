@@ -11,20 +11,20 @@ namespace dbtoaster {
 
 namespace standard_rings {
 
-inline SumRing USumFn(DoubleType v) {
+inline constexpr SumRing USumFn(DoubleType v) {
   return SumRing(1, v);
 }
 
-inline AvgRing UAvgFn(DoubleType v) {
+inline constexpr AvgRing UAvgFn(DoubleType v) {
   return AvgRing(1, v);
 }
 
 inline MinRing UMinFn(DoubleType v) {
-  return MinRing(1, v);
+  return MinRing(v);
 }
 
 inline MaxRing UMaxFn(DoubleType v) {
-  return MaxRing(1, v);
+  return MaxRing(v);
 }
 
 }

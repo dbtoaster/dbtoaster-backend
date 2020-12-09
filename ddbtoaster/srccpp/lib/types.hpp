@@ -19,12 +19,12 @@ using CStringMap = Map<const char*, const char*, Size>;
 
 template<class T, class Enable = void>
 struct Value {
-  static constexpr T zero = T();
-  static constexpr bool isZero(const T& a) { return a.isZero(); }
+  static const T zero;
+  static const bool isZero(const T& a) { return a.isZero(); }
 };
 
 template<class T, class Enable>
-constexpr T Value<T, Enable>::zero;
+const T Value<T, Enable>::zero = T();
 
 template <class T>
 struct Value<T, typename std::enable_if<std::is_integral<T>::value>::type> {

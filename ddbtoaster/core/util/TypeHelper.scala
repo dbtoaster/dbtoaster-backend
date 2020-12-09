@@ -58,6 +58,13 @@ object TypeHelper {
       case TypeCustom(_, _) => "const " + typeToString(t) + "&"
     }    
 
+    def isConstexprType(t: Type): Boolean = t match {
+      case TypeByte | TypeShort | TypeInt | TypeLong |
+           TypeFloat | TypeDouble | TypeDate | TypeChar => true
+      case TypeCustom(d, _) => d.name == "SumRing" || d.name == "AvgRing"
+      case _ => false
+    }
+
     def typeToChar(t: Type): String = t match {
       case TypeByte   => "b"
       case TypeShort  => "s"

@@ -46,7 +46,7 @@ trait ICppGen extends CodeGen {
     if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else q.name + "_map&"
 
   protected def queryReturnTypeToString(q: Query) = 
-    if (q.expr.ovars.isEmpty) refTypeToString(q.expr.tp) else "const " + q.name + "_map&"
+    if (q.expr.ovars.isEmpty) constRefTypeToString(q.expr.tp) else "const " + q.name + "_map&"
 
   protected def cmpToString(op: OpCmp) = op match {
     case OpEq => "=="
@@ -179,19 +179,25 @@ trait ICppGen extends CodeGen {
   //   case _ => true
   // }
 
+  private val constexprUFunctions =
+    Set("date_year", "date_month", "date_day", "date", "SumFn", "AvgFn")
+
+  private def isConstexprFn(a: Apply) =
+    constexprUFunctions.contains(a.fun) && isConstexprType(a.tp)
+
   private def emitConstDefinitions =
     if (!cgOpts.useOldRuntimeLibrary) {
       val s = hoistedConsts.map {
-        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
-          "static const " + typeToString(tp) + " " + n + ";"
-
-        case (Apply(fn, tp, args), n) =>
-          val sArgs = args.map {
+        case (a, n) if isConstexprFn(a) =>
+          val sArgs = a.args.map {
             case Const(TypeString, v) => "\"" + v + "\""
             case a => cpsExpr(a)
           }.mkString(", ")
-          "static constexpr " + typeToString(tp) + " " +
-            n + " = U" + fn + "(" + sArgs + ");"
+          val sFnName = if (a.fun == "StringType") a.fun else "U" + a.fun
+          "static constexpr " + typeToString(a.tp) + " " + n +
+            " = " + sFnName + "(" + sArgs + ");"
+        case (a, n) =>
+          "static const " + typeToString(a.tp) + " " + n + ";"
       }.mkString("\n")
       stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
     }
@@ -200,17 +206,22 @@ trait ICppGen extends CodeGen {
         "/* const static */ " + typeToString(a.tp) + " " + n + ";"
       }.mkString("\n")
 
-      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)      
+      stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
     }
 
-  private def emitPostConstDefinitions = 
+  private def emitPostConstDefinitions =
     stringIf(!cgOpts.useOldRuntimeLibrary, {
       val s = hoistedConsts.map {
-        case (Apply("StringType", tp, Const(TypeString, v) :: Nil), n) =>
-          "const " + typeToString(tp) + " data_t::" + 
-            n + " = StringType(\"" + v + "\");"
-        case (a, n) => 
+        case (a, n) if isConstexprFn(a) =>
           "constexpr " + typeToString(a.tp) + " data_t::" + n + ";"
+        case (a, n) =>
+          val sArgs = a.args.map {
+            case Const(TypeString, v) => "\"" + v + "\""
+            case a => cpsExpr(a)
+          }.mkString(", ")
+          val sFnName = if (a.fun == "StringType") a.fun else "U" + a.fun
+          "const " + typeToString(a.tp) + " data_t::" + n +
+            " = " + sFnName + "(" + sArgs + ");"
       }.mkString("\n")
       stringIf(s.nonEmpty, "/* Constant definitions */\n" + s)
     })

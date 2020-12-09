@@ -1,50 +1,73 @@
 #ifndef DBTOASTER_RINGS_MAX_STRUCT_HPP
 #define DBTOASTER_RINGS_MAX_STRUCT_HPP
 
+#include <map>
 #include "numeric_ring.hpp"
 
 namespace dbtoaster {
 
 namespace standard_rings {
 
-// SKELETON CLASS - NOT IMPLEMENTED yet
-
 struct MaxRing : NumericRing {
-  int count;
-  DoubleType sum;
 
-  explicit constexpr MaxRing() : count(0), sum(0.0) { }
+  std::map<DoubleType, long> sorted_map;
 
-  explicit constexpr MaxRing(int c, DoubleType s) : count(c), sum(s) { }
+  explicit MaxRing() { }
 
-  inline constexpr bool isZero() const { return count == 0; }
+  explicit MaxRing(DoubleType v) : sorted_map { { v, 1 } } { }
 
-  inline constexpr DoubleType result() const {
-    return (count != 0 ? sum : 0.0);
+  explicit MaxRing(const MaxRing& other, long a) {
+    if (a == 0L) return;
+    for (auto& kv : other.sorted_map) {
+      sorted_map[kv.first] = kv.second * a;
+    }
+  }
+
+  inline bool isZero() const { return sorted_map.empty(); }
+
+  inline DoubleType result() const {
+    return (sorted_map.empty() ? 0.0 : sorted_map.rbegin()->first);
   }
 
   inline MaxRing& operator+=(const MaxRing& other) {
-    this->count += other.count;
-    this->sum += other.sum;
+    for (auto& kv : other.sorted_map) {
+      auto it = sorted_map.find(kv.first);
+      if (it == sorted_map.end()) {
+        sorted_map[kv.first] = kv.second;
+      }
+      else {
+        it->second += kv.second;
+        if (it->second == 0L) sorted_map.erase(it);
+      }
+    }
     return *this;
-  }
-
-  inline constexpr MaxRing operator+(const MaxRing& other) const {
-    return MaxRing(count + other.count, sum + other.sum);
-  }
-
-  inline constexpr MaxRing operator*(const MaxRing& other) const {
-    return MaxRing(count * other.count, sum * other.sum);
   }
 
 };
 
-inline constexpr MaxRing operator*(long v, const MaxRing& a) {
-  return MaxRing(v * a.count, v * a.sum);
+inline MaxRing multiply(MaxRing&& r, long a) {
+  if (a == 0L) return MaxRing();
+  if (a == 1L) return std::move(r);
+  for (auto& kv : r.sorted_map) {
+    kv.second *= a;
+  }
+  return std::move(r);
 }
 
-inline constexpr MaxRing operator*(const MaxRing& a, long v) {
-  return MaxRing(v * a.count, v * a.sum);
+inline MaxRing operator*(long a, MaxRing&& r) {
+  return multiply(std::forward<MaxRing>(r), a);
+}
+
+inline MaxRing operator*(MaxRing&& r, long a) {
+  return multiply(std::forward<MaxRing>(r), a);
+}
+
+inline MaxRing operator*(long a, const MaxRing& r) {
+  return MaxRing(r, a);
+}
+
+inline MaxRing operator*(const MaxRing& r, long a) {
+  return MaxRing(r, a);
 }
 
 }
