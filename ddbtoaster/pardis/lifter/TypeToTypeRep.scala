@@ -13,11 +13,11 @@ import ch.epfl.data.sc.pardis.types._
 trait TypeToTypeRep { this: StoreDSL =>
   
   def man(tp: Type): TypeRep[_] = tp match {
-    case TypeChar | TypeShort | TypeInt | TypeLong => runtimeType[Long]
+    case TypeShort | TypeInt | TypeLong => runtimeType[Long]
     case TypeFloat | TypeDouble => runtimeType[Double]
+    case TypeChar => runtimeType[Char]
     case TypeString => runtimeType[String]
-    case TypeDate => runtimeType[Long]
-    // case TypeDate => runtimeType[java.util.Date]
+    case TypeDate => runtimeType[java.util.Date]
     case _ => sys.error("No typeRep for "+tp)
   }
 
@@ -61,19 +61,21 @@ trait TypeToTypeRep { this: StoreDSL =>
   }
 
   def zero(tp: Type) = tp match {
-    case TypeChar | TypeShort | TypeInt | TypeLong => 0L
+    case TypeShort | TypeInt | TypeLong => 0L
     case TypeFloat | TypeDouble => 0.0
+    case TypeChar => 0.toChar
     case TypeString => ""
-    case TypeDate => 0L
-    // case TypeDate => new java.util.Date()
+    case TypeDate => null
     case _ => sys.error("Bad Type")
   }
 
   def zero(m: TypeRep[_]) = m.name match {
     case "Long" => 0L
     case "Double" => 0.0
+    case "Char" => 0.toChar
     case "String" => ""
-    case "java.util.Date" => new java.util.Date()
+    case "java.util.Date" => 0L
+    // case "java.util.Date" => new java.util.Date()
     case _ => sys.error("Bad manifest")
   }
 }

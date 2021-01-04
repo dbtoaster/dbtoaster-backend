@@ -170,9 +170,11 @@ object Adaptor {
 
   class CSV(name: String, schema: String, delimiter: String = ",", action: String = "insert") extends Adaptor {
     val tfs: Array[String => _] = schema.split(",").map {
-      case "char" | "short" | "int" | "long" => (c: String) => java.lang.Long.parseLong(c)
+      case "short" | "int" | "long" => (c: String) => java.lang.Long.parseLong(c)
       case "float" | "double" => (c: String) => java.lang.Double.parseDouble(c)
       case "date"   => (c: String) => Functions.Udate(c)
+      case "char" => (c: String) =>
+        if (c.length == 1) c(0) else sys.error("Illegal character format " + c)
       case "string" => (c: String) => if (c.length == 0) "" else c(0) match {
         case '\'' => c.substring(1, c.length - 1).replaceAll("\\\\'", "'")
         case '"'  => c.substring(1, c.length - 1).replaceAll("\\\\\"", "\"")
@@ -189,9 +191,10 @@ object Adaptor {
     }
 
     val btfs: Array[DataInputStream => _] = schema.split(",").map {
-      case "char" | "short" | "int" | "long"   => (in: DataInputStream) => in.readLong()
+      case "short" | "int" | "long"   => (in: DataInputStream) => in.readLong()
       case "float" | "double" => (in: DataInputStream) => in.readDouble()
       case "date"   => (in: DataInputStream) => in.readLong()
+      case "char"   => (in: DataInputStream) => in.readChar() 
       case "string" => (in: DataInputStream) => in.readUTF()
       case _ => sys.error("Unsupported schema type")
     }

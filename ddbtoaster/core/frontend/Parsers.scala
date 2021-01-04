@@ -60,41 +60,66 @@ class ExtParser extends StandardTokenParsers {
 
   lazy val floatLit = 
     doubleLit <~ ("F"|"f")
- 
+
   // ------------ Types
   lazy val tpe: Parser[Type] = (
-    ("string" | ("char" | "varchar") ~> "(" ~> numericLit <~ ")") ^^^ TypeString
+      "char" ~> "(" ~> "1" ~> ")" ^^^ TypeChar
+    | ( "string" | ("char" | "varchar") ~> "(" ~> numericLit <~ ")") ^^^ TypeString
     | "char" ^^^ TypeChar
+    | "byte" ^^^ TypeByte
     | "short" ^^^ TypeShort
     | "int" ^^^ TypeInt
     | "long" ^^^ TypeLong
     | "float" ^^^ TypeFloat
     | ("decimal" | "double") ^^^ TypeDouble
     | "date" ^^^ TypeDate
-    // | "<" ~> repsep(tpe, ",") <~ ">" ^^ { TypeTuple(_) }
     | customType
   )
 
-  // ------------ Custom type definition
-  val typeMap = collection.mutable.Map[String,TypeDefinition]()
-
-  lazy val typeDef = 
-    "CREATE" ~> "TYPE" ~> ident ~ ("FROM" ~> "FILE" ~> stringLit) <~ ";" ^^ {
-      case i ~ f => 
-        val t = TypeDefinition(i, f)
-        typeMap += ((i, t))
-        t
-    }
+  // ------------ Generic type definition
+  lazy val genericParam: Parser[GenericParameter] =
+    (  intLit ^^ { i => ConstParameter(i.toInt) }
+    |  tpe ^^ { t => PrimitiveTypeParameter(t) }
+    |  "[" ~> (intLit <~ ",") ~ rep1sep(genericParam, ",") <~ "]" ^^ {
+          case p ~ l => PrioritizedParameterList(p.toInt, l)
+       }
+    )
 
   lazy val customType: Parser[TypeCustom] =
-    acceptIf (x => typeMap.contains(x.chars)) (x => "No such type '" + x.chars + "'") ~ opt("(" ~> intLit <~ ")") ^^ {
-      case i ~ p => TypeCustom(typeMap(i.chars), p.map(_.toInt))
+    acceptIf (x => typeMap.contains(x.chars)) (x => "No such type '" + x.chars + "'") ~
+      opt("<" ~> repsep(genericParam, ",") <~ ">") ^^ {
+      case i ~ p => TypeCustom(typeMap(i.chars), p.getOrElse(Nil))
     }
 
-  // ------------ Library function (validates name)
-  lazy val func: Parser[String] = 
-    acceptIf (x => Library(x.chars.toLowerCase)) (x => 
-      "No such function '" + x.chars + "'") ^^ (_.chars.toLowerCase)
+  private val typeMap = collection.mutable.Map[String, TypeDefinition]()
+
+  lazy val parameterType: Parser[ParameterType] =
+    ( "static" ^^^ StaticParameter
+    | "dynamic_sum" ^^^ DynamicSumParameter
+    | "dynamic_concat" ^^^ DynamicPrioritizedConcatParameter
+    | "dynamic_min" ^^^ DynamicPrioritizedMinParameter
+    )
+
+  lazy val typeDef: Parser[TypeDefinition] =
+    ("CREATE" ~> opt("DISTRIBUTED") <~ "TYPE") ~ ident ~ ("FROM" ~> sourceIn) ~
+      opt("WITH" ~> "PARAMETER" ~> "SCHEMA" ~> "(" ~> repsep(parameterType, ",") <~ ")") <~ ";" ^^ {
+        case d ~ i ~ f ~ p =>
+          val td = TypeDefinition(i, f, p.getOrElse(Nil), d.isDefined)
+          typeMap += ((i, td))
+          td
+    }
+
+  // ------------ Function name
+  lazy val func: Parser[String] =
+    ident ~ opt("<" ~> repsep(intLit, ",") <~ ">") ^^ {
+      case n ~ Some(ps) => n + "<" + ps.mkString(", ") + ">"
+      case n ~ None => n
+    }
+
+  // // ------------ Library function (validates name)
+  // lazy val func: Parser[String] = 
+  //   acceptIf (x => Library(x.chars.toLowerCase)) (x => 
+  //     "No such function '" + x.chars + "'") ^^ (_.chars.toLowerCase)
   
   // ------------ Partitioning information
   lazy val partitioning = 
@@ -205,7 +230,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
       ("(" ~> expr <~ ")") ^^ { 
         case t ~ e => Apply("/", t, List(e)) 
       }
-    | ("[" ~> /* func */ ident <~ ":") ~ (tpe <~ "]") ~ 
+    | ("[" ~> func <~ ":") ~ (tpe <~ "]") ~ 
       ("(" ~> repsep(expr,",") <~ ")") ^^ { 
         case n ~ t ~ as => Apply(n, t, as) 
       }
@@ -411,7 +436,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
       }}
     | expr ~ ("BETWEEN" ~> expr) ~ 
       ("AND" ~> expr) ^^ { 
-        case e ~ m ~ n => And(Cmp(e, m, OpGt), Cmp(n, e, OpGt)) 
+        case e ~ m ~ n => And(Cmp(e, m, OpGe), Cmp(n, e, OpGe))
       }
     | expr ~ (opt("NOT") <~ "IN") ~ query ^^ { 
         case e ~ Some(_) ~ q => Not(In(e, q)) 

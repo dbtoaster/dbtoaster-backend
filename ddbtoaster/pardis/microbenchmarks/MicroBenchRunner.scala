@@ -77,7 +77,9 @@ object MicroBenchRunner {
 
     val codeGen = lang match {
       case "scala" => new MicroBenchPardisScalaGen(Context)
-      case "cpp" => Optimizer.cTransformer = true;
+      case "cpp" => 
+        Optimizer.cTransformer = true
+        Optimizer.analyzeEntry = true        
         new MicroBenchPardisCppGen(Context)
     }
     val initialTP: TransactionProgram[Int] = prog.getTransactionProgram

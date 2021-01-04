@@ -1,6 +1,13 @@
 DBToaster Changelog
 ===============================================================================
 
+Release 2.3 - 2019/06/04
+
+- Added Pardis code generator for Scala and C++. Pardis is now default Scala codegen.
+- Enabled custom payload types in vanilla C++.
+- Various frontend and backend optimizations
+
+
 Release 2.2 (revision 3387) - 2015/11/27
 
 - Added support for batch updates via flags '--batch' and '--xbs <BATCH_SIZE>'.

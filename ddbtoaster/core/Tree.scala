@@ -12,76 +12,130 @@ sealed abstract class Tree    // Generic AST node
 sealed abstract class Type extends Tree {
   def resolve(b: Type): Type
 }
-case object TypeChar extends Type {
+object Type {
+  def resolve(tp1: Type, tp2: Type): Type =
+    if (tp1 == null || tp2 == null) null else
+    try { tp1.resolve(tp2) }
+    catch { case _: TypeMismatchException => tp2.resolve(tp1) }
+}
+case object TypeByte extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => b
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => b
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = "char"
+  override def toString = "byte"
 }
 case object TypeShort extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort => this
+    case TypeByte | TypeShort => this
     case TypeInt | TypeLong | TypeFloat | TypeDouble => b
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
   override def toString = "short" 
 }
 case object TypeInt extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeDate => this
+    case TypeByte | TypeShort | TypeInt | TypeDate => this
     case TypeLong | TypeFloat | TypeDouble => b
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = "int" 
+  override def toString = "int"
 }
 case object TypeLong extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeDate => this
+    case TypeByte | TypeShort | TypeInt | TypeLong | TypeDate => this
     case TypeFloat | TypeDouble => b
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = "long" 
+  override def toString = "long"
 }
-case object TypeFloat extends Type { 
+case object TypeFloat extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat => this
+    case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat => this
     case TypeDouble => b
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = "float" 
+  override def toString = "float"
 }
-case object TypeDouble extends Type { 
+case object TypeDouble extends Type {
   def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = "double" 
+  override def toString = "double"
 }
 case object TypeDate extends Type {
   def resolve(b: Type) = b match {
     case TypeDate => this
     case TypeInt | TypeLong => b    // no other integer types allowed
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }  
-  override def toString = "date" 
+  override def toString = "date"
 }
-case object TypeString extends Type { 
+case object TypeChar extends Type {
   def resolve(b: Type) = b match {
-    case TypeString => this
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
-  }    
-  override def toString = "string" 
-}
-case class TypeCustom(typeDef: TypeDefinition, param: Option[Int]) extends Type { 
-  def resolve(b: Type) = b match {
-    case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => this
-    case b: TypeCustom if typeDef == b.typeDef && param.isEmpty && b.param.isEmpty => this
-    case b: TypeCustom if typeDef == b.typeDef && param.nonEmpty && b.param.nonEmpty => 
-      TypeCustom(typeDef, Some(param.get + b.param.get))
-    case _ => throw new TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+    case TypeChar => this
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
   }
-  override def toString = typeDef.name + param.map("(" + _ + ")").mkString
+  override def toString = "char"
+}
+case object TypeString extends Type {
+  def resolve(b: Type) = b match {    
+    case TypeString => this
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }    
+  override def toString = "string"
+}
+
+sealed trait GenericParameter
+case class ConstParameter(c: Integer) extends GenericParameter {
+  override def toString = c.toString
+}
+case class PrimitiveTypeParameter(tp: Type) extends GenericParameter {
+  override def toString = tp.toString
+}
+case class PrioritizedParameterList(priority: Integer,
+                                    params: List[GenericParameter]) extends GenericParameter {
+  override def toString = "[" + (priority :: params).mkString(", ") + "]"
+}
+
+case class TypeCustom(typeDef: TypeDefinition,
+                      params: List[GenericParameter]) extends Type {
+
+  assert(params.size == typeDef.schema.size,
+    "Wrong number of generic parameters")
+
+  private def resolveParam(a: GenericParameter,
+                           b: GenericParameter,
+                           tp: ParameterType): GenericParameter =
+    (tp, a, b) match {
+      case (StaticParameter, p1, p2) if p1 == p2 => p1
+      case (DynamicSumParameter,
+            ConstParameter(c1),
+            ConstParameter(c2)) => ConstParameter(c1 + c2)
+      case (DynamicPrioritizedConcatParameter,
+            PrioritizedParameterList(o1, p1),
+            PrioritizedParameterList(o2, p2)) if o1 < o2 => PrioritizedParameterList(o1, p1 ++ p2)
+      case (DynamicPrioritizedMinParameter,
+            ConstParameter(o1),
+            ConstParameter(o2)) if o1 < o2 => a
+      case (DynamicPrioritizedMinParameter,
+            PrioritizedParameterList(o1, _),
+            PrioritizedParameterList(o2, _)) if o1 < o2 => a
+      case _ =>
+        throw TypeMismatchException("Parameter type mismatch (" + a + ", " + b + ")")
+    }
+
+  def resolve(b: Type): Type = b match {
+    case TypeByte | TypeShort | TypeInt | TypeLong => this
+    case b: TypeCustom if typeDef == b.typeDef =>
+      TypeCustom(typeDef, (params, b.params, typeDef.schema).zipped.map(resolveParam))
+    case _ => throw TypeMismatchException("Type mismatch (" + this + ", " + b + ")")
+  }
+
+  override def toString =
+    if (params.isEmpty) typeDef.name
+    else typeDef.name + "<" + params.mkString(", ") + ">"
 }
 
 // ------ Comparison operators
@@ -133,9 +187,30 @@ case class Adaptor(name: String, options: Map[String, String]) extends Tree {
              else " (" + options.map { case (k, v) => k + " := '" + v + "'" }.mkString(", ") + ")" )
 }
 
-// ------ Custom type definitions
-case class TypeDefinition(name: String, path: String) {
-  override def toString = "CREATE TYPE " + name + " FROM FILE " + path + ";"
+// ------ Custom generic type definitions
+abstract sealed class ParameterType
+case object StaticParameter extends ParameterType {
+  override def toString = "static"
+}
+case object DynamicSumParameter extends ParameterType {
+  override def toString = "dynamic_sum"
+}
+case object DynamicPrioritizedConcatParameter extends ParameterType {
+  override def toString = "dynamic_concat"
+}
+case object DynamicPrioritizedMinParameter extends ParameterType {
+  override def toString = "dynamic_min"
+}
+
+case class TypeDefinition(name: String, file: SourceFile,
+                          schema: List[ParameterType], isDistributed: Boolean) {
+  override def toString =
+    if (schema.isEmpty)
+      s"CREATE ${if (isDistributed) "DISTRIBUTED" else ""} TYPE $name FROM $file;"
+    else
+      s"""CREATE ${if (isDistributed) "DISTRIBUTED" else ""} TYPE $name
+         |FROM $file
+         |WITH PARAMETER SCHEMA (${schema.mkString(", ")});""".stripMargin
 }
 
 // ------ Expression locality types
@@ -328,9 +403,28 @@ object M3 {
       * @return A pair of lists, holding input variables and output variables
       */
     def schema: (List[(String, Type)], List[(String, Type)]) = {
-      def union(l1: List[(String, Type)],l2: List[(String, Type)])  = (l1 ++ l2).distinct
-      def diff(l1: List[(String, Type)], l2: List[(String, Type)])  = l1.filterNot(l2.contains)
-      def inter(l1: List[(String, Type)], l2: List[(String, Type)]) = l1.filter(l2.contains)
+      def resolver(l: List[(String, Type)]): Map[String, Type] = 
+        l.groupBy(_._1).mapValues(_.map(_._2).reduce(Type.resolve)).toMap
+
+      def distinct(l: List[(String, Type)]) = {
+        val tr = resolver(l)
+        l.map(_._1).distinct.map(x => x -> tr(x))
+      }
+
+      def union(l1: List[(String, Type)], l2: List[(String, Type)]) = {
+        val tr = resolver(l1 ++ l2)
+        (l1 ++ l2).map(_._1).distinct.map(x => x -> tr(x))
+      }
+  
+      def diff(l1: List[(String, Type)], l2: List[(String, Type)]) = {
+        val tr = resolver(l1 ++ l2)
+        l1.map(_._1).filterNot(l2.map(_._1).contains).map(x => x -> tr(x))
+      }
+      
+      def inter(l1: List[(String, Type)], l2: List[(String, Type)]) = {
+        val tr = resolver(l1 ++ l2)
+        l1.map(_._1).filter(l2.map(_._1).contains).map(x => x -> tr(x))
+      }
 
       this match {
         case Const(tp, v) => (List(), List())
@@ -342,7 +436,7 @@ object M3 {
         case CmpOrList(l, r) => (l.schema._1, List())
         case Apply(fn, tp, as) =>
           val (ivs, ovs) = as.map(_.schema).unzip
-          (ivs.flatten.distinct, ovs.flatten.distinct)
+          (distinct(ivs.flatten), distinct(ovs.flatten))
         case Mul(el, er) =>
           val (iv1, ov1) = el.schema
           val (iv2, ov2) = er.schema
@@ -403,7 +497,9 @@ object M3 {
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
-          if (op1 != op2) None else merge(l1.cmp(l2), r1.cmp(r2))
+          if (op1 == op2) merge(l1.cmp(l2), r1.cmp(r2)) else None
+        case (CmpOrList(e1, l1), CmpOrList(e2, l2)) =>         
+          if (l1.toSet == l2.toSet) e1.cmp(e2) else None
         case (Mul(l1, r1), Mul(l2, r2)) =>
           merge(l1.cmp(l2), r1.cmp(r2))
         case (Add(l1, r1), Add(l2, r2)) =>
@@ -433,9 +529,12 @@ object M3 {
   }
 
   // Constants
-  case class Const(tp: Type, v: String) extends Expr { 
+  case class Const(var tp: Type, v: String) extends Expr { 
     val locality: Option[LocalityType] = None
-    override def toString = if (tp == TypeString) "'" + v + "'" else v 
+    override def toString = tp match {
+      case TypeChar | TypeString => "'" + v + "'"
+      case _ => v
+    }
     def toDecoratedString = toString + ": " + tp
   }
 
@@ -469,7 +568,7 @@ object M3 {
 
   // Lifting operator ('Let name=e in ...' semantics)
   case class Lift(name: String, e: Expr) extends Expr { 
-    val tp = TypeChar
+    val tp = TypeInt
     def locality = e.locality
     override def toString = "(" + name + " ^= " + e + ")"
     def toDecoratedString = "(" + name + " ^= " + e.toDecoratedString + ")" + ": " + tp
@@ -549,7 +648,7 @@ object M3 {
 
   // Exists operator - returns 0 or 1 (checks if there is at least one tuple)
   case class Exists(e: Expr) extends Expr { 
-    val tp = TypeChar 
+    val tp = TypeInt 
     def locality = e.locality
     override def toString = "EXISTS(" + e + ")"
     def toDecoratedString = "EXISTS(" + e.toDecoratedString + "): " + tp
@@ -564,7 +663,7 @@ object M3 {
 
   // Comparison, returns 0 or 1
   case class Cmp(l: Expr, r: Expr, op: OpCmp) extends Expr { 
-    val tp = TypeChar    
+    val tp = TypeInt    
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " " + op + " " + r + "}"
     def toDecoratedString = "{" + l.toDecoratedString + " " + op + " " + r.toDecoratedString + "}: " + tp
@@ -572,7 +671,7 @@ object M3 {
 
   // OR comparison with a given expr list, returns 0 or 1
   case class CmpOrList(l: Expr, r: List[Expr]) extends Expr {
-    val tp = TypeChar
+    val tp = TypeInt
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " IN [" + r.mkString(", ") + "]}"
     def toDecoratedString = "{" + l.toDecoratedString + " IN [" + r.map(_.toDecoratedString).mkString(", ") + "]}: " + tp
@@ -589,7 +688,7 @@ object M3 {
 
   // Lifting operator with tuples
   case class TupleLift(ns: List[String], e: Expr) extends Expr { 
-    val tp = TypeChar
+    val tp = TypeInt
     val locality: Option[LocalityType] = None
     override def toString = "(<" + ns.mkString(", ") + "> ^= " + e + ")"
     def toDecoratedString = 

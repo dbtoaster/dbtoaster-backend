@@ -63,8 +63,6 @@ object Utils {
     System.err.println(sb.toString)
   }
 
-  private val defaultPathDBTBin = "./bin/dbtoaster_frontend"
-
   private val prop_ = new java.util.Properties
 
   try { 
@@ -190,30 +188,55 @@ object Utils {
   }
 
   // C++ compiler wrapper
-  def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
+  def cppCompiler(out: String, cPath: String, cppDir: String, strictWarningCheck: Boolean = false) = {
+    val cppDriverDir = cppDir + "/driver"
+    val cppLibDir = cppDir + "/lib"
+    val warningFlags = if (strictWarningCheck) Nil else List(
+      "-Wno-parentheses-equality",
+      "-Wno-tautological-compare",
+      "-Wno-unused-variable",
+      "-Wno-uninitialized",
+      "-Wno-strict-overflow"
+    )
     val as = 
-      ( List(prop("gpp", "g++"), cppLibDir + "/main.cpp", "-w", "-std=c++11",
-          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
-          "-I" + cppLibDir, "-L" + cppLibDir) :::
-        (if (boost == null) Nil else 
-          List("program_options", "serialization", "system", "filesystem",
-               "chrono", "thread").map("-lboost_" + _ + Utils.prop("lib_boost_thread", "")) ::: 
-          List("-I" + boost + "/include", "-L" + boost + "/lib")) ::: 
-        cppOpts
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-std=c++14",    
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG",
+          "-I" + cppLibDir, "-I" + cppDriverDir
+        ) ::: cppOpts ::: warningFlags
       ).filter(_ != "")
-    //make DBT c++ library
+    Utils.exec(as.toArray)
+  }
+
+  def cppCompilerOldRuntime(out: String, cPath: String, cppDir: String, strictWarningCheck: Boolean = false) = {
+    val cppDriverDir = cppDir + "/old_driver"
+    val cppLibDir = cppDir + "/old_lib"
+    val warningFlags = if (strictWarningCheck) Nil else List(
+      "-Wno-parentheses-equality",
+      "-Wno-tautological-compare",
+      "-Wno-unused-variable",
+      "-Wno-uninitialized",
+      "-Wno-strict-overflow"
+    )
+    val as = 
+      ( List(prop("gpp", "g++"), cppDriverDir + "/main.cpp", "-std=c++11",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldriver", "-ldbtoaster",
+          "-I" + cppLibDir, "-L" + cppLibDir, "-I" + cppDriverDir, "-L" + cppDriverDir
+        ) ::: cppOpts ::: warningFlags
+      ).filter(_ != "")
+    //make DBT c++ library and driver
     Utils.exec(Array("make", "-C", cppLibDir))
+    Utils.exec(Array("make", "-C", cppDriverDir))
     Utils.exec(as.toArray)
   }
 
   def scalaJSCompiler(scalaFile: String) = {
-    val queryName = scalaFile.split('.').dropRight(1).mkString(".") //SBJ: Remove extension
+    val queryName = scalaFile.split('.').dropRight(1).mkString(".") // SBJ: Remove extension
     Utils.exec(Array("./compileJS.sh", queryName))
   }
 
   def jsExec(className: String, args: Array[String] = Array()): (String, String) = {
     val (out, err) = exec(Array("./runJS.sh", className + ".js"))
-    (out, "") //SBJ: Ignoring errors and warnings
+    (out, "") // SBJ: Ignoring errors and warnings
   }
 
   // Execute Scala program

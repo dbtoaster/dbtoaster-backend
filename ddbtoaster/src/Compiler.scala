@@ -25,13 +25,12 @@ object Compiler {
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
   val LANG_DIST_M3 = "annotm3"
-  val LANG_CPP_VANILLA = "vcpp"
+  val LANG_CPP_VANILLA = "cpp"
   val LANG_CPP_LMS = "lmscpp"
-  val LANG_CPP_PARDIS = "cpp"
+  val LANG_CPP_PARDIS = "pcpp"
   val LANG_SCALA_VANILLA = "vscala"
   val LANG_SCALA_LMS = "lmsscala"
   val LANG_SCALA_PARDIS = "scala"
-  val LANG_SCALA2_PARDIS = "scala2"
   val LANG_SCALAJS_PARDIS = "scalajs"
   val LANG_SPARK_LMS = "spark"
   val LANG_AKKA = "akka"
@@ -46,7 +45,6 @@ object Compiler {
     LANG_SCALA_VANILLA -> "m3",
     LANG_SCALA_LMS -> "m3",
     LANG_SCALA_PARDIS -> "m3",
-    LANG_SCALA2_PARDIS -> "m3",
     LANG_SCALAJS_PARDIS -> "m3",
     LANG_SPARK_LMS -> "dm3",
     LANG_AKKA -> "m3"
@@ -62,53 +60,54 @@ object Compiler {
     LANG_SCALA_VANILLA -> "scala",
     LANG_SCALA_LMS -> "scala",
     LANG_SCALA_PARDIS -> "scala",
-    LANG_SCALA2_PARDIS -> "scala",
     LANG_SCALAJS_PARDIS -> "scala",
     LANG_SPARK_LMS -> "scala",
     LANG_AKKA -> "scala"
   )
 
   val M3_FILE_SUFFIX = ("""\.(""" + frontendFileExtensions(LANG_M3) + "|" +
-    frontendFileExtensions(LANG_DIST_M3) + ")").r
+                                    frontendFileExtensions(LANG_DIST_M3) + ")").r
 
-  val DEFAULT_LANG_CPP = LANG_CPP_PARDIS
+  val DEFAULT_LANG_CPP = LANG_CPP_VANILLA
   val DEFAULT_LANG_SCALA = LANG_SCALA_PARDIS
   val DEFAULT_PACKAGE_NAME = "ddbt.gen"
   val DEFAULT_DATASET_NAME = "standard"
 
-  private var inputFile: String = null // input file
-  private var outputSrcFile: String = null // output file (defaults to stdout)
-  private var outputExeFile: String = null // path for putting the compiled program
-  private var outputExeDir = new File("./") // output directory
-  private var lang: String = null // output language
+  private var inputFile: String = null       // input file
+  private var outputSrcFile: String = null   // output file (defaults to stdout)
+  private var outputExeFile: String = null   // path for putting the compiled program
+  private var outputExeDir = new File("./")  // output directory
+  private var lang: String = null            // output language
 
-  private var frontendPathBin = Utils.pathDBTBin // the path to DBToaster's frontend
-  private var frontendOptLevel = "-O2" // optimization level
-  private var frontendIvmDepth = -1 // incrementalization depth (-1 = infinite)
-  private var frontendDebugFlags = List[String]() // front-end flags
-  private var batchingEnabled = false // determines whether batching is enabled or not
+  private var frontendPathBin = Utils.pathDBTBin    // the path to DBToaster's frontend
+  private var frontendOptLevel = "-O2"              // optimization level
+  private var frontendIvmDepth = -1                 // incrementalization depth (-1 = infinite)
+  private var frontendDebugFlags = List[String]()   // front-end flags
+  private var batchingEnabled = false               // whether batching is enabled or not
 
   // Codegen options
-  private var className: String = null // class/structures name (defaults to Query or capitalized filename)
-  private var packageName = DEFAULT_PACKAGE_NAME // class package
-  private var datasetName = DEFAULT_DATASET_NAME // dataset name (used for codegen)
-  private var datasetWithDeletions = false // whether dataset contains deletions or not
+  private var className: String = null            // class/structures name (defaults to Query or capitalized filename)
+  private var packageName = DEFAULT_PACKAGE_NAME  // class package
+  private var datasetName = DEFAULT_DATASET_NAME  // dataset name (used for codegen)
+  private var datasetWithDeletions = false        // whether dataset contains deletions or not
 
   // Execution
-  private var execOutput = false // compile and execute immediately
-  private var execArgs = List[String]() // arguments passed for execution
-  private var execPrintProgress = 0 // print time and number of tuples processed every X tuples (0 = disable printing)
-  private var execBatchSize = 0 // execute as batches of certain size
-  private var execTimeoutMilli = 0L // execution timeout in milliseconds
-  private var execRuntimeLibs = List[String]() // runtime libraries (defaults to lib/ddbt.jar for scala)
+  private var execOutput = false                // compile and execute immediately
+  private var execArgs = List[String]()         // arguments passed for execution
+  private var execPrintProgress = 0             // print time and number of tuples processed every X tuples (0 = disable printing)
+  private var execBatchSize = 0                 // execute as batches of certain size
+  private var execTimeoutMilli = 0L             // execution timeout in milliseconds
+  private var execRuntimeLibs = List[String]()  // runtime libraries (defaults to lib/ddbt.jar for scala)
+  private var execPreloadInput = false          // preload input dataset  
 
-  private var useExternalScalac = false // compile using fsc / external scalac
-  private var useExternalJVM = false // execute in a fresh JVM
+  // Backward compatibility
+  private var useOldCppRuntimeLibrary = false
 
-  // private var ni   = false     // non-incremental query evaluation (implies depth=0)
+  private var useExternalScalac = false       // compile using fsc / external scalac
+  private var useExternalJVM = false          // execute in a fresh JVM
+
+  // private var ni   = false      // non-incremental query evaluation (implies depth=0)
   // private var watch  = false    // stream of updates on result map
-
-  def isBatchingEnable = batchingEnabled
 
   def batchSize = execBatchSize
 
@@ -134,19 +133,18 @@ object Compiler {
     error("  -o <file>     output file (default: stdout)")
     error("  -c <file>     invoke a second stage compiler on the source file")
     error("  -l <lang>     defines the target language")
-    error("                - " + pad(LANG_CALC) + ": relational calculus")
-    error("                - " + pad(LANG_M3) + ": M3 program")
-    error("                - " + pad(LANG_DIST_M3) + ": distributed M3 program")
-    error("                - " + pad(LANG_CPP_VANILLA) + ": vanilla C++ code")
-    // error("                - " + pad(LANG_CPP_LMS)       + ": LMS-optimized C++")
-    error("                - " + pad(LANG_CPP_PARDIS) + ": PARDIS-optimized C++")
-    error("                - " + pad(LANG_SCALA_VANILLA) + ": vanilla Scala code")
-    error("                - " + pad(LANG_SCALA_LMS) + ": LMS-optimized Scala")
-    error("                - " + pad(LANG_SCALA_PARDIS) + ": PARDIS-optimized Scala")
-    error("                - " + pad(LANG_SCALA2_PARDIS) + ": PARDIS-optimized Scala2")
+    error("                - " + pad(LANG_CALC)           + ": relational calculus")
+    error("                - " + pad(LANG_M3)             + ": M3 program")
+    error("                - " + pad(LANG_DIST_M3)        + ": distributed M3 program")
+    error("                - " + pad(LANG_CPP_VANILLA)    + ": vanilla C++ code")
+    // error("                - " + pad(LANG_CPP_LMS)        + ": LMS-optimized C++")
+    error("                - " + pad(LANG_CPP_PARDIS)     + ": PARDIS-optimized C++")
+    error("                - " + pad(LANG_SCALA_VANILLA)  + ": vanilla Scala code")
+    error("                - " + pad(LANG_SCALA_LMS)      + ": LMS-optimized Scala")
+    error("                - " + pad(LANG_SCALA_PARDIS)   + ": PARDIS-optimized Scala")
     error("                - " + pad(LANG_SCALAJS_PARDIS) + ": PARDIS-optimized ScalaJS")
-    error("                - " + pad(LANG_SPARK_LMS) + ": LMS-optimized Spark")
-    // error("                - " + pad(LANG_AKKA)          +": distributed Akka code")
+    error("                - " + pad(LANG_SPARK_LMS)      + ": LMS-optimized Spark")
+    // error("                - " + pad(LANG_AKKA)           +": distributed Akka code")
     error("Front-end options:")
     error("  --depth <depth>    incrementalization depth (default: -1 = infinite)")
     error("  --batch       Enable batch processing")
@@ -166,7 +164,10 @@ object Compiler {
     error("  -t <n>        execution timeout in seconds")
     error("  -xbs <n>      execute with batches of certain size")
     error("  -xa <arg>     pass an argument to generated program")
-    error("", true) // exit here
+    error("  -preload      preload input datasets")
+    error("Backward compatibility:")
+    error("  -xruntime     use old C++ runtime library")
+    error("", true)     // exit here
   }
 
   private def opts(o: String) = o match {
@@ -221,6 +222,9 @@ object Compiler {
     execBatchSize = 0
     execTimeoutMilli = 0L
     execRuntimeLibs = Nil
+    execPreloadInput = false
+
+    useOldCppRuntimeLibrary = false
 
     useExternalScalac = false
     useExternalJVM = false
@@ -246,7 +250,7 @@ object Compiler {
         case "-l" => eat(s => s match {
           case LANG_CALC | LANG_M3 | LANG_DIST_M3 |
                LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS |
-               LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALAJS_PARDIS | LANG_SCALA_PARDIS |LANG_SCALA2_PARDIS|
+               LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALAJS_PARDIS |
                LANG_SPARK_LMS | LANG_AKKA => lang = s
           case _ => sys.error("Unsupported language: " + s)
         }, true)
@@ -268,6 +272,8 @@ object Compiler {
         case "-d" => eat(s => datasetName = s)
         case "--del" => datasetWithDeletions = true
         case "-L" => eat(s => execRuntimeLibs = s :: execRuntimeLibs)
+        case "-xruntime" => useOldCppRuntimeLibrary = true
+        case "-preload" => execPreloadInput = true
         // case "-wa" => watch = true;
         // case "-ni" => ni = true; frontendIvmDepth = 0; frontendDebugFlags = Nil
         case "-x" => execOutput = true
@@ -299,13 +305,22 @@ object Compiler {
         lang = DEFAULT_LANG_SCALA
     }
 
+    if (batchingEnabled) {
+      if (lang == LANG_SCALA_PARDIS) {
+        error(s"Pardis Scala code generator does not support batching. Use '-l ${LANG_SCALA_LMS}' or '-l ${LANG_SCALA_VANILLA}' instead.", true)
+      }
+      else if (lang == LANG_CPP_PARDIS) {
+       error(s"Pardis C++ code generator does not support batching. Use '-l ${LANG_CPP_VANILLA}' instead.", true) 
+      }
+    }
+
     if (outputSrcFile == null && outputExeFile != null) {
       outputSrcFile = backendFileExtensions.get(lang).map(outputExeFile + "." + _).getOrElse(null)
     }
 
     if (className == null) {
       val n = if (outputSrcFile == null) "Query"
-      else outputSrcFile.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "")
+        else outputSrcFile.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "")
       val firstChar = n.substring(0, 1)
       className = (if (Character.isDigit(firstChar(0))) "_" + firstChar else firstChar.toUpperCase) + n.substring(1)
     }
@@ -326,7 +341,7 @@ object Compiler {
     } else false
 
     if (execRuntimeLibs == Nil && execOutput) lang match {
-      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS |LANG_SCALA2_PARDIS| LANG_SCALAJS_PARDIS =>
+      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALAJS_PARDIS =>
         if (!checkLib("lib/ddbt.jar") && !checkLib("target/scala-2.11/classes")) {
           error("Cannot find runtime libraries")
           execOutput = false
@@ -389,92 +404,66 @@ object Compiler {
       //   new LMSCppGen(codegenOpts)
       case LANG_CPP_PARDIS =>
         // Set Pardis optimizer options
-        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
-        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
-        Optimizer.fixedRange = (frontendOptLevel == "-O3")
-        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
-        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
-        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
-        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
-        Optimizer.indexInline = (frontendOptLevel == "-O3")
-        Optimizer.sliceInline = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
-        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
-        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        val optOn = (frontendOptLevel == "-O2") || (frontendOptLevel == "-O3")
+        Optimizer.analyzeEntry = optOn
+        Optimizer.secondaryIndex = optOn
+        Optimizer.fixedRange = optOn
+        Optimizer.onlineOpts = optOn
+        Optimizer.m3CompareMultiply = optOn
+        Optimizer.tmpVarHoist = optOn
+        Optimizer.tmpMapHoist = optOn
+        Optimizer.indexInline = optOn
+        Optimizer.sliceInline = optOn
+        Optimizer.indexLookupFusion = optOn
+        Optimizer.indexLookupPartialFusion = optOn
+        Optimizer.deadIndexUpdate = optOn
+        Optimizer.codeMotion = optOn
         Optimizer.refCounter = true
-        Optimizer.regexHoister = (frontendOptLevel == "-O3")
-        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
-        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
-        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
-        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
-        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
-        Optimizer.medIdx = (frontendOptLevel == "-O3")
-        Optimizer.coldMotion = (frontendOptLevel == "-O3")
-        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.regexHoister = optOn
+        Optimizer.multiResSplitter = optOn
+        // Optimizer.initialStoreSize = optOn
+        Optimizer.sliceNoUpd = optOn
+        Optimizer.splSecondaryIdx = optOn
+        Optimizer.minMaxIdx = optOn
+        Optimizer.medIdx = optOn
+        Optimizer.coldMotion = optOn
+        // Optimizer.profileStoreOperations = optOn
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = true
         new PardisCppGen(codegenOpts)
       case LANG_SCALA_VANILLA =>
         new ScalaGen(codegenOpts)
-      case LANG_SCALA_LMS => new
-          LMSScalaGen(codegenOpts /*, watch */)
+      case LANG_SCALA_LMS =>
+        new LMSScalaGen(codegenOpts /*, watch */)
       case LANG_SCALA_PARDIS =>
         // Set Pardis optimizer options
-        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
-        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
-        Optimizer.fixedRange = (frontendOptLevel == "-O3")
-        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
-        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
-        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
-        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
-        Optimizer.indexInline = (frontendOptLevel == "-O3")
-        Optimizer.sliceInline = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
-        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
-        Optimizer.codeMotion = (frontendOptLevel == "-O3")
+        val optOn = (frontendOptLevel == "-O2") || (frontendOptLevel == "-O3")
+        Optimizer.analyzeEntry = optOn
+        Optimizer.secondaryIndex = optOn
+        Optimizer.fixedRange = optOn
+        Optimizer.onlineOpts = optOn
+        Optimizer.m3CompareMultiply = optOn
+        Optimizer.tmpVarHoist = optOn
+        Optimizer.tmpMapHoist = optOn
+        Optimizer.indexInline = optOn
+        Optimizer.sliceInline = optOn
+        Optimizer.indexLookupFusion = optOn
+        Optimizer.indexLookupPartialFusion = optOn
+        Optimizer.deadIndexUpdate = optOn
+        Optimizer.codeMotion = optOn
         Optimizer.refCounter = true
-        Optimizer.regexHoister = (frontendOptLevel == "-O3")
-        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
-        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
-        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
-        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
-        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
-        Optimizer.medIdx = (frontendOptLevel == "-O3")
-        Optimizer.coldMotion = (frontendOptLevel == "-O3")
-        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
+        Optimizer.regexHoister = optOn
+        Optimizer.multiResSplitter = optOn
+        // Optimizer.initialStoreSize = optOn
+        Optimizer.sliceNoUpd = optOn
+        Optimizer.splSecondaryIdx = optOn
+        Optimizer.minMaxIdx = optOn
+        Optimizer.medIdx = optOn
+        Optimizer.coldMotion = optOn
+        // Optimizer.profileStoreOperations = optOn
         Optimizer.parameterPromotion = true
         Optimizer.cTransformer = false
         new PardisScalaGen(codegenOpts) //DSL
-      case LANG_SCALA2_PARDIS =>
-        // Set Pardis optimizer options
-        Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
-        Optimizer.secondaryIndex = (frontendOptLevel == "-O3")
-        Optimizer.fixedRange = (frontendOptLevel == "-O3")
-        Optimizer.onlineOpts = (frontendOptLevel == "-O3")
-        Optimizer.m3CompareMultiply = (frontendOptLevel == "-O3")
-        Optimizer.tmpVarHoist = (frontendOptLevel == "-O3")
-        Optimizer.tmpMapHoist = (frontendOptLevel == "-O3")
-        Optimizer.indexInline = (frontendOptLevel == "-O3")
-        Optimizer.sliceInline = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupFusion = (frontendOptLevel == "-O3")
-        Optimizer.indexLookupPartialFusion = (frontendOptLevel == "-O3")
-        Optimizer.deadIndexUpdate = (frontendOptLevel == "-O3")
-        Optimizer.codeMotion = (frontendOptLevel == "-O3")
-        Optimizer.refCounter = true
-        Optimizer.regexHoister = (frontendOptLevel == "-O3")
-        Optimizer.multiResSplitter = (frontendOptLevel == "-O3")
-        // Optimizer.initialStoreSize = (frontendOptLevel == "-O3")
-        Optimizer.sliceNoUpd = (frontendOptLevel == "-O3")
-        Optimizer.splSecondaryIdx = (frontendOptLevel == "-O3")
-        Optimizer.minMaxIdx = (frontendOptLevel == "-O3")
-        Optimizer.medIdx = (frontendOptLevel == "-O3")
-        Optimizer.coldMotion = (frontendOptLevel == "-O3")
-        // Optimizer.profileStoreOperations = (frontendOptLevel == "-O3")
-        Optimizer.parameterPromotion = true
-        Optimizer.cTransformer = false
-        new PardisScala2Gen(codegenOpts) //DSL
       case LANG_SCALAJS_PARDIS =>
         // Set Pardis optimizer options
         Optimizer.analyzeEntry = (frontendOptLevel == "-O3")
@@ -529,7 +518,7 @@ object Compiler {
     }
 
     lang match {
-      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS | LANG_AKKA =>
+      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
         Utils.scalaCompiler(outputDir,
           runtimeLibs.mkString(":"),
           useExternalScalac)(List(inputFile))
@@ -558,17 +547,24 @@ object Compiler {
         if (outputFile == null) {
           error("Compilation failed, output file name missing", true)
         }
-        Utils.cppCompiler(inputFile, outputFile, null, "ddbtoaster/srccpp/lib")
+        val strictWarningFlags = (lang == LANG_CPP_VANILLA)
+        if (useOldCppRuntimeLibrary)
+          Utils.cppCompilerOldRuntime(inputFile, outputFile, "ddbtoaster/srccpp", strictWarningFlags)
+        else
+          Utils.cppCompiler(inputFile, outputFile, "ddbtoaster/srccpp", strictWarningFlags)
 
       case _ => error("Source compilation for " + lang + " is not supported", true)
     }
   }
 
-  def runCpp(file: String, args: List[String], batchSize: Int): (String, String) = {
+  def runCpp(file: String, args: List[String], batchSize: Int, preloadInput: Boolean): (String, String) = {
     if (file == null) {
       error("Execution failed, executable file missing", true)
     }
-    val execArgs = args ++ (if (batchSize > 0) List("-b" + batchSize) else Nil)
+    val execArgs = args ++ 
+      (if (batchSize > 0 && useOldCppRuntimeLibrary) List("-b" + batchSize) else Nil) ++
+      (if (batchSize > 0 && !useOldCppRuntimeLibrary) List("-b", batchSize.toString) else Nil) ++
+      (if (preloadInput && !useOldCppRuntimeLibrary) List("--preload") else Nil)
     Utils.cppExec(file, execArgs)
   }
 
@@ -623,7 +619,8 @@ object Compiler {
     val codegenOpts =
       new CodeGenOptions(
         className, packageName, datasetName, datasetWithDeletions, execTimeoutMilli,
-        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, execPrintProgress)
+        DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO, 
+        execPrintProgress, batchingEnabled, useOldCppRuntimeLibrary)
 
     val (tCodegen, code) = Utils.ns(() => codegen(sourceM3, lang, codegenOpts))
 
@@ -649,8 +646,8 @@ object Compiler {
       val (tRun, (out, err)) = Utils.ns(() =>
         lang match {
           case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
-            runCpp(outputExeFile, execArgs, execBatchSize)
-          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS  | LANG_AKKA =>
+            runCpp(outputExeFile, execArgs, execBatchSize, execPreloadInput)
+          case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_AKKA =>
             runScala(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)
           case LANG_SCALAJS_PARDIS =>
             runJS(outputExeDir, execRuntimeLibs, useExternalJVM, packageName, className, execArgs, execBatchSize, dataset)

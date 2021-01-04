@@ -67,11 +67,11 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => runtimeType[Long]
+      case TypeByte | TypeShort | TypeInt | TypeLong => runtimeType[Long]
       case TypeFloat | TypeDouble => runtimeType[Double]
+      case TypeChar => runtimeType[Char]
       case TypeString => runtimeType[String]
-      case TypeDate => runtimeType[Long]
-      // case TypeDate => runtimeType[Date]
+      case TypeDate => runtimeType[java.util.Date]
       case _ => sys.error("Unsupported type: " + tp)
     }
   }.asInstanceOf[TypeRep[Any]]
@@ -150,9 +150,10 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => co(IR.unit(v.toLong))
+      case TypeByte | TypeShort | TypeInt | TypeLong => co(IR.unit(v.toLong))
       case TypeFloat | TypeDouble => co(IR.unit(v.toDouble))
-      case TypeString if Optimizer.regexHoister && Optimizer.cTransformer => expr(M3ASTApply("STRING_TYPE", TypeString, List(ex)), co, am)
+      case TypeChar => co(IR.unit(v(0)))
+      case TypeString if Optimizer.regexHoister && Optimizer.cTransformer => expr(M3ASTApply("StringType", TypeString, List(ex)), co, am)
       case TypeString => co(IR.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type " + tp)
@@ -308,7 +309,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur = cx.save;
         ex.tp match {
-          case TypeChar | TypeShort | TypeInt | TypeLong =>
+          case TypeByte | TypeShort | TypeInt | TypeLong =>
             val agg: IR.Var[Long] = IR.__newVar[Long](IR.unit(0L))
             expr(e,
               (v: Rep[_]) => IR.__assign[Long](agg.asInstanceOf[IR.Var[Long]], IR.numeric_plus[Long](IR.readVar[Long](agg.asInstanceOf[IR.Var[Long]]), v.asInstanceOf[Rep[Long]]))
@@ -323,14 +324,14 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
             cx.load(cur)
             co(IR.readVar(agg))
-          case TypeString =>
-            val agg: IR.Var[String] = IR.__newVar[String](IR.unit(""))
-            expr(e,
-              (v: Rep[_]) => IR.__assign[String](agg.asInstanceOf[IR.Var[String]], IR.string$plus(IR.readVar[String](agg.asInstanceOf[IR.Var[String]]), v.asInstanceOf[Rep[String]]))
-            )
+          // case TypeString =>
+          //   val agg: IR.Var[String] = IR.__newVar[String](IR.unit(""))
+          //   expr(e,
+          //     (v: Rep[_]) => IR.__assign[String](agg.asInstanceOf[IR.Var[String]], IR.string$plus(IR.readVar[String](agg.asInstanceOf[IR.Var[String]]), v.asInstanceOf[Rep[String]]))
+          //   )
 
-            cx.load(cur)
-            co(IR.readVar(agg))
+          //   cx.load(cur)
+          //   co(IR.readVar(agg))
           case _ => sys.error("Unsupported type " + ex.tp)
         }
       } else am match {
@@ -370,7 +371,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
   def mul(l: Rep[_], r: Rep[_], tp: Type) = {
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
+      case TypeByte | TypeShort | TypeInt | TypeLong | TypeFloat | TypeDouble => 
         IR.m3apply("mul", List(l, r), tp)
       case _ => sys.error("Mul(l,r) only allowed on numeric types")
     }
@@ -379,7 +380,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
   def add(l: Rep[_], r: Rep[_], tp: Type) = {
     @inline def plus[T: TypeRep]() = IR.numeric_plus[T](l.asInstanceOf[Rep[T]], r.asInstanceOf[Rep[T]])
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => plus[Long]()
+      case TypeByte | TypeShort | TypeInt | TypeLong => plus[Long]()
       case TypeFloat | TypeDouble => plus[Double]()
       case _ => sys.error("Add(l,r) only allowed on numeric types")
     }
@@ -396,11 +397,11 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       }
     }
     tp match {
-      case TypeChar | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
+      case TypeByte | TypeShort | TypeInt | TypeLong => cmp2[Long](l, r)
       case TypeFloat | TypeDouble => cmp2[Double](l, r)
+      case TypeChar => cmp2[Char](l, r)
       case TypeString => cmp2[String](l, r)
-      case TypeDate => cmp2[Long](l, r)
-      // case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
+      case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
     }
   }
@@ -441,11 +442,11 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
         case TriggerStmt(m, e, op, oi) => cx.load()
           if (m.keys.size == 0) {
             val (mm, mmtp) = m.tp match {
-              case TypeChar | TypeShort | TypeInt | TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
+              case TypeByte | TypeShort | TypeInt | TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
               case TypeFloat | TypeDouble => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Double]]]) -> DoubleType
+              case TypeChar => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Char]]]) -> CharType
               case TypeString => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[String]]]) -> StringType
-              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> LongType
-              // case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
+              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
               case _ => sys.error("Unsupported type " + m.tp)
             }
 
@@ -713,16 +714,16 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
       var postBody = ""
       if (!x._1.contains("system_ready")) {
         preBody = s"""
-                    |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
-                    |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+                    |//BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
+                    |//BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
                     |$sTimeout
                     |++tN;
          """.stripMargin
         postBody =
           s"""
              |clearTempMem();
-             |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
-             |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+             |//END_TRIGGER(exec_stats,"${x._1.drop(1)}")
+             |//END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
          """.stripMargin
       }
       val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
@@ -758,7 +759,7 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
         val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
-          if (x.tpe == StringType)
+          if (x.tpe == StringType || x.tpe == DateType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
@@ -768,10 +769,26 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
 //          else
             doc"${x.name}"
         }).mkDocument(", ") :: "); return ptr; }"
-        val streamOp = doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => doc"obj.${x.name}").mkDocument(doc""" << "," << """)} << ")"; return os; }"""
-        val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
-          Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
-
+        val streamOp = 
+          doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => {
+              if (x.tpe == DateType)
+                doc"10000 * obj.${x.name}.getYear() + 100 * obj.${x.name}.getMonth() + obj.${x.name}.getDay()"
+              else 
+                doc"obj.${x.name}"
+            }).mkDocument(doc""" << "," << """)} << ")"; return os; }"""
+        val serializer = 
+          if (!cgOpts.useOldRuntimeLibrary) {
+            doc"template<class Archive> \nvoid serialize(Archive& ar) const {" :/:
+            Document.nest(4, fields.map(x => 
+              doc"dbtoaster::serialization::serialize(ar, ${x.name}, STRING(${x.name}));").mkDocument("ar << dbtoaster::serialization::kElemSeparator;\n", "\nar << dbtoaster::serialization::kElemSeparator;\n", "\n"
+            )) :/: "}"
+          }
+          else {
+            doc"template<class Archive> \nvoid serialize(Archive& ar) const {" :/:
+            Document.nest(4, fields.map(x =>
+              doc"dbtoaster::serialize_nvp(ar, STRING(${x.name}), ${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n"
+            )) :/: "}"
+          }
         "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn :/: streamOp) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
@@ -879,17 +896,33 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     s"void on_$Cname(" + params.map(i => "const")
   }
 
-  override def emitIncludeHeaders = 
-    s"""|#define SC_GENERATED 1
-        |#include "program_base.hpp"
-        |#include "hpds/KDouble.hpp"
-        |#include "hash.hpp"
-        |#include "mmap/mmap.hpp"
-        |#include "hpds/pstring.hpp"
-        |#include "hpds/pstringops.hpp"
-        |""".stripMargin +    
+  override def emitIncludeHeaders =
+    "#define SC_GENERATED 1\n" +
+    stringIf(!cgOpts.useOldRuntimeLibrary,
+      s"""|#include <sys/time.h>
+          |#include <cstring>
+          |#include <vector>
+          |#include <tuple>
+          |#include "types.hpp"
+          |#include "hash.hpp"
+          |#include "standard_functions.hpp"
+          |#include "event.hpp"
+          |#include "source.hpp"
+          |#include "pardis/mmap.hpp"
+          |""".stripMargin,
+      s"""|#include "program_base.hpp"
+          |#include "types.hpp"
+          |#include "hash.hpp"
+          |#include "standard_functions.hpp"
+          |#include "sc/mmap.hpp"
+          |""".stripMargin) + 
     stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
-    "#include \"ExecutionProfiler.h\"\n"
+    stringIf(!cgOpts.useOldRuntimeLibrary,
+      s"""|#include "pardis/execution_profiler.hpp"
+          |using namespace dbtoaster::pardis;
+          |""".stripMargin,
+      "#include \"sc/ExecutionProfiler.h\"\n"
+    )
 
   override protected def emitMapTypes(s0: System) = mapTypes  // genPardis._2
 
@@ -928,11 +961,12 @@ class PardisCppGen(cgOpts: CodeGenOptions) extends PardisGen(cgOpts, if (Optimiz
     entryDefs = x._3
   }
 }
-class PardisScala2Gen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
-  override val additionalImports: String = "import ddbt.lib.storeScala._\n"
 
+class PardisScala2Gen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts) {
+  override val additionalImports: String = "import ddbt.lib.storeScala._\n"
 }
-class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
+
+class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts) {
 
   override def apply(s0: System): String = {
 
@@ -1033,6 +1067,7 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
         |
         |""".stripMargin
   }
+
   override protected def genStream(s: Source): (String, String, String) = {
     val in = s.in match {
       case SourceFile(path) =>
@@ -1119,7 +1154,6 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
 
     ind(ss)
   }
-
 
   override def genInternals(s0: System, nextSkip: String = "timeoutReached=true"): (String, String, String) = {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
@@ -1212,8 +1246,6 @@ class PardisScalaJSGen(cgOpts: CodeGenOptions) extends PardisScalaGen(cgOpts){
 
     (singleStr + batchStr, tableInitialization, consts)
   }
+
   override val additionalImports: String = "import HelperGS._\nimport Messages._\nimport Functions._"
-
-
-
 }

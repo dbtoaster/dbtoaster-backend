@@ -111,6 +111,7 @@ trait StoreDSL extends
     case LongType => unit(scala.Int.MinValue.asInstanceOf[scala.Long])
     case DoubleType => unit(scala.Double.MinValue)
     case BooleanType => unit(false)
+    case CharType => unit(scala.Char.MinValue)  
     case StringType => unit[String](null)
     case DateType => unit[Date](null)
     case PardisVariableType(ctp) => nullValue(ctp)

@@ -185,8 +185,7 @@ object UnitTest {
           error("  -l <lang>     add language: " +
                                   List(
                                     LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS,
-                                    LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, LANG_SCALA2_PARDIS,
-                                    LANG_SCALAJS_PARDIS,
+                                    LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, LANG_SCALAJS_PARDIS,
                                     LANG_SPARK_LMS, LANG_AKKA
                                   ).mkString(", ") /* + " (_spec|_full|_0-10)?" */)
           error("  -q <filter>   add an inclusion filter for queries")
@@ -331,7 +330,7 @@ object UnitTest {
 
         for (dataset <- datasets) {
           for (lang <- languages) lang match {
-            case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS |LANG_SCALAJS_PARDIS|LANG_SPARK_LMS =>
+            case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALAJS_PARDIS | LANG_SPARK_LMS =>
               val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
               testQueryScala(query, className, dataset, lang, tmpDir, codeM3)
             case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
@@ -371,7 +370,7 @@ object UnitTest {
         Compiler.toast(fileName, "m3", pathRepo = null)
       }
       for (lang <- languages) lang match {
-        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALA2_PARDIS|LANG_SCALAJS_PARDIS | LANG_SPARK_LMS =>
+        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS | LANG_SCALAJS_PARDIS | LANG_SPARK_LMS =>
           val className = queryName.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "").capitalize
           testQueryScala(fileName, className, dataset, lang, tmpDir, codeM3)
         case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
@@ -438,14 +437,12 @@ object UnitTest {
             }
           }
         case None =>
-          warning("Verification failed, test result missing for " + queryFile + " and " + dataset + " dataset")
-          val e = new Exception
+          val e = new Exception("Test result missing for " + queryFile + " and " + dataset + " dataset")
           e.setStackTrace(Array[StackTraceElement]())
           throw e
       }
       case None =>
-        warning("Verification failed, test result missing for " + queryFile)
-        val e = new Exception
+        val e = new Exception("Test result missing for " + queryFile)
         e.setStackTrace(Array[StackTraceElement]())
         throw e
     }
@@ -454,9 +451,9 @@ object UnitTest {
   def testQueryCpp(sqlFile: String, queryName: String, dataset: String,
                    lang: String,  dir: File, sourceM3: String) = {
     val langID = lang match {
-        case LANG_CPP_VANILLA => "VCpp"
+        case LANG_CPP_VANILLA => "Cpp"
         case LANG_CPP_LMS => "LMSCpp"
-        case LANG_CPP_PARDIS => "Cpp"
+        case LANG_CPP_PARDIS => "PCpp"
         case _ => sys.error("Unknown lang: " + lang)
       }
     val exeFile = dir.getPath + "/" + queryName + langID
@@ -526,9 +523,9 @@ object UnitTest {
               }
               catch {
                 case ex: Exception =>
-                  print(langID + " verification", "%7s".format("FAILED"))
-                  ex.printStackTrace()
-                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
+                  print(langID + " verification", 
+                        "%8s".format(scala.Console.RED + "FAILED") + " - " + ex.getMessage)
+                  if (sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
               warning("Verification failed, result missing")
@@ -566,7 +563,6 @@ object UnitTest {
         case LANG_SCALA_VANILLA => "VScala"
         case LANG_SCALA_LMS => "LMSScala"
         case LANG_SCALA_PARDIS => "Scala"
-        case LANG_SCALA2_PARDIS => "Scala2"
         case LANG_SCALAJS_PARDIS => "ScalaJS"
         case LANG_SPARK_LMS => "Spark"
         case _ => sys.error("Unknown lang: " + lang)
@@ -581,10 +577,10 @@ object UnitTest {
                       "-n", "ddbt.test.gen." + className,
                       "-d", dataset,
                       "-xa", "-n" + (numRuns + numWarmups),
-                      "-xa", "-m1",  //SBJ: Print sampling info always like C++
+                      "-xa", "-m1",  // SBJ: Print sampling info always like C++
                       "-xa", "-p" + readMode) ++
                 (if (runBenchmark) List("-x") else Nil) ++
-                (if(!verifyOutput) List("-xa", "--no-output") else Nil)++  //SBJ: Skip printing output if not verifying
+                (if (!verifyOutput) List("-xa", "--no-output") else Nil) ++  // SBJ: Skip printing output if not verifying
                 (if (dataset.endsWith("_del")) List("--del") else Nil) ++
                 (if (Utils.isLMSTurnedOn) List("-xsc") else Nil)
 
@@ -639,9 +635,9 @@ object UnitTest {
               }
               catch {
                 case ex: Exception =>
-                  print(langID + " verification", "%7s".format("FAILED"))
-                  ex.printStackTrace()
-                  if(sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
+                  print(langID + " verification", 
+                        "%8s".format(scala.Console.RED + "FAILED") + " - " + ex.getMessage)
+                  if (sampleRecorder.verification != Timeout) sampleRecorder.verification = Wrong
               }
             case None =>
               warning("Verification failed, result missing")

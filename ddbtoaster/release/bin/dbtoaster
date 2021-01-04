@@ -1,247 +1,361 @@
 #!/bin/bash
 
-in_list() {
-   local search="$1"
-   shift
-   local list=("$@")
-   for elem in "${list[@]}" ; do
-      [[ "$elem" == "$search" ]] && return 0
-   done
-   return 1
-}
-
-# Helper function for producing JVM flags based on SCALA_LIBS
-function get_jvm_exec_flags() {
-   echo "-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
-}
-
+DBTOASTER_VERSION="3.0"
 
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
-SCALA_LIBDIR="${BINDIR}/../lib/dbt_scala"
+CPP_LIBDIR="$BINDIR/../lib/dbt_c++/lib"
+CPP_DRIVERDIR="$BINDIR/../lib/dbt_c++/driver"
+CPP_OLDLIBDIR="$BINDIR/../lib/dbt_c++/old_lib"
+CPP_OLDDRIVERDIR="$BINDIR/../lib/dbt_c++/old_driver"
+SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
 
 if [[ $( uname -s ) == CYGWIN* ]]; then
-   PATH_SEP="\\"
-   JAVA_SEP=";"
-   BINDIR_JAVA="$( cygpath --windows $BINDIR )"
-   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | xargs cygpath --windows | tr "\\n" $JAVA_SEP`
+  PATH_SEP="\\"
+  JAVA_SEP=";"
+  BINDIR_PLATFORM="$( cygpath --windows $BINDIR )"
+  SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | xargs cygpath --windows | tr "\\n" $JAVA_SEP`
 else
-   PATH_SEP="/"
-   JAVA_SEP=":"
-   BINDIR_JAVA=$BINDIR
-   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | tr "\\n" $JAVA_SEP`
+  PATH_SEP="/"
+  JAVA_SEP=":"
+  BINDIR_PLATFORM=$BINDIR
+  SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | tr "\\n" $JAVA_SEP`
 fi
-
-out_src_file="-"
-out_src_class_name="-"
-out_src_lang="-"
-out_bin_file="-"
-tmp_out_src_file=""
-tmp_out_bin_file=""
-
-option="-"
-filter_options="-c -d -D -I -L -r -n"
-no_parameter_options="-r"
-new_args=""
-
-compile_cmd=""
-run_cmd=""
-out_bin_args=""
-
-def_flags=""
-inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
-[[ $inc_flags != "" ]] && { inc_flags="-I\"$inc_flags\""; }
-inc_flags="-I\"$CPP_LIBDIR\" $inc_flags"
-lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
-[[ $lib_flags != "" ]] && { lib_flags="-L\"$lib_flags\""; }
-lib_flags="-L\"$CPP_LIBDIR\" $lib_flags"
+DBTOASTER_FRONTEND="${BINDIR_PLATFORM}${PATH_SEP}dbtoaster_frontend"
 
 # If there is a symlink to a custom C++ compiler, use it instead of g++
 if [ -L "./gpp" ]; then
-   gpp="./gpp"
+   CPP_COMPILER="./gpp"
 else
-   gpp="g++"
+   CPP_COMPILER="g++"
 fi
+CPP_COMPILER_FLAGS="-std=c++11 -O3"
+SCALA_COMPILER="scala"
+SCALA_COMPILER_FLAGS="-optimise -deprecation -unchecked -feature -classpath \"$SCALA_LIBS\""
+SCALA_VERSION="2.11"
 
-cpp_compile_flags="-std=c++11"
-cpp_opt_flag="-O3"
-cpp_libs="-ldbtoaster -lpthread"
+CODEGEN_FLAGS="-Xms256m -Xmx4g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
+CODEGEN_ARGS=""
 
-lms_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
-scala_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
-jvm_exec_flags=$scala_codegen_flags
-scala_compile_flags="-deprecation -unchecked -feature -classpath \"$SCALA_LIBS\""
-scala_opt_flag="-optimise"
+JVM_EXEC_ARGS="-Xms256m -Xmx4g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled"
 
-compile_log=""
-run_log=""
-log_gcc=0
-log_scala=0
-log_dbtoaster=0
+TARGET_LANG=""
+TARGET_SRC_FILE=""
+TARGET_BIN_FILE=""
+TARGET_BIN_ARGS=""
+TARGET_CLASS_NAME=""
+TMP_FILE=""
 
-run_after_compile=0
+RUN_AFTER_COMPILE=0
+USE_OLD_CPP_RUNTIME=0
+BATCH_ENABLED=0
+BATCH_SIZE=""
+CPP_BIN_PRELOAD_ARG=0
 
-for arg in "$@"; do
-   if ! in_list $arg $filter_options && ! in_list $option $filter_options; then
-      new_args="$new_args $arg";
-   fi
-   if ! in_list $arg $filter_options && in_list $option $no_parameter_options; then
-      new_args="$new_args $arg";
-   fi
-   if in_list $arg $no_parameter_options; then
-      option=$arg
-   fi
+LOG_DBTOASTER=0
+LOG_CPP=0
+LOG_SCALA=0
+LOG_RUN=0
 
-   if [ $option = "-o" ]; then
-      out_src_file=$arg
-   elif [ $option = "-l" ]; then
-      out_src_lang=$arg;
-      if [ $out_src_lang == "scala" ]; then
-         scala_codegen_flags="$lms_codegen_flags";
-      fi
-   elif [ $option = "-c" ]; then
-      out_bin_file=$arg
-   elif [ $option = "-n" ]; then
-      out_src_class_name=$arg
-      new_args="$new_args -n $arg";
-   elif [ $option = "-r" ]; then
-      run_after_compile=1
-      if [ $out_bin_file = "-" ]; then
-         tmp_out_bin_file=`mktemp -q ./dbttest.XXXXXX`
-         [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
-         out_bin_file=${tmp_out_bin_file}
-      fi
-   elif [ $option = "-xbs" ]; then
-      out_bin_args="${out_bin_args} -b${arg}"
-   elif [ $option = "-D" ]; then
-      def_flags="$def_flags -D $arg"
-   elif [ $option = "-I" ]; then
-      inc_flags="$inc_flags -I\"$arg\""
-   elif [ $option = "-L" ]; then
-      lib_flags="$lib_flags -L\"$arg\""
-   elif [ $option = "-g" ]; then
-      cpp_compile_flags="$cpp_compile_flags \"$arg\""
-   elif [ $option = "-d" ]; then
-      debug_flag=$(echo $arg | tr '[:lower:]' '[:upper:]')
-           if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
-         cpp_compile_flags="$cpp_compile_flags -pg"
-      elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
-         cpp_compile_flags="$cpp_compile_flags -g"
-      elif [ $debug_flag = "COMPILE-WITHOUT-OPT" ]; then
-         cpp_opt_flag=""
-         scala_opt_flag=""
-      elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
-         cpp_compile_flags="$cpp_compile_flags -static"
-      elif [ $debug_flag = "LOG-DBTOASTER" ]; then
-         log_dbtoaster=1
-      elif [ $debug_flag = "LOG-GCC" ]; then
-         log_gcc=1
-      elif [ $debug_flag = "LOG-SCALA" ]; then
-         log_scala=1
-      else
-         new_args="$new_args -d $arg"
-      fi
-   fi
-   option="-"
+function exit_program() {
+  # Delete any temporary files
+  [ -n "$TMP_FILE" ] && { rm -fr ${TMP_FILE}* &> /dev/null; }
+  if [ -z "$1" ]; then
+    exit 0
+  else
+    echo $1
+    exit 1
+  fi
+}
 
-   if [ ${arg:0:1} = "-" ]; then
-      option=$arg
-   fi
+function show_help() {
+  echo "DBToaster v$DBTOASTER_VERSION"
+  echo ""
+  echo "Compilation options"
+  echo "---------------"
+  echo " --help | -h        Show help message"
+  echo " -l <lang>          Define the target language"
+  echo "                     - calc: relational calculus"
+  echo "                     - m3: M3 program"
+  echo "                     - dm3: distributed M3 program"
+  echo "                     - cpp: C++ code (default)"
+  echo "                     - pcpp: PARDIS-optimized C++ code"
+  echo "                     - scala: PARDIS-optimized Scala"
+  echo "                     - vscala: vanilla Scala code"
+  echo "                     - lmsscala: LMS-optimized Scala"
+  echo "                     - spark: LMS-optimized Spark"
+  echo " -o <file>          Set output file (default: stdout)"
+  echo " -c <file>          Invoke a second stage compiler on the output file"
+  echo " -x | -r            Compile and execute generated code"
+  echo " -d <lang>          Log executed commands"
+  echo "                     - LOG-DBTOASTER: frontend commands"
+  echo "                     - LOG-CPP: C++ compiler commands"
+  echo "                     - LOG-SCALA: Scala compiler commands"
+  echo "                     - LOG-RUN: execute commands"
+  echo " -O[123]            Set the optimization level in the frontend (default: 2)"
+  echo " --preload          Preload input datasets when executing generated code"
+  echo " --depth <depth>    Set incrementalization depth (default: -1 = infinite)"
+  echo " --batch            Enable batch processing"
+  echo " -xbs <batch_size>  Set batch size"
+  echo " -F <arg>           Activate the specified frontend flag"
+  echo " -n <name>          Specify name of internal structures (default: Query, Scala only)"
+  echo " -xruntime          Use old C++ runtime library"
+  echo ""
+  echo "Generated programs may have additional options. Use --help for more information."
+  echo ""
+  exit_program ""
+}
+
+[ $# -eq 0 ] && { show_help; }
+
+while (( "$#" )); do
+  case "$1" in
+    -h|--help) show_help
+               ;;
+    -l) case "$2" in
+          cpp|pcpp|scala|vscala|lmsscala|spark|calc|m3|dm3)
+            TARGET_LANG=$2
+            shift 2
+            ;;
+          *) exit_program "[error] Unsupported language $2"
+             ;;
+        esac
+        ;;
+    -o|-c|-n|-xbs|-d|-F|--depth)
+       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+          case "$1" in
+             -o) TARGET_SRC_FILE=$2
+                 ;;
+             -c) TARGET_BIN_FILE=$2
+                 ;;
+             -n) TARGET_CLASS_NAME=$2       # Scala output class name
+                 CODEGEN_ARGS="$CODEGEN_ARGS -n $TARGET_CLASS_NAME"
+                 ;;
+             -xbs) BATCH_SIZE=$2
+                   TARGET_BIN_ARGS="$TARGET_BIN_ARGS -b $2"
+                   ;;
+             -d) DEBUG_FLAG=$(echo $2 | tr '[:lower:]' '[:upper:]')
+                 case $DEBUG_FLAG in
+                   LOG-DBTOASTER) LOG_DBTOASTER=1
+                                  ;;
+                   LOG-CPP) LOG_CPP=1
+                            ;;
+                   LOG-SCALA) LOG_SCALA=1
+                              ;;
+                   LOG-RUN) LOG_RUN=1
+                            ;;
+                   *) exit_program "[error] Unsupported flag -d $2" >&2
+                      ;;
+                 esac
+                 ;;
+             -F) CODEGEN_ARGS="$CODEGEN_ARGS -F $2"
+                 ;;
+             --depth) CODEGEN_ARGS="$CODEGEN_ARGS --depth $2"
+                      ;;
+          esac
+          shift 2
+       else
+          exit_program "[error] Argument for $1 is missing" >&2
+       fi
+       ;;
+    -xruntime) USE_OLD_CPP_RUNTIME=1
+               CODEGEN_ARGS="$CODEGEN_ARGS -xruntime" 
+               shift
+               ;;
+    -r|-x) RUN_AFTER_COMPILE=1
+        shift
+        ;;
+    --batch) BATCH_ENABLED=1
+             CODEGEN_ARGS="$CODEGEN_ARGS --batch"
+             shift
+             ;;
+    -O1|-O2|-O3) CODEGEN_ARGS="$CODEGEN_ARGS $1"
+                 shift
+                 ;;              
+    --preload) CPP_BIN_PRELOAD_ARG=1
+               shift
+               ;;
+    -*) exit_program "[error] Unsupported flag $1"
+        ;;
+    *) CODEGEN_ARGS="$CODEGEN_ARGS $1"
+       shift
+       ;;
+  esac
 done
 
-if [ $out_bin_file != "-" ]; then
-   src_extension="hpp"
-   if [ $out_src_lang != "-" ]; then
-      [ $out_src_lang != "cpp" -a $out_src_lang != "vcpp" -a $out_src_lang != "vscala" -a $out_src_lang != "lmsscala" -a $out_src_lang != "scala" ] && \
-         { echo "$0: Binaries can be created only for C++ and Scala languages, exiting..." ; exit 1; }
-      [ $out_src_lang == "vscala" ] && { src_extension="scala"; }
-      [ $out_src_lang == "lmsscala" ] && { src_extension="scala"; }
-      [ $out_src_lang == "scala" ] && { src_extension="scala"; }
-
-   elif [ ${out_src_file} != "-" ]; then
-      out_src_file_ext=${out_src_file##*.}
-      [[ $out_src_file_ext && ($out_src_file_ext == "vscala" || $out_src_file_ext == "lmsscala" || $out_src_file_ext == "scala") ]] && { src_extension="scala"; }
-   fi
-
-   if [ ${out_src_file} = "-" ]; then
-      tmp_out_src_file=`mktemp -q ./dbtoaster.XXXXXX`
-      [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
-
-      out_src_file=${tmp_out_src_file}.${src_extension}
-      tmp_out_src_file="${tmp_out_src_file} ${out_src_file}"
-   fi
-
-   if [ $src_extension == "hpp" ]; then
-      new_args="$new_args -o $out_src_file"
-      ! which g++ &>/dev/null && { echo "Unable to compile C++ code: g++ not found!"; exit 1; }
-      main_file="\"$CPP_LIBDIR/main.cpp\""
-
-      compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
-      compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
-      run_cmd="PATH=.:\$PATH $out_bin_file $out_bin_args"
-      [ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
-   fi
-
-   if [ $src_extension == "scala" ]; then
-      ! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
-      # jar_file="$SCALA_LIBDIR/dbtlib.jar"
-      # eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
-
-      if [[ $( uname -s ) == CYGWIN* ]]; then
-         out_src_file="$( cygpath --windows $out_src_file )"
-         out_src_file="\"$out_src_file\""
-      fi
-      new_args="$new_args -o $out_src_file"
-
-      out_bin_file_ext=${out_bin_file##*.}
-      out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
-      [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
-
-
-      if [ -f $out_bin_file ]; then
-         rm $out_bin_file
-      fi
-      compile_flags="$scala_compile_flags $scala_opt_flag"
-      compile_cmd="scalac $out_src_file -d $out_bin_file $compile_flags"
-
-      if [[ $( uname -s ) == CYGWIN* ]]; then
-         new_out_bin_file=`cygpath --windows $out_bin_file`
-      else
-         new_out_bin_file=$out_bin_file
-      fi
-      SCALA_LIBS="${SCALA_LIBS}${JAVA_SEP}.${PATH_SEP}$new_out_bin_file"
-      jvm_exec_flags=$(get_jvm_exec_flags)
-
-      if [[ $out_src_class_name == "-" ]] ; then
-         run_cmd=$(echo "$out_src_file" | sed 's/\"//g' | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
-         run_cmd="java $jvm_exec_flags ddbt.gen.$run_cmd $out_bin_args"
-      else
-         run_cmd="java $jvm_exec_flags $out_src_class_name $out_bin_args"
-      fi
-
-      [ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
-   fi
-
-   mkdir -p $(dirname "$out_bin_file")
+# Set default target language
+if [ -z $TARGET_LANG ]; then
+  case "${TARGET_SRC_FILE##*.}" in
+    hpp) TARGET_LANG="cpp"
+         ;;
+    scala) TARGET_LANG="scala"
+           ;;
+    *) echo "Target language not set. C++ is used."
+       TARGET_LANG="cpp"
+  esac
 fi
 
-dbtoaster_cmd="java $scala_codegen_flags ddbt.Compiler --frontend \"${BINDIR_JAVA}${PATH_SEP}dbtoaster_frontend\" $new_args"
-[ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
-eval $dbtoaster_cmd;
-
-[ "$compile_log" ] && { echo $compile_log; }
-eval $compile_cmd;
-
-# Delete any temporary files
-[ "$tmp_out_src_file" ] && { rm -fr $tmp_out_src_file; }
-
-[ "$run_log" ] && { echo $run_log; }
-
-if [ $run_after_compile == "1" ]; then
-   eval "time $run_cmd"
+# Only C++ and Scala/Spark programs can be executed
+if [ "$RUN_AFTER_COMPILE" == "1" ] || [ -n "$TARGET_BIN_FILE" ]; then
+  case $TARGET_LANG in
+    cpp|pcpp|scala|vscala|lmsscala|spark) ;;
+    *) exit_program "[error] Cannot create target binary file. $TARGET_LANG programs are not executable"
+       ;;
+  esac
 fi
 
-[ "$tmp_out_bin_file" ] && { tmp_out_bin_file="${tmp_out_bin_file} ${tmp_out_bin_file}.jar"; rm -fr $tmp_out_bin_file; }
+if [ "$RUN_AFTER_COMPILE" == "1" ] && [ "$BATCH_ENABLED" == "1" ] && [ -z "$BATCH_SIZE" ]; then
+  exit_program "[error] Batch size not specified. Use -xbs <arg> to specify batch size"
+fi
 
-exit 0;
+if [ "$RUN_AFTER_COMPILE" == "1" ] && [ "$BATCH_ENABLED" == "0" ] && [ -n "$BATCH_SIZE" ]; then
+  exit_program "[error] Batch mode not enable. Use --batch to enable batch mode"
+fi
 
+# Create temp output binary if needed
+if [ "$RUN_AFTER_COMPILE" == "1" ] && [ -z "$TARGET_BIN_FILE" ]; then
+   TMP_FILE=`mktemp -q ./dbtoaster_XXXXXX`
+   TARGET_BIN_FILE=$TMP_FILE
+fi
+
+# Output binary file cannot end with .hpp or .scala 
+if [ -n "$TARGET_BIN_FILE" ]; then
+  TARGET_BIN_FILE=${TARGET_BIN_FILE%.hpp}
+  TARGET_BIN_FILE=${TARGET_BIN_FILE%.scala}
+fi
+
+# Create temp output source file if needed
+if [ -n "$TARGET_BIN_FILE" ] && [ -z "$TARGET_SRC_FILE" ]; then
+   TARGET_SRC_FILE=$TARGET_BIN_FILE
+fi
+
+# Add output source file extension if needed
+if [ -n "$TARGET_SRC_FILE" ]; then
+   case $TARGET_LANG in
+      scala|vscala|lmsscala|spark) TARGET_SRC_FILE=${TARGET_SRC_FILE%.scala}.scala
+                                   ;;
+      cpp|pcpp) TARGET_SRC_FILE=${TARGET_SRC_FILE%.hpp}.hpp
+                ;;
+      calc) TARGET_SRC_FILE=${TARGET_SRC_FILE%.calc}.calc
+            ;;
+      m3) TARGET_SRC_FILE=${TARGET_SRC_FILE%.m3}.m3
+          ;;
+      dm3) TARGET_SRC_FILE=${TARGET_SRC_FILE%.dm3}.dm3
+           ;;
+   esac
+fi
+
+# Set codegen flags
+CODEGEN_ARGS="$CODEGEN_ARGS -l $TARGET_LANG"
+if [ -n "$TARGET_SRC_FILE" ]; then
+  mkdir -p $(dirname "$TARGET_SRC_FILE")
+  rm $TARGET_SRC_FILE &> /dev/null
+  CODEGEN_ARGS="$CODEGEN_ARGS -o $TARGET_SRC_FILE"
+fi
+
+# Code generation (first stage)
+! which java &>/dev/null && { exit_program "[error] Unable to generate code: java not found!"; }
+DBTOASTER_CMD="java $CODEGEN_FLAGS ddbt.Compiler --frontend \"$DBTOASTER_FRONTEND\" $CODEGEN_ARGS"
+[ $LOG_DBTOASTER -eq 1 ] && { echo $DBTOASTER_CMD; }
+eval $DBTOASTER_CMD
+
+if [ -n "$TARGET_SRC_FILE" ] && [ ! -f "$TARGET_SRC_FILE" ]; then
+  exit_program "[error] Source file missing $TARGET_SRC_FILE"
+fi
+
+# Second stage compilation
+if [ -n "$TARGET_BIN_FILE" ]; then
+  mkdir -p $(dirname "$TARGET_BIN_FILE")
+  case $TARGET_LANG in
+    cpp|pcpp)
+      # GCC compiler check
+      ! which $CPP_COMPILER &>/dev/null && { exit_program "[error] Unable to compile C++ code: $CPP_COMPILER not found!"; }
+
+      if [ -f $TARGET_BIN_FILE ]; then
+         rm $TARGET_BIN_FILE &> /dev/null
+      fi
+
+      if [ $USE_OLD_CPP_RUNTIME == "1" ]; then
+        # make check
+        ! which make &>/dev/null && { exit_program "[error] Unable to compile C++ code: make not found!"; }
+
+        MAKE_CMD="make -s -C $CPP_OLDLIBDIR && make -s -C $CPP_OLDDRIVERDIR"
+        CPP_FLAGS="$CPP_COMPILER_FLAGS \
+                  -I\"$CPP_OLDLIBDIR\" -I\"$CPP_OLDDRIVERDIR\" \
+                  -L\"$CPP_OLDLIBDIR\" -L\"$CPP_OLDDRIVERDIR\" \
+                  -ldbtoaster -ldriver -lpthread"
+        CPP_COMPILE_CMD="$CPP_COMPILER \"$CPP_OLDDRIVERDIR/main.cpp\" -include $TARGET_SRC_FILE -o $TARGET_BIN_FILE $CPP_FLAGS"
+        COMPILE_CMD="$MAKE_CMD && $CPP_COMPILE_CMD"
+      else
+        COMPILE_FLAGS="$CPP_COMPILER_FLAGS -I\"$CPP_LIBDIR\" -I\"$CPP_DRIVERDIR\""
+        COMPILE_CMD="$CPP_COMPILER \"$CPP_DRIVERDIR/main.cpp\" -include $TARGET_SRC_FILE -o $TARGET_BIN_FILE $COMPILE_FLAGS"
+      fi
+
+      [ $LOG_CPP -eq 1 ] && { echo $COMPILE_CMD; }
+      eval $COMPILE_CMD
+      ;;
+
+    scala|vscala|lmsscala)
+      # Scala compiler check
+      SCALA_VERSION_GOOD=$($SCALA_COMPILER -version 2>&1 | grep -F "$SCALA_VERSION")
+      if [ -z "$SCALA_VERSION_GOOD" ]; then 
+        exit_program "[error] Scala $SCALA_VERSION compiler not found"
+      fi
+
+      if [[ $( uname -s ) == CYGWIN* ]]; then
+         TARGET_SRC_FILE="$( cygpath --windows $TARGET_SRC_FILE )"
+         TARGET_SRC_FILE="\"$TARGET_SRC_FILE\""
+      fi
+
+      TARGET_BIN_FILE=${TARGET_BIN_FILE%.jar}.jar
+      if [ -f $TARGET_BIN_FILE ]; then
+         rm $TARGET_BIN_FILE &> /dev/null
+      fi
+
+      COMPILE_FLAGS="$SCALA_COMPILER_FLAGS"
+      COMPILE_CMD="scalac $TARGET_SRC_FILE -d $TARGET_BIN_FILE $COMPILE_FLAGS"
+
+      [ $LOG_SCALA -eq 1 ] && { echo $COMPILE_CMD; }
+      eval $COMPILE_CMD
+      ;;
+    spark)
+      exit_program "Generated Spark code requires manual compilation"
+      ;;
+  esac
+fi
+
+if [ -n "$TARGET_BIN_FILE" ] && [ ! -f "$TARGET_BIN_FILE" ]; then
+  exit_program "[error] Binary file missing $TARGET_BIN_FILE"
+fi
+
+if [ "$RUN_AFTER_COMPILE" == "1" ]; then
+  case $TARGET_LANG in
+    cpp|pcpp)
+      if [ "$CPP_BIN_PRELOAD_ARG" == "1" ] && [ "$USE_OLD_CPP_RUNTIME" == "0" ]; then
+        TARGET_BIN_ARGS="$TARGET_BIN_ARGS --preload"
+      fi
+      RUN_CMD="PATH=.:\$PATH $TARGET_BIN_FILE $TARGET_BIN_ARGS"
+      [ $LOG_RUN -eq 1 ] && { echo $RUN_CMD; }
+      eval $RUN_CMD
+      ;;
+    scala|vscala|lmsscala)
+      if [[ $( uname -s ) == CYGWIN* ]]; then
+         TARGET_BIN_FILE_PLATFORM=`cygpath --windows $TARGET_BIN_FILE`
+      else
+         TARGET_BIN_FILE_PLATFORM=$TARGET_BIN_FILE
+      fi
+      SCALA_LIBS="${SCALA_LIBS}${JAVA_SEP}.${PATH_SEP}$TARGET_BIN_FILE_PLATFORM"
+
+      if [ -z "$TARGET_CLASS_NAME" ]; then
+        CLASS_NAME=$(echo "$TARGET_SRC_FILE" | sed 's/\"//g' | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
+      else
+        CLASS_NAME=$TARGET_CLASS_NAME
+      fi
+      RUN_CMD="java $JVM_EXEC_ARGS -classpath \"$SCALA_LIBS\" ddbt.gen.$CLASS_NAME $TARGET_BIN_ARGS"
+
+      [ $LOG_RUN -eq 1 ] && { echo $RUN_CMD; }
+      eval $RUN_CMD
+      ;;
+  esac
+fi
+
+exit_program ""

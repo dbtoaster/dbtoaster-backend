@@ -1,190 +1,94 @@
-/*
- * iprogram.hpp
- *
- *  Created on: May 8, 2012
- *      Author: daniel
- */
-
 #ifndef DBTOASTER_SERIALIZATION_H
 #define DBTOASTER_SERIALIZATION_H
 
-#include "hpds/pstring.hpp"
-#include "hpds/KDouble.hpp"
-#include <iostream>
 #include <iomanip>
-
-#define DBT_SERIALIZATION_NVP_OF_PTR( ar , name )  \
-    dbtoaster::serialize_nvp(ar, STRING(name), *name)
-
-#define DBT_SERIALIZATION_NVP( ar , name )  \
-    dbtoaster::serialize_nvp(ar, STRING(name), name)
-
-#define ELEM_SEPARATOR "\n\t\t\t"
+#include <type_traits>
+#include <string>
+#include "macro.hpp"
+#include "date_type.hpp"
 
 namespace dbtoaster {
 
-typedef std::ostream xml_oarchive;
+namespace serialization {
 
-template<typename T, class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const T & t){
-    t.serialize(ar, version);
-    ar << "\n";
-    return ar;
+constexpr const char* kElemSeparator = "\n\t\t\t";
+
+template<class Output, class T, class Enable = void>
+struct XmlSerializer {
+  void operator()(Output& out, const T& t) {
+    t.serialize(out);
+  }
+
+  void operator()(Output& out, const T& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << '\n' << tab << "</" << name << ">";
+  }
+}; // primary template
+
+template<class Output, class T>
+struct XmlSerializer<Output, T, typename std::enable_if<std::is_integral<T>::value>::type> {
+  void operator()(Output& out, const T& t) {
+    out << t;
+  }
+
+  void operator()(Output& out, const T& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << "</" << name << ">";
+  }  
+}; // specialization for integral types
+
+template<class Output, class T>
+struct XmlSerializer<Output, T, typename std::enable_if<std::is_floating_point<T>::value>::type> {
+  void operator()(Output& out, const T& t) {
+    out << std::setprecision(15) << t;
+  }
+
+  void operator()(Output& out, const T& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << "</" << name << ">";
+  }
+}; // specialization for floating-point types
+
+template<class Output>
+struct XmlSerializer<Output, std::string> {
+  void operator()(Output& out, const std::string& t) {
+    out << t.c_str();
+  }
+
+  void operator()(Output& out, const std::string& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << "</" << name << ">";
+  }
+}; // specialization for string type
+
+template<class Output>
+struct XmlSerializer<Output, DateType> {
+  void operator()(Output& out, const DateType& t) {
+    out << 10000 * t.getYear() + 100 * t.getMonth() + t.getDay();
+  }
+
+  void operator()(Output& out, const DateType& t, const char* name, const char* tab) {
+    out << tab << "<" << name << ">";
+    this->operator()(out, t);
+    out << "</" << name << ">";
+  }
+}; // specialization for date type
+
+template<class Output, class T>
+void serialize(Output& s, const T& t) {
+  XmlSerializer<Output, T>{}(s, t);
 }
 
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const long & t){
-    ar << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const int & t){
-    ar << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const size_t & t){
-    ar << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const STRING_TYPE & t){
-    ar << t.c_str();
-    return ar;
-}
-
-template<typename T, class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << tab << "</" << name << ">";
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const int & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const size_t & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const float & t){
-    ar << std::setprecision(15) << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const float & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-
-#if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const KDouble & t){
-    ar << std::setprecision(15) << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const KDouble & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-#elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_BOOST
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const cpp_dec_float_1000 & t){
-    ar << std::setprecision(15) << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const boost::multiprecision::cpp_dec_float_100 & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-#elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_STD_LONG_DOUBLE
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const long double & t){
-    ar << std::setprecision(15) << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long double & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-#else
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const double & t){
-    ar << std::setprecision(15) << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const double & t, const char* tab){
-    ar << tab << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
-}
-
-#endif
-
-template<typename T, class Archive>
-inline Archive & serialize_nvp(Archive & ar, const char * name, const T & t){
-    ar << "<"  << name << ">";
-    serialize(ar, 0, t);
-    ar << "</" << name << ">";
-    return ar;
+template<class Output, class T>
+void serialize(Output& s, const T& t, const char* name, const char* tab = "") {
+  XmlSerializer<Output, T>{}(s, t, name, tab);
 }
 
 }
 
+}
 #endif /* DBTOASTER_SERIALIZATION_H */

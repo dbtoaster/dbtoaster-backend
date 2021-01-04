@@ -1,68 +1,43 @@
-/*
- * event.hpp
- *
- *  Created on: May 8, 2012
- *      Author: daniel
- */
+#ifndef DBTOASTER_EVENT_HPP
+#define DBTOASTER_EVENT_HPP
 
-#ifndef DBTOASTER_EVENT_H
-#define DBTOASTER_EVENT_H
-
-#include <string>
-#include <vector>
-#include <memory>
+#include <cstdint>
+#include "relation.hpp"
+#include "message.hpp"
 
 namespace dbtoaster {
 
-typedef int date;
-
-/**
- * Type definitions of data-structures used for representing events.
- */
-
-enum event_type { 
-    delete_tuple = 0, 
-    insert_tuple, 
-    batch_update, 
-    system_ready_event 
+enum class EventType : uint32_t {
+  kNotDefined = 0,
+  kInsertTuple,
+  kDeleteTuple,
+  kBatchUpdate
 };
 
-typedef int relation_id_t;
-typedef std::vector<std::shared_ptr<void>> event_args_t;
+struct Event {
+  Event() : relation_id(kInvalidRelationId), event_type(EventType::kNotDefined) { }
 
-extern std::string event_name[];
+  Event(RelationId rid, EventType tp, MessageBasePtr msg)
+      : relation_id(rid), event_type(tp), message(std::move(msg)) { }
 
-/**
- * Data-structure used for representing a event consisting of: event type,
- * relation identifier corresponding to the stream/table it relates to and
- * finally, the tuple associated with event.
- */
-struct event_t
-{
-    event_type type;
-    relation_id_t id;
-    unsigned int event_order;
-    event_args_t data;
+  bool isEmpty() { return message == nullptr; }
 
-    event_t(const event_t& other)
-    : type(other.type), id(other.id), event_order(other.event_order), data(other.data)
-    {}
+  union {
+    struct {
+      RelationId relation_id;
+      EventType event_type;
+    };
+    uint64_t id;
+  };
+  MessageBasePtr message;
 
-    event_t(event_type t, relation_id_t i, unsigned int ord, event_args_t& d)
-    : type(t), id(i), event_order(ord), data(d)
-    {}
+  static constexpr uint64_t getId(RelationId r, EventType t) {
+    return (static_cast<uint64_t>(t) << 32) | r;
+  }
 };
 
-bool compare_event_timestamp_order (event_t const & p1, event_t const & p2);
-
-struct event_timestamp_order
-{
-	bool operator()(event_t const & p1, event_t const & p2) {
-        return compare_event_timestamp_order(p1, p2);
-    }
-};
-
+static_assert(sizeof(MessageBasePtr) + 8 == sizeof(Event), "Unexpected event type size");
 
 }
 
-#endif /* DBTOASTER_DBT_EVENT_H */
+#endif /* DBTOASTER_EVENT_HPP */

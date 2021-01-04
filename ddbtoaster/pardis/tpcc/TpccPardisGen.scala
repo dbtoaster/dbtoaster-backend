@@ -159,8 +159,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
@@ -169,13 +168,11 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <sched.h>
        |#include <pthread.h>
        |
+       |#include "sc/mmap.hpp"
        |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -200,20 +197,28 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |
        |#define CORE_FOR_W(x) (x%numThreads)
        |
-       |#define setAffinity(thread_id)\\
+       |#ifndef __APPLE__
+       |  #define setAffinity(thread_id)\\
        |    cpu_set_t cpuset;\\
        |    CPU_ZERO(&cpuset);\\
        |    CPU_SET(thread_id+1, &cpuset);\\
        |    auto s = sched_setaffinity(0, sizeof (cpu_set_t), &cpuset);\\
        |    if (s != 0)\\
        |        throw std::runtime_error("Cannot set affinity");
+       |#else
+       |  #define setAffinity(thread_id)
+       |#endif
        |
-       |#define setSched(type)\\
+       |#ifndef __APPLE__
+       |  #define setSched(type)\\
        |    sched_param param;\\
        |    param.__sched_priority =  sched_get_priority_max(type);\\
        |    s = sched_setscheduler(0, type, &param);\\
        |    if (s != 0)\\
        |        cerr << "Cannot set scheduler" << endl;
+       |#else
+       |  #define setSched(type)
+       |#endif
        |
        |uint failedOS = 0;
        |uint failedDel = 0;
@@ -668,7 +673,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        """.stripMargin :\\: execProfile :\\: blocks) :\\:
       "};" :\\:
       "Partition partitions[numThreads];" :\\:
-      "#include \"TPCC.h\"\n" :\\:
+      "#include \"sc/TPCC.h\"\n" :\\:
       "TPCCDataGen tpcc;" :\\:
       threadFn :\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")
@@ -694,21 +699,18 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
-       |#include "TransactionManager.h"
-       |
+       |#include "types.hpp"
+       |#include "sc/mmap.hpp"
+       |#include "sc/TransactionManager.h"
        |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -1936,7 +1938,7 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
       """.stripMargin
     file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:
-    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\:
+    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"sc/TPCC.h\"\n"  :\\: runPrgFn :\\:
       threadFn:\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
@@ -1960,19 +1962,16 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
-       |#include <valgrind/callgrind.h>
+       |//#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
+       |#include "sc/mmap.hpp"
        |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
-       |#include "ExecutionProfiler.h"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
-       |#include "hpds/pstring.hpp"
-       |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -2311,7 +2310,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    val txns = new PrintWriter("TpccTxns.hpp")
     //    txns.print(blocks)
     //    txns.close()
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"sc/TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

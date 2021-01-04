@@ -105,17 +105,16 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
        |
-       |#include "ExecutionProfiler.h"
+       |#include "sc/mmap.hpp"
+       |#include "sc/ExecutionProfiler.h"
        |
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
-       |#include "program_base.hpp"
        |
      """.stripMargin
 
@@ -195,7 +194,7 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"${tag.typeName}* copy() const { return new ${tag.typeName}(" :: fields.map(x => {
           if (x.tpe == StringType)
-            doc"*${x.name}.copy()"
+            doc"${x.name}.copy()"
           else
             doc"${x.name}"
         }).mkDocument(", ") :: "); }"
@@ -243,7 +242,7 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
          | }
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"MB1.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"sc/MB1.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }
