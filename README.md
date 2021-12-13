@@ -32,7 +32,7 @@ Currently the project matches original DBToaster code generation based on M3 and
 
 #### Instructions for running the distributed version
 
-Currently, DBToaster provides a limited support for distributed incremental evaluation. The current implementation can compile the provided TPCH-like queries into executable Spark programs.
+Currently, DBToaster provides a limited support for distributed incremental evaluation. The current implementation can compile the provided TPCH-like queries into executable Spark programs. Other database schemas can also be supported, see [here](https://github.com/dbtoaster/dbtoaster-backend/issues/103#issuecomment-992930545).
 
 1. Follow the extended setup from above.
 2. Set `ddbt.lms=1` in `ddbtoaster/conf/ddbt.properties`.
