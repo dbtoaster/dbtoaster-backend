@@ -53,13 +53,13 @@ object TypeCheck extends (M3.System => M3.System) {
     val usedTableDefs = s0.sources.filter { s => 
         !s.isStream && accessedMaps.contains(s.schema.name)
       }.map { s => 
-        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), LocalExp)
+        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), s.locality)
       } 
     val usedDeltaDefs = 
       s0.sources.filter { s =>
         s.isStream && accessedMaps.contains(delta(s.schema.name))
       }.map { s =>
-        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), LocalExp)
+        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), s.locality)
       }
 
     System(s0.typeDefs, s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
@@ -370,6 +370,62 @@ object TypeCheck extends (M3.System => M3.System) {
     System(s0.typeDefs, s0.sources, s0.maps, queries, triggers)
   }
 
+  // 8. Resolve locality information
+  def resolveLocality(s0: System): System = {
+
+    val localityMap: Map[String, (List[(String, Type)], LocalityType)] =
+      s0.maps.map(m => m.name -> (m.keys, m.locality)).toMap
+
+    def getLocality(n: String, ks: List[(String, Type)]) =
+      localityMap(n) match {
+        case (_, LocalExp) => Some(LocalExp)
+        case (_, DistRandomExp) => Some(DistRandomExp)
+        case (refKeys, DistByKeyExp(pk)) => 
+          Some(DistByKeyExp(pk.map(k => ks(refKeys.indexOf(k))))) 
+      }
+
+    def resolveExpr(e: Expr): Expr = e.replace {
+      case m: MapRef =>
+        MapRef(m.name, m.tp, m.keys, m.isTemp, getLocality(m.name, m.keys))
+      case m: MapRefConst =>
+        MapRefConst(m.name, m.keys, getLocality(m.name, m.keys))
+      case m: DeltaMapRefConst =>
+        MapRefConst(m.name, m.keys, getLocality(m.name, m.keys))
+    }
+
+    def resolveStmt(s: Statement): Statement =  s match {
+      case TriggerStmt(target, expr, op, initExpr) =>
+        val lhs = resolveExpr(target).asInstanceOf[MapRef]
+        val rhs = resolveExpr(expr)
+        val init = initExpr.map(resolveExpr)
+
+        // Sanity check
+        assert(
+          lhs.locality == rhs.locality &&
+          (init.isEmpty || init.get.locality == lhs.locality),
+          "Locality mismatch: " + "\nLHS: " + lhs + 
+          "\nRHS: " + rhs + "\nINIT: " + init.mkString
+        )
+        TriggerStmt(lhs, rhs, op, init)
+
+      case IfStmt(cond, thenBlk, elseBlk) =>
+        val rCond = resolveExpr(cond).asInstanceOf[Cmp]
+        val rThenBlk = thenBlk.map(resolveStmt)
+        val rElseBlk = elseBlk.map(resolveStmt)
+        IfStmt(rCond, rThenBlk, rElseBlk)
+    }
+
+    val triggers = s0.triggers.map { t =>
+      Trigger(t.event, t.stmts.map(resolveStmt))
+    }
+    
+    val queries = s0.queries.map { q =>
+      Query(q.name, resolveExpr(q.expr))
+    }
+
+    System(s0.typeDefs, s0.sources, s0.maps, queries, triggers)    
+  }
+
   def apply(s: System) = {
     val phases = 
       addMissingMaps _ andThen
@@ -379,7 +435,8 @@ object TypeCheck extends (M3.System => M3.System) {
       ) andThen
       typeMaps andThen
       renameLifts andThen
-      typeCheck
+      typeCheck andThen
+      resolveLocality
 
     phases(s)    
   }
