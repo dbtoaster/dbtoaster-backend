@@ -87,9 +87,9 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
 
   def containsForeachOrSlice(ex: Expr): Boolean = ex match {
-    case MapRef(_, _, ks, _) => {
-      ks.size > 0 && {
-        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
+    case m: MapRef => {
+      m.keys.size > 0 && {
+        val (ko, ki) = m.keys.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
         ki.size > 0
       }
     }
@@ -107,7 +107,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
 
     case Exists(e) if containsForeachOrSlice(e) => None  //No conditions for foreach and slice. They always exist
 
-    case Exists(e@MapRef(n, tp, ks, isTemp)) if ks.size > 0 && ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1)) => //check if it is a get on a store
+    case Exists(e@MapRef(n, tp, ks, isTemp, _)) if ks.size > 0 && ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1)) => //check if it is a get on a store
       val vs = ks.zipWithIndex.map { case (k, i) => (i + 1, cx(k._1)) }
       val r = mapProxy2(cx(n)).get1(vs: _*)
       Some(IR.infix_!=(r, IR.unit(null)))
@@ -158,7 +158,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type " + tp)
     }
-    case Exists(e@MapRef(n, tp, ks, isTemp)) if Optimizer.m3CompareMultiply && (ks.size > 0 && !ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1))) =>
+    case Exists(e@MapRef(n, tp, ks, isTemp, _)) if Optimizer.m3CompareMultiply && (ks.size > 0 && !ks.foldLeft(true)((acc, k) => acc && cx.contains(k._1))) =>
       expr(e, (ve: Rep[_]) => co(IR.unit(1)))
     case Exists(e) => 
       expr(e, (ve: Rep[_]) => 
@@ -263,7 +263,7 @@ abstract class PardisGen(override val cgOpts: CodeGenOptions, val IR: StoreDSL) 
           foreach(acc, agg, a.tp, co)
       }
 
-    case m@MapRef(n, tp, ks, isTemp) =>
+    case m@MapRef(n, tp, ks, isTemp, _) =>
       val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
       val proxy = mapProxy(cx(n))
       val proxy2 = mapProxy2(cx(n))

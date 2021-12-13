@@ -81,7 +81,7 @@ abstract class LMSGen(val cgOpts: CodeGenOptions, val impl: LMSExpGen, override 
       else 
         app(as, Nil)
 
-    case MapRef(n, tp, ks, isTemp) =>
+    case MapRef(n, tp, ks, isTemp, _) =>
       val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
       val proxy = mapProxy(cx(n))
       if (ks.size == 0) { // variable

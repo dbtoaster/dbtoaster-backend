@@ -149,7 +149,7 @@ class AkkaGen(cgOpts: CodeGenOptions) extends ScalaGen(cgOpts) {
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
   def fmap(e:Expr,c2:Set[String]=Set()):MapRef = e match {
-    case m@MapRef(n,tp,ks,_) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
+    case m@MapRef(n,tp,ks,_,_) if ks.exists(k=> !ctx.contains(k._1) && !c2.contains(k._1)) => m
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => List(n) }) else lm
@@ -186,7 +186,7 @@ class AkkaGen(cgOpts: CodeGenOptions) extends ScalaGen(cgOpts) {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
                       else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
-    case m@MapRef(n,tp,ks,_) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
+    case m@MapRef(n,tp,ks,_,_) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k._1)};
       if (part.local(m) || !ref.contains(n)) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) { inuse.add(ks.map(_._1).toSet); co(n+(if (ks.size>0) ".get("+tup(ks map { case (n, _) => rn(n) })+")" else "")) } // all keys are bound
@@ -244,7 +244,7 @@ class AkkaGen(cgOpts: CodeGenOptions) extends ScalaGen(cgOpts) {
 
   override def genStmt(s:Statement) = s match {
     case TriggerStmt(m,e,op,oi) => val r=ref(m.name);
-      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks,_)=>List(ref(n)) }).map(x=>","+x).mkString
+      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks,_,_)=>List(ref(n)) }).map(x=>","+x).mkString
       def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
                                 ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
       def mo(o:OpMap,v:String) = (if (o==OpSet) "set" else "add")+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map (x => rn(x._1))))+","+v+");\n"

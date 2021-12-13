@@ -174,9 +174,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
     ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> 
     repsep(ident,",") <~ "]") ~ opt(locality) ^^ { 
       case n ~ ot ~ ks ~ loc => 
-        val m = MapRef(n, ot.getOrElse(null), ks.map ((_, null)))
-        m.locality = if (loc == None) Some(LocalExp) else loc
-        m
+        MapRef(n, ot.getOrElse(null), ks.map ((_, null)), false, loc.orElse(Some(LocalExp)))
     }
 
   lazy val locality = 

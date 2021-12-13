@@ -243,7 +243,7 @@ trait IScalaGen extends CodeGen {
     //     v * ex
     //   }
     // }
-    case MapRef(n, tp, ks, isTemp) =>
+    case MapRef(n, tp, ks, isTemp, _) =>
       val (ko, ki) = ks.zipWithIndex.partition { case ((n, t), i) => ctx.contains(n) }
       if (ks.size == 0) { // variable
         if (ctx contains n) co(rn(n)) else co(n)
@@ -636,7 +636,7 @@ trait IScalaGen extends CodeGen {
 
   def genQueries(queries: List[Query]) = {
     queries.map { query => { query.expr match {
-      case MapRef(n, _, _, _) if (n == query.name) => ""
+      case m: MapRef if (m.name == query.name) => ""
       case _ =>
         val keys = query.expr.ovars
         ctx = Ctx[(Type, String)]()

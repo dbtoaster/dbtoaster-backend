@@ -376,9 +376,9 @@ object M3 {
 
     def rename(r: String => String): Expr = replace {
       case Ref(n) => new Ref(r(n), tp)
-      case m @ MapRef(n, tp, ks, isTemp) =>
-        new MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp, 
-          m.locality match { 
+      case MapRef(n, tp, ks, isTemp, locality) =>
+        MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)), isTemp, 
+          locality match {
             case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
             case Some(DistRandomExp) => Some(DistRandomExp)
             case Some(LocalExp) => Some(LocalExp)
@@ -429,9 +429,9 @@ object M3 {
       this match {
         case Const(tp, v) => (List(), List())
         case Ref(n) => (List((n, this.tp)), List())
-        case MapRef(n, tp, ks, tmp) => (List(), ks)
-        case MapRefConst(n, ks) => (List(), ks)
-        case DeltaMapRefConst(n, ks) => (List(), ks)        
+        case m: MapRef => (List(), m.keys)
+        case m: MapRefConst => (List(), m.keys)
+        case m: DeltaMapRefConst => (List(), m.keys)
         case Cmp(l, r, op) => (union(l.schema._1, r.schema._1), List())
         case CmpOrList(l, r) => (l.schema._1, List())
         case Apply(fn, tp, as) =>
@@ -484,16 +484,16 @@ object M3 {
           if (fn1 != fn2 || as1.length != as2.length) None 
           else as1.zip(as2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, a.cmp(b)) }
-        case (MapRef(n1, tp1, ks1, tmp1), MapRef(n2, tp2, ks2, tmp2)) =>
-          if (n1 != n2 || ks1.length != ks2.length || tmp1 != tmp2) None
+        case (MapRef(n1, tp1, ks1, tmp1, loc1), MapRef(n2, tp2, ks2, tmp2, loc2)) =>
+          if (n1 != n2 || ks1.length != ks2.length || tmp1 != tmp2 || loc1 != loc2) None
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
-        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) =>
-          if (n1 != n2 || ks1.length != ks2.length) None
+        case (MapRefConst(n1, ks1, loc1), MapRefConst(n2, ks2, loc2)) =>
+          if (n1 != n2 || ks1.length != ks2.length || loc1 != loc2) None
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
-        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>
-          if (n1 != n2 || ks1.length != ks2.length) None
+        case (DeltaMapRefConst(n1, ks1, loc1), DeltaMapRefConst(n2, ks2, loc2)) =>
+          if (n1 != n2 || ks1.length != ks2.length || loc1 != loc2) None
           else ks1.zip(ks2).foldLeft (empty) {
             case (fmap, (a, b)) => merge(fmap, Some(Map(a -> b))) }
         case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
@@ -548,15 +548,7 @@ object M3 {
   }
 
   // Map reference
-  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], val isTemp: Boolean = false) extends Expr {
-    var locality: Option[LocalityType] = Some(LocalExp)
-
-    def this(name0: String, tp0: Type, keys0: List[(String, Type)], 
-             isTemp0: Boolean, locality0: Option[LocalityType]) = {
-      this(name0, tp0, keys0, isTemp0)
-      locality = locality0;
-    }
-
+  case class MapRef(name: String, var tp: Type, var keys: List[(String, Type)], isTemp: Boolean = false, locality: Option[LocalityType] = Some(LocalExp)) extends Expr {
     override def toString = 
       name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
       keys.map(_._1).mkString(", ") + "]" + locality.getOrElse("")
@@ -575,17 +567,15 @@ object M3 {
   }
 
   // Map reference of a table
-  case class MapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
+  case class MapRefConst(name: String, keys: List[(String, Type)], locality: Option[LocalityType] = None) extends Expr { 
     val tp = TypeLong
-    var locality: Option[LocalityType] = None
     override def toString = name + "(" + keys.map(_._1).mkString(", ") + ")"
     def toDecoratedString = name + "(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
   }
 
   // Map reference of a delta update
-  case class DeltaMapRefConst(name: String, keys: List[(String, Type)]) extends Expr { 
+  case class DeltaMapRefConst(name: String, keys: List[(String, Type)], locality: Option[LocalityType] = None) extends Expr { 
     val tp = TypeLong
-    var locality: Option[LocalityType] = None
     override def toString = "(DELTA " + name + ")(" + keys.map(_._1).mkString(", ") + ")"
     def toDecoratedString = "(DELTA " + name + ")(" + keys.map(k => k._1 + ": " + k._2).mkString(", ") + "): " + tp
   }

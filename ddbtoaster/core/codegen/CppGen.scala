@@ -691,7 +691,7 @@ trait ICppGen extends CodeGen {
     val sTLQGetters = {
       val s = s0.queries.map { q =>
         val body = q.expr match {
-          case MapRef(n, _, _, _) if n == q.name =>
+          case m: MapRef if m.name == q.name =>
             "return " + q.name + ";"
           case _ =>
             ctx = Ctx[(Type, String)]()
@@ -1265,7 +1265,7 @@ trait ICppGen extends CodeGen {
 
     case Apply(fn, tp, as) => applyFunc(co, fn, tp, as)
 
-    case MapRef(mapName, tp, ks, isTemp) =>
+    case MapRef(mapName, tp, ks, isTemp, _) =>
       val (ko, ki) = ks.zipWithIndex.partition { case((n, _), _) => ctx.contains(n) }
       val mapType = mapName + "_map"
       val mapEntryType = mapName + "_entry"
@@ -1527,7 +1527,7 @@ trait ICppGen extends CodeGen {
 
     isExpressiveTLQSEnabled = s0.queries.exists { q => 
       q.expr match { 
-        case MapRef(n, _, _, _) => n != q.name
+        case m: MapRef => m.name != q.name
         case _ => true
       }
     }

@@ -27,10 +27,10 @@ object TypeCheck extends (M3.System => M3.System) {
 
     // Replace access by MapRefs (M3 fix?)
     def replaceExpr(e: Expr): Expr = e.replace {
-      case m @ MapRefConst(n, ks) =>
+      case m @ MapRefConst(n, ks, loc) =>
         accessedMaps += n
         MapRef(n, m.tp, ks)
-      case m @ DeltaMapRefConst(n, ks) =>
+      case m @ DeltaMapRefConst(n, ks, loc) =>
         accessedMaps += delta(n)
         MapRef(delta(n), m.tp, ks)
     }
@@ -82,9 +82,9 @@ object TypeCheck extends (M3.System => M3.System) {
     def renameExpr(e: Expr): Expr = e.replace {
       case Ref(n) => 
         Ref(vn(n))
-      case MapRef(n, tp, ks, tmp) => 
+      case MapRef(n, tp, ks, tmp, loc) => 
         MapRef(localMapRenaming.getOrElse(n, n), tp, renameKeys(ks), tmp)
-      case m @ DeltaMapRefConst(n, ks) =>
+      case m @ DeltaMapRefConst(n, ks, loc) =>
         MapRef(delta(n), m.tp, renameKeys(ks))
       case Lift(n, e) => 
         Lift(vn(n), renameExpr(e))
@@ -295,7 +295,7 @@ object TypeCheck extends (M3.System => M3.System) {
             // a.tp = Library.typeCheck(n, args.map(_.tp))
           case r @ Ref(n) => 
             r.tp = ctx0(n)
-          case m @ MapRef(n, tp, ks, tmp) =>
+          case m @ MapRef(n, tp, ks, tmp, loc) =>
             mapTypes.get(n) match {
               case Some((mktps, mtp)) =>
                 ctxRet = ctx0 ++ ((ks.map(_._1)) zip mktps).toMap

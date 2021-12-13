@@ -78,7 +78,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     case Apply(fn,tp,as) => (ctx /: as)((c,a)=>expr(a,ctx))
     case Lift(n,e) => expr(e,ctx)
     case AggSum(ks,e) => expr(e,ctx)
-    case m@MapRef(n,tp,ks,isTemp) if (!tableNames.contains(n) && !deltaNames.contains(n)) => // don't consider replicated tables and delta relations
+    case m@MapRef(n,tp,ks,isTemp,_) if (!tableNames.contains(n) && !deltaNames.contains(n)) => // don't consider replicated tables and delta relations
       (ctx:::cm0).foreach(x=>join(m,x)); if (!(ctx0.toSet & ks.map(_._1).toSet).isEmpty) cm0=m::cm0; m::ctx
     case _ => ctx
   }
