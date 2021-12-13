@@ -42,7 +42,12 @@ class LMSSparkGen(cgOpts: CodeGenOptions) extends DistributedM3Gen(cgOpts, Spark
       case EventBatchUpdate(Schema(name, _)) => 
         val source = s0.sources.filter(_.schema.name == name).head
         val keys = source.schema.fields
-        val storeType = if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) ArrayStore else IndexedStore
+        val storeType =
+          if (source.locality != LocalExp &&
+              UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH)
+            ArrayStore
+          else
+            IndexedStore
         List((delta(name), MapInfo(delta(name), TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, storeType)))
       case EventInsert(_) | EventDelete(_) => 
         sys.error("Distributed programs run only in batch mode.")
@@ -55,7 +60,8 @@ class LMSSparkGen(cgOpts: CodeGenOptions) extends DistributedM3Gen(cgOpts, Spark
       isInputDistributed = false
     else if ( deltaMapInfo.forall(_._2.locality == DistRandomExp) )
       isInputDistributed = true
-    else sys.error ("Mixing local and distributed input is not supported")
+    else sys.error ("Delta relations must either be all local or all randomly distributed. " +
+      "Mixing local and distributed input is not supported")
 
     // Lift and merge trigger statements 
     val updateStmts = reorderTriggers(s0.triggers).flatMap { 
@@ -1003,7 +1009,7 @@ class LMSSparkGen(cgOpts: CodeGenOptions) extends DistributedM3Gen(cgOpts, Spark
       case _ => false
     }
     val sBatchEventHandler = 
-      if (batchEvents.size == 0 | isInputDistributed)
+      if (batchEvents.size == 0 || isInputDistributed)
         "case BatchUpdateEvent(streamData) =>"
       else if (skipExec) {
         """|case BatchUpdateEvent(streamData) =>

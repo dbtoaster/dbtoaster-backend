@@ -46,6 +46,11 @@ object TypeCheck extends (M3.System => M3.System) {
     def toLowerCase(fields: List[(String, Type)]) = 
       fields.map { case (n, t) => (n.toLowerCase, t) }
 
+    def localityToLowerCase(l: LocalityType) = l match {
+      case DistByKeyExp(ks) => DistByKeyExp(toLowerCase(ks))
+      case _ => l
+    }
+
     val queries = s0.queries.map { q => Query(q.name, replaceExpr(q.expr)) }
     
     val triggers = s0.triggers.map { t => Trigger(t.event, t.stmts.map(replaceStmt)) }
@@ -53,13 +58,15 @@ object TypeCheck extends (M3.System => M3.System) {
     val usedTableDefs = s0.sources.filter { s => 
         !s.isStream && accessedMaps.contains(s.schema.name)
       }.map { s => 
-        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), s.locality)
+        MapDef(s.schema.name, TypeLong, toLowerCase(s.schema.fields),
+          Const(TypeLong, "0"), localityToLowerCase(s.locality))
       } 
     val usedDeltaDefs = 
       s0.sources.filter { s =>
         s.isStream && accessedMaps.contains(delta(s.schema.name))
       }.map { s =>
-        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields), Const(TypeLong, "0"), s.locality)
+        MapDef(delta(s.schema.name), TypeLong, toLowerCase(s.schema.fields),
+          Const(TypeLong, "0"), localityToLowerCase(s.locality))
       }
 
     System(s0.typeDefs, s0.sources, s0.maps ::: usedTableDefs ::: usedDeltaDefs, queries, triggers)
