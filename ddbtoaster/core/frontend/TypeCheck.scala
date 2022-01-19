@@ -408,7 +408,10 @@ object TypeCheck extends (M3.System => M3.System) {
 
         // Sanity check
         assert(
-          lhs.locality == rhs.locality &&
+          (
+            lhs.locality.isEmpty || 
+            rhs.locality.isEmpty || 
+            lhs.locality == rhs.locality) &&
           (init.isEmpty || init.get.locality == lhs.locality),
           "Locality mismatch: " + "\nLHS: " + lhs + 
           "\nRHS: " + rhs + "\nINIT: " + init.mkString
