@@ -150,7 +150,7 @@ commands += Command.command("release")((state: State) => {
 
   println("compiling sources")
   val compilerFilePath = (baseDir/"src"/"Compiler.scala").getAbsolutePath
-  val compilerClassContent = read(compilerFilePath)
+  val compilerClassContent = read(compilerFilePath).trim
   write(compilerFilePath, compilerClassContent.replace("= DEPLOYMENT_STATUS_DEVELOPMENT", "= DEPLOYMENT_STATUS_RELEASE"))
   Project.runTask(compile, state)
 
