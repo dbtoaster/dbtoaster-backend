@@ -28,7 +28,7 @@ if [ -L "./gpp" ]; then
 else
    CPP_COMPILER="g++"
 fi
-CPP_COMPILER_FLAGS="-std=c++11 -O3"
+CPP_COMPILER_FLAGS="-std=c++14 -O3"
 SCALA_COMPILER="scala"
 SCALA_COMPILER_FLAGS="-optimise -deprecation -unchecked -feature -classpath \"$SCALA_LIBS\""
 SCALA_VERSION="2.11"
@@ -51,8 +51,8 @@ BATCH_ENABLED=0
 BATCH_SIZE=""
 CPP_BIN_PRELOAD_ARG=0
 
-LOG_DBTOASTER=0
-LOG_CPP=0
+LOG_DBTOASTER=1
+LOG_CPP=1
 LOG_SCALA=0
 LOG_RUN=0
 
